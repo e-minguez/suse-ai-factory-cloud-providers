@@ -1,0 +1,21 @@
+# Injects the inputs and outputs tables into each module README between the
+# BEGIN_TF_DOCS and END_TF_DOCS markers. Run `make docs`.
+formatter: markdown table
+output:
+  file: README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+content: |-
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+sort:
+  by: name
+settings:
+  anchor: false
+  default: true
+  required: true
+  type: true

@@ -1,0 +1,3 @@
+{"@level":"info","@message":"aws_vpc.main: Creation complete","type":"apply_complete","hook":{"resource":{"addr":"aws_vpc.main","resource_type":"aws_vpc"},"action":"create"}}
+{"@level":"error","@message":"aws_lb.api: Creation errored after 2s","type":"apply_errored","hook":{"resource":{"addr":"aws_lb.api","resource_type":"aws_lb"},"elapsed_seconds":2}}
+{"@level":"error","@message":"Error: creating LB","type":"diagnostic","diagnostic":{"severity":"error","summary":"creating LB","detail":"quota exceeded","address":"aws_lb.api"}}

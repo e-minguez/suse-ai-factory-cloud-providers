@@ -1,0 +1,19 @@
+%{ if appco_set || suse_registry_set || nvidia_set ~}
+# Credentials are jsonencoded so any character stays a valid YAML scalar.
+credentials:
+%{ endif ~}
+%{ if appco_set ~}
+  applicationCollection:
+    username: ${jsonencode(appco_username)}
+    password: ${jsonencode(appco_password)}
+%{ endif ~}
+%{ if suse_registry_set ~}
+  suseRegistry:
+    username: ${jsonencode(suse_registry_username)}
+    password: ${jsonencode(suse_registry_password)}
+%{ endif ~}
+%{ if nvidia_set ~}
+  nvidia:
+    username: ${jsonencode(nvidia_username)}
+    password: ${jsonencode(nvidia_api_key)}
+%{ endif ~}

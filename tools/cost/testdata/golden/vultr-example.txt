@@ -1,0 +1,19 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: vultr   Region: ams   Cluster: suse-ai-factory   Catalog: file
+
+  RESOURCE                        ROLE           POOL  QTY  TYPE                    USD/hr     1h     8h    24h      7d      30d
+  jumphost                        jumphost               1  vc2-6c-16gb             0.1100   0.11   0.88   2.64   18.48    79.20
+  control plane                   control_plane  cp      3  vx1-g-4c-16g-240s       0.1530   0.46   3.67  11.02   77.11   330.48
+  load balancer (api)             lb                     1  lb                      0.0150   0.02   0.12   0.36    2.52  10.00 *
+  load balancer (ingress)         lb                     1  lb                      0.0150   0.02   0.12   0.36    2.52  10.00 *
+  nat gateway                     network                1  nat-gateway             0.0300   0.03   0.24   0.72    5.04  20.00 *
+  image snapshot (8 GB)           image                  1  storage:snapshot   0.000068/GB  <0.01  <0.01   0.01    0.09     0.39
+  vpc, firewall groups and rules  network                   -- free --                  --     --     --     --      --       --
+                                                                                     TOTAL   0.63   5.04  15.11  105.76   450.07
+
+  All amounts in USD.
+  *  capped at the monthly rate
+  Not included:
+    - bandwidth overage: traffic-dependent
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.

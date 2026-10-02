@@ -1,0 +1,12 @@
+{
+  "provider": {"value": "aws", "type": "string", "sensitive": false},
+  "api_host": {"value": "rke2-203.0.113.10.sslip.io", "type": "string", "sensitive": false},
+  "jumphost": {"value": {"public_ip": "203.0.113.5", "private_ip": "10.0.0.5", "ssh_user": "ec2-user"}, "sensitive": false},
+  "nodes": {"value": {
+    "t-cp-01": {"role": "control_plane", "pool": "cp", "init": true, "zone": "a", "private_ip": "10.0.1.11", "public_ip": null, "instance_type": "m5", "id": "i-1", "ssh_user": "suse"},
+    "t-cp-02": {"role": "control_plane", "pool": "cp", "init": false, "zone": "b", "private_ip": "10.0.1.12", "public_ip": null, "instance_type": "m5", "id": "i-2", "ssh_user": "suse"},
+    "t-gpu-01": {"role": "gpu", "pool": "g", "init": false, "zone": "a", "private_ip": "10.0.2.21", "public_ip": null, "instance_type": "g5", "id": "i-3", "ssh_user": "suse"},
+    "t-bm-01": {"role": "gpu", "pool": "bm", "init": false, "zone": null, "private_ip": null, "public_ip": "198.51.100.7", "instance_type": "bm", "id": "b-1", "ssh_user": "bmuser"}
+  }, "sensitive": false},
+  "build_status": {"value": {"method": "http", "url_or_key": "http://203.0.113.5:8080/status", "hosts": ["203.0.113.5", "10.0.9.9"]}, "sensitive": false}
+}

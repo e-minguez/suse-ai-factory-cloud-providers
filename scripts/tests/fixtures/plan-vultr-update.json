@@ -1,0 +1,4 @@
+{"format_version":"1.2","resource_changes":[
+{"address":"module.ai_factory.vultr_instance.agent_cloud[\"w-0\"]","type":"vultr_instance","change":{"actions":["update"]}},
+{"address":"module.ai_factory.vultr_firewall_rule.agent_cloud[\"ssh-198.51.100.1/32\"]","type":"vultr_firewall_rule","change":{"actions":["create"]}}
+]}

@@ -1,0 +1,31 @@
+{
+  "currency": "EUR",
+  "as_of": "2026-09-11",
+  "source_url": "https://evroc.com/cloud-services/virtual-machines/",
+  "instances": {
+    "a1a.2xl": 2.192,
+    "a1a.l": 0.548,
+    "a1a.m": 0.274,
+    "a1a.s": 0.137,
+    "a1a.xl": 1.096,
+    "a1a.xs": 0.069,
+    "c1a.2xl": 1.644,
+    "c1a.l": 0.411,
+    "c1a.m": 0.206,
+    "c1a.s": 0.103,
+    "c1a.xl": 0.822,
+    "gn-b200.l": 32,
+    "gn-b200.m": 16,
+    "gn-b200.s": 8,
+    "gn-b200.xl": 64,
+    "gn-l40s.l": 6,
+    "gn-l40s.m": 3,
+    "gn-l40s.s": 1.5,
+    "m1a.l": 0.822,
+    "m1a.m": 0.411,
+    "m1a.s": 0.206,
+    "m1a.xl": 1.644
+  },
+  "storage_gb_hour": 0.000137,
+  "public_ip_hour": 0.01
+}

@@ -1,0 +1,146 @@
+# Config identical on every node, baked into the image as
+# /usr/lib/ignition/base.d/90-butane.ign. Per-node Ignition user data is
+# merged on top. Any change here rebuilds the image.
+variant: fcos
+version: 1.6.0
+
+passwd:
+  users:
+    - name: root
+      password_hash: ${jsonencode(root_password_hash)}
+%{ if permit_root_ssh ~}
+      ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+        - ${jsonencode(key)}
+%{ endfor ~}
+%{ endif ~}
+    # No sudo in the image: escalate with `su -`.
+    - name: ${jsonencode(node_username)}
+      password_hash: ${jsonencode(node_user_password_hash)}
+      shell: /bin/bash
+      ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+        - ${jsonencode(key)}
+%{ endfor ~}
+
+systemd:
+  units:
+    - name: sshd.service
+      enabled: true
+%{ if enable_write_node_ip ~}
+    # Ordering only (Before=): a failed script must not block boot.
+    - name: write-node-ip.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Write RKE2 node-ip override, if this node has more than one NIC
+        Wants=network-online.target
+        After=network-online.target
+        Before=rke2-server.service rke2-agent.service k8s-config-installer.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        # Through bash: SELinux blocks executing var_lib_t files (203/EXEC).
+        ExecStart=/usr/bin/bash /var/lib/elemental/write-node-ip.sh
+
+        [Install]
+        WantedBy=multi-user.target
+%{ endif ~}
+%{ if enable_iscsi_prep ~}
+    # The suse-storage sysext ships iscsid under /usr and nothing under /etc.
+    - name: iscsi-prep.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Seed /etc for the sysext-delivered open-iSCSI and start iscsid
+        Wants=systemd-sysext.service
+        After=systemd-sysext.service local-fs.target
+        ConditionPathExists=/var/lib/elemental/iscsi-prep.sh
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/bash /var/lib/elemental/iscsi-prep.sh
+
+        [Install]
+        WantedBy=multi-user.target
+%{ endif ~}
+%{ if enable_local_path_prep ~}
+    # /opt is read-only in the initrd, so the directory is made at boot; -Z
+    # applies the container_file_t label rke2-selinux defines for the path.
+    - name: local-path-prep.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Create the local-path-provisioner data directory with a container-writable SELinux label
+        After=local-fs.target
+        Before=rke2-server.service rke2-agent.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/mkdir -pZ /opt/local-path-provisioner
+        ExecStart=-/usr/sbin/restorecon -R /opt/local-path-provisioner
+
+        [Install]
+        WantedBy=multi-user.target
+%{ endif ~}
+%{ if extra_units_yaml != "" ~}
+    ${indent(4, extra_units_yaml)}
+%{ endif ~}
+
+storage:
+  # /home is a btrfs subvolume not mounted in the initrd; declaring it here
+  # makes Ignition create the user homes on the real subvolume.
+  filesystems:
+    - device: /dev/disk/by-partlabel/SYSTEM
+      format: btrfs
+      wipe_filesystem: false
+      path: /home
+      mount_options:
+        - subvol=/@/home
+
+  files:
+    # Decimal modes: elemental round-trips this file through YAML.
+    - path: /etc/ssh/sshd_config.d/sshd.conf
+      mode: 384 # 0600
+      overwrite: true
+      contents:
+        inline: |
+          PermitRootLogin ${permit_root_ssh ? "yes" : "no"}
+          AuthorizedKeysFile .ssh/authorized_keys .ssh/authorized_keys.d/ignition
+    - path: /root/.profile
+      mode: 416 # 0640
+      overwrite: true
+      contents:
+        inline: |
+          export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
+          export PATH=$${PATH}:/var/lib/rancher/rke2/bin
+          alias k=/var/lib/rancher/rke2/bin/kubectl
+%{ if enable_write_node_ip ~}
+    # Scripts live in /var/lib/elemental: the image's other paths are read-only
+    # during Ignition, and a failed write drops the node into the initrd shell.
+    - path: /var/lib/elemental/write-node-ip.sh
+      mode: 493 # 0755
+      overwrite: true
+      contents:
+        inline: |
+          ${indent(10, write_node_ip_script)}
+%{ endif ~}
+%{ if enable_iscsi_prep ~}
+    - path: /var/lib/elemental/iscsi-prep.sh
+      mode: 493 # 0755
+      overwrite: true
+      contents:
+        inline: |
+          ${indent(10, iscsi_prep_script)}
+%{ endif ~}
+%{ for f in extra_files ~}
+    - path: ${jsonencode(f.path)}
+      mode: ${f.mode}
+      overwrite: true
+      contents:
+        inline: |
+          ${indent(10, f.contents)}
+%{ endfor ~}

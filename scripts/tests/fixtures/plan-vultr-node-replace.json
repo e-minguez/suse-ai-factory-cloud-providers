@@ -1,0 +1,4 @@
+{"format_version":"1.2","resource_changes":[
+{"address":"module.ai_factory.vultr_instance.control_plane[\"cp-0\"]","type":"vultr_instance","action_reason":"replace_because_cannot_update","change":{"actions":["delete","create"]}},
+{"address":"module.ai_factory.vultr_load_balancer.api","type":"vultr_load_balancer","change":{"actions":["update"]}}
+]}

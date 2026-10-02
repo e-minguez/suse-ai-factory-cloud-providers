@@ -1,0 +1,26 @@
+# release_manifest.yaml is rendered by the module next to this file.
+manifestURI: file://./release_manifest.yaml
+
+components:
+  kubernetes: {}
+%{ if length(sysexts) > 0 ~}
+  # Key is `systemd` with `extension` items, unlike the manifest's own schema.
+  systemd:
+%{ for e in sysexts ~}
+    - extension: ${e}
+%{ endfor ~}
+%{ endif ~}
+  helm:
+%{ for c in components ~}
+    - chart: ${c.name}
+%{ if c.values_template != null ~}
+      valuesFile: ${c.name}.yaml
+%{ endif ~}
+%{ if c.chart_credentials && appco_set ~}
+      # Application Collection OCI charts need auth; jsonencode keeps any
+      # character valid as a YAML scalar.
+      credentials:
+        username: ${jsonencode(appco_username)}
+        password: ${jsonencode(appco_password)}
+%{ endif ~}
+%{ endfor ~}

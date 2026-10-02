@@ -1,0 +1,14 @@
+{"@level":"info","@message":"aws_vpc.main: Creation complete","type":"apply_complete","hook":{"resource":{"addr":"aws_vpc.main","resource_type":"aws_vpc"},"action":"create"}}
+{"@level":"info","@message":"aws_instance.jump: Still destroying... [10s elapsed]","type":"apply_progress","hook":{"resource":{"addr":"aws_instance.jump","resource_type":"aws_instance"},"action":"delete","elapsed_seconds":10}}
+{"@level":"info","@message":"aws_subnet.a: Creation complete","type":"apply_complete","hook":{"resource":{"addr":"aws_subnet.a","resource_type":"aws_subnet"},"action":"create"}}
+{"@level":"info","@message":"aws_security_group.x: Creation complete","type":"apply_complete","hook":{"resource":{"addr":"aws_security_group.x","resource_type":"aws_security_group"},"action":"create"}}
+{"@level":"info","@message":"aws_lb.api: Creation complete","type":"apply_complete","hook":{"resource":{"addr":"aws_lb.api","resource_type":"aws_lb"},"action":"create"}}
+{"@level":"info","@message":"aws_instance.jump: Destruction complete","type":"apply_complete","hook":{"resource":{"addr":"aws_instance.jump","resource_type":"aws_instance"},"action":"delete"}}
+{"@level":"info","@message":"x","type":"provision_progress","hook":{"resource":{"addr":"module.ai_factory.terraform_data.wait_for_image"},"provisioner":"local-exec","output":"status=building elapsed=0"}}
+{"@level":"info","@message":"x","type":"provision_progress","hook":{"resource":{"addr":"module.ai_factory.terraform_data.wait_for_image"},"provisioner":"local-exec","output":"status=building elapsed=300"}}
+{"@level":"info","@message":"x","type":"provision_progress","hook":{"resource":{"addr":"module.ai_factory.terraform_data.wait_for_image"},"provisioner":"local-exec","output":"status=customize elapsed=720 step 3"}}
+{"@level":"info","@message":"x","type":"provision_progress","hook":{"resource":{"addr":"module.ai_factory.terraform_data.wait_for_image"},"provisioner":"local-exec","output":"status=done elapsed=1000"}}
+{"@level":"warn","@message":"Warning: Deprecated argument","type":"diagnostic","diagnostic":{"severity":"warning","summary":"Deprecated argument","detail":"Use the new argument instead.","address":"aws_lb.api"}}
+{"@level":"info","@message":"aws_instance.jump: Creation complete","type":"apply_complete","hook":{"resource":{"addr":"aws_instance.jump","resource_type":"aws_instance"},"action":"create"}}
+{"@level":"info","@message":"aws_instance.old: Destruction complete","type":"apply_complete","hook":{"resource":{"addr":"aws_instance.old","resource_type":"aws_instance"},"action":"delete"}}
+{"@level":"info","@message":"Apply complete! Resources: 5 added, 0 changed, 2 destroyed.","type":"change_summary","changes":{"add":5,"change":0,"import":0,"remove":2,"operation":"apply"}}

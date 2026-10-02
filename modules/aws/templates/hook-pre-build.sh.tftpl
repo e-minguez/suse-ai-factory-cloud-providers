@@ -1,0 +1,18 @@
+# The zip check runs before extraction so a truncated download fails clearly.
+if ! command -v aws >/dev/null 2>&1; then
+  log "AWS CLI not found, installing awscli v2"
+  AWSCLI_WORKDIR=$(mktemp -d)
+  ( cd "$AWSCLI_WORKDIR"
+    curl -fsS -o awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+    if ! unzip -tq awscliv2.zip >/dev/null; then
+      log "ERROR: downloaded awscliv2.zip failed integrity check"
+      exit 1
+    fi
+    unzip -q awscliv2.zip
+    ./aws/install
+  )
+  rm -rf "$AWSCLI_WORKDIR"
+fi
+log "aws cli version: $(aws --version)"
+
+export AWS_DEFAULT_REGION="${region}"

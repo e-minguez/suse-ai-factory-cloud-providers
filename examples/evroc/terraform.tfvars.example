@@ -1,0 +1,203 @@
+# --------------------------------------------------------------------------
+# Identity / region
+# --------------------------------------------------------------------------
+
+# region and project default to null -- "whatever `evroc login`'s context
+# says". Set either explicitly to pin this example to a specific
+# region/project regardless of the CLI's current context.
+# region  = null
+# project = null
+
+# The zones the cluster spans. One subnet and one control-plane placement
+# group per zone; control-plane nodes are assigned round-robin across the
+# list, so three zones and the default control_plane_count = 3 put one etcd
+# member in each.
+#
+# Cost of each extra zone: snapshots are zonal, so every zone gets its own
+# build host, image-target disk, snapshot and full build (in parallel, so
+# compute cost, not wall-clock time). Only zones[0]'s build host has a public
+# IP. A single-element list, e.g. ["a"], is a single-AZ cluster with one build.
+#
+# Do not REORDER this list on an existing cluster: subnet CIDRs are assigned
+# by position, so reordering replaces every node. Appending is safe.
+zones = ["a", "b", "c"]
+
+# --------------------------------------------------------------------------
+# Access: SSH keys, admin CIDRs, password hashes
+# --------------------------------------------------------------------------
+
+# CIDRs allowed to SSH into the jumphost. Your admin IP(s)/VPN range, not
+# 0.0.0.0/0. Also the only sources that can read the build-status relay
+# during pass 1, so include every egress address of the machine running
+# terraform, or pass 1 waits until the build times out.
+admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
+
+# At least one public key. Injected onto node_username on every elemental
+# node, onto the jumphost, and onto root too only if permit_root_ssh is true.
+ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
+
+# Generate both with: openssl passwd -6
+# root's is the password `su -` asks for; the node user's is node_username's.
+# Use different passwords.
+root_password_hash      = "REPLACE_WITH_OUTPUT_OF_openssl_passwd_-6"
+node_user_password_hash = "REPLACE_WITH_A_DIFFERENT_OUTPUT_OF_openssl_passwd_-6"
+
+# Unprivileged login on the elemental nodes. Escalate with `su -` (sudo is
+# not installed in the image). Optional -- this is the default.
+# node_username = "suse"
+
+# Allow `ssh root@<node>` and give root the SSH keys too. Off by default.
+# Flipping it rebuilds the image and replaces every node.
+# permit_root_ssh = true
+
+# --------------------------------------------------------------------------
+# Credentials: AppCo, SUSE registry, NVIDIA NGC
+#
+# See the comment below for which ones are required.
+# --------------------------------------------------------------------------
+
+# Registry credentials. Application Collection is required with
+# local-path-provisioner (in the default components) or suse-storage; the SUSE
+# registry and NVIDIA NGC ones are optional. With aif-operator, set all of them
+# so AI Factory can pull its workloads right after deployment; plan warns about
+# any that are missing.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# GPU operator driver source. DO NOT CHANGE until SUSE publishes SLES 16.1
+# precompiled drivers under registry.suse.com/third-party/nvidia: left unset,
+# the module uses an experimental OBS build of branch 615, the only driver
+# known to load on the nodes' 16.1 kernel. See ../../docs/workarounds.md.
+# gpu_driver_repository = "registry.suse.com/third-party/nvidia"
+# gpu_driver_version    = "..."
+
+# --------------------------------------------------------------------------
+# Sizing
+# --------------------------------------------------------------------------
+
+# cluster_name                = "suse-ai-factory"
+# control_plane_count         = 3  # 1 = single node; the LBs stay, so it scales out later
+# control_plane_instance_type = "c1a.m"
+# control_plane_disk_size_gb  = 200
+# jumphost_instance_type      = "a1a.m"  # per BUILD HOST, and there is one per zone.
+                                         # 3 zones x a1a.l (8 vCPU) = 24, over a
+                                         # default project's 20 vCPU quota
+# jumphost_disk_size_gb       = 200
+# tags replaces (not merges with) any tags map in common-*.tfvars.
+# tags                        = { env = "test" }  # keys: no "/" and no elemental- prefix
+
+# The network (vpc_cidr, vpc_mtu), jumphost user and image inputs keep the
+# module defaults; see ../../modules/common/variables-common.tf and
+# ../../modules/evroc/variables.tf.
+
+# --------------------------------------------------------------------------
+# Public IPs are quota-limited (3 by default). The API VIP and the jumphost
+# use two, so true here does not fit three control planes on a default
+# project; the plan fails with the public IP quota check.
+#
+# Nodes need no public IP: the API answers through the load balancer, nodes
+# are reachable from the jumphost, and VMs have outbound internet access
+# without one.
+# --------------------------------------------------------------------------
+control_plane_public_ip = false
+# Worker and GPU pools set public_ip per pool (default false), see below.
+
+# --------------------------------------------------------------------------
+# Worker pools: non-GPU agent nodes, same options as gpu_pools below. A pool
+# may use any zone in zones (unpinned: zones[0]); keys must differ from
+# gpu_pools keys. Flavors with GPUs are rejected; worker vCPU, memory and
+# public IPs count toward the quota check at plan time.
+# --------------------------------------------------------------------------
+# worker_pools = {
+#   general = { instance_type = "c1a.m", count = 2, zone = "b" }
+# }
+
+# --------------------------------------------------------------------------
+# GPU worker pools. GPU nodes boot the same snapshot clone as the control
+# plane. A project that predates evroc lifting the snapshot-disk restriction
+# (2026-09-23) fails a GPU VM with "Ready: disk is missing DiskImageRef
+# (ProvisioningFailed)" -- ../../docs/providers/evroc.md has the detail.
+#
+# Empty by default (control-plane-only cluster). Real GPU
+# flavors are gn-l40s.{s,m,l} and gn-b200.{s,m,l,xl}; both sit at the
+# expensive end of evroc's price list, so nothing is provisioned unless asked
+# for. Pool names become node hostnames ("<cluster_name>-<pool>-NN"), must be
+# unique, 1-16 characters of [a-z0-9-], and "cp" is reserved for the control
+# plane. Adding a pool, renaming one, or bumping a count is a plain
+# Terraform add/replace of just the affected nodes -- no image rebuild.
+# --------------------------------------------------------------------------
+# Optionally per pool:
+#
+#   instance_type       the evroc compute profile (required), for example
+#                       "gn-l40s.s".
+#   disk_size_gb        boot disk size. Default: control_plane_disk_size_gb.
+#   public_ip           give each node a public IP. Default false; uses quota.
+#   zone                pin the pool to one zone. Default: zones[0], which must
+#                       be a GPU zone (see below). Pin it when a profile's
+#                       stock only exists in one zone.
+#   placement           "spread" (anti-affinity: no two of the pool's nodes on
+#                       one host -- for inference, where a host failure should
+#                       cost one replica) or "cluster" (affinity: pack the pool
+#                       together for the lowest inter-node latency -- for
+#                       training collectives). Omitted means no placement group
+#                       at all, leaving the scheduler unconstrained.
+#
+# Two limits shape these numbers, and both are enforced by an admission webhook
+# at APPLY time rather than at plan time:
+#   - GPU VMs run in zone "a" only. A pool with no zone uses zones[0], so list
+#     "a" first or pin the pool; any other zone fails during plan.
+#   - GPU quota is per GPU MODEL, and a default project holds ONE of each.
+#     The FLAVOR SIZE IS THE GPU COUNT -- gn-l40s.s is 1 GPU, .m is 2, .l is 4
+#     -- and the webhook is handed count * that, so even count = 1 on gn-l40s.m
+#     fails with "not enough quota ... Only 1 nvidia.com/AD102GL_L40S GPUs
+#     available (out of 1 in quota)". gn-l40s.s at count = 1 is the only pool
+#     an unmodified project can apply.
+# `terraform plan` prints the resulting demand in the gpu_quota_request output;
+# ask evroc to raise the quota before asking for more than it says.
+#
+# gpu_pools = {
+#   inference = { instance_type = "gn-l40s.m", count = 1, placement = "spread" }
+#   training  = { instance_type = "gn-b200.l", count = 1, zone = "a", placement = "cluster" }
+# }
+
+# --------------------------------------------------------------------------
+# Components -- which SUSE AI Factory Helm charts release.yaml enables.
+# Rendered in a fixed canonical order regardless of the order typed here.
+# Changing this rebuilds the image and replaces every node.
+# --------------------------------------------------------------------------
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]  # the default
+
+# suse-storage (Longhorn) instead of local-path-provisioner. NOT a migration
+# from the default -- a new cluster, with a different default StorageClass
+# and no data carried across. cert-manager is still injected automatically
+# because "rancher" is listed.
+# components = ["rancher", "suse-storage", "aif-operator"]
+# suse_storage_nodes = ["control_plane"]  # roles (control_plane, worker, gpu) and/or pool keys; 3+ nodes
+
+# api_cidrs     = ["0.0.0.0/0"]   # who may reach the Kubernetes API (6443)
+# ingress_cidrs = ["0.0.0.0/0"]   # who may reach the ingress listeners (80/443)
+
+# rancher_hostname           = null  # defaults to "rancher-<api_vip>.sslip.io"
+# rancher_bootstrap_password = null  # defaults to a generated password
+# api_host                   = null  # defaults to "rke2-<api_vip>.sslip.io", added to the
+                                      # API server certificate's SANs
+
+# --------------------------------------------------------------------------
+# Image build
+# --------------------------------------------------------------------------
+
+# AI Factory release: a full X.Y.Z version (no "2.2" tag; pre-releases such as
+# "2.3.0-dev.2" work), resolved to SUSE/aif's tag aif-operator-<version>, or a
+# manifest URL (http:// or https://) for a branch, fork or mirror. 2.1.0 is the
+# oldest version with a manifest. `git ls-remote --tags https://github.com/SUSE/aif`
+# lists them.
+# aif_release = "2.2.0"
+
+# The build inputs elemental_image, core_platform_override,
+# sysext_image_overrides, image_disk_size and fips keep the module defaults.
+# core_platform_override must not be null: the GA OS image ignores
+# bootloader.initrdExtensions. See ../../modules/evroc/README.md and
+# ../../docs/providers/evroc.md.

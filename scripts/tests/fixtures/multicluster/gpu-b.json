@@ -1,0 +1,12 @@
+{
+  "provider": {"value": "evroc"},
+  "cluster_name": {"value": "gpu-b"},
+  "egress_ips": {"value": []},
+  "rancher_url": {"value": null},
+  "rancher_bootstrap_password": {"value": "boot-pass", "sensitive": true},
+  "jumphost": {"value": {"public_ip": "203.0.113.5", "private_ip": "10.0.0.5", "ssh_user": "ec2-user"}},
+  "nodes": {"value": {
+    "gpu-b-cp-01": {"role": "control_plane", "pool": "cp", "init": true, "zone": "a", "private_ip": "10.0.1.11", "public_ip": null, "ssh_user": "suse"},
+    "gpu-b-cp-02": {"role": "control_plane", "pool": "cp", "init": false, "zone": "b", "private_ip": "10.0.1.12", "public_ip": null, "ssh_user": "suse"}
+  }}
+}

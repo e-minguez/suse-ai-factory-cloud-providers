@@ -1,0 +1,153 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-10-02
+
+First release. Deploys SUSE AI Factory (RKE2, Rancher, AI Factory operator and
+NVIDIA GPU operator on a SUSE Elemental image) on aws, evroc and vultr from one
+repository.
+
+### Added
+
+- **Providers**
+  - aws (`modules/aws`): one apply. A Leap 16 jumphost builds the Elemental image
+    and uploads the raw disk to S3; the image is imported as a regional AMI.
+    Control plane and agents run behind public and internal NLBs.
+  - evroc (`modules/evroc`): two passes, plus an optional third that reclaims the
+    build disks. The image is written to a disk and snapshotted, one snapshot per
+    zone. Build progress is relayed over HTTP from the jumphost.
+  - vultr (`modules/vultr`): two passes. The jumphost serves the image over HTTP
+    and Vultr imports it as an account-wide snapshot
+    ([ADR 006](docs/decisions/006-vultr-two-passes.md)). Nodes can be instances
+    or bare metal servers (`kind = "bare_metal"`) in a single location.
+  - Per provider: VPC, firewall rules from a shared port table
+    (`modules/rke2-ports`), load balancers for the Kubernetes API and Rancher,
+    jumphost, `api_host` override and `*.sslip.io` or NLB hostnames.
+  - Provider guides in `docs/providers/`.
+- **Node pools**
+  - `control_plane_count` (1 keeps the load balancers and jumphost, so a
+    single-node cluster scales out by raising the count).
+  - `gpu_pools` and `worker_pools` with per-pool instance type, count, disk, zone,
+    public IP and kind (`vm` or `bare_metal`); evroc pools can use placement groups.
+  - `deploy_nodes = false` builds the image without creating nodes.
+  - Scaling guide in `docs/scaling.md`.
+- **Image build**
+  - Elemental image built on the jumphost with `elemental3ctl`
+    (`modules/elemental-config`, `modules/image-factory`).
+  - The image is rebuilt only when `build_hash` changes. Every build input
+    (config files, release manifest, sysexts, overrides) feeds the hash.
+  - `deploy.sh --rebuild` bumps a persisted rebuild counter
+    ([ADR 003](docs/decisions/003-rebuild-counter.md)).
+  - `aif_release` takes a version (tag `aif-operator-<version>`) or a manifest
+    URL; the manifest is rewritten in Terraform at plan time and shipped to the
+    build host.
+  - `write-node-ip.sh` (node IP selection on dual-NIC servers),
+    `configure-network.sh` (MTU, evroc and vultr) and `iscsi-prep.sh`.
+  - Comments are stripped from rendered configs before hashing and before
+    user_data; user_data size is checked at plan (EC2 16 KiB, vultr 32 KiB,
+    evroc 768 KiB).
+  - `keep_build_artifacts` keeps the intermediate artifacts (raw image, build
+    disks) after the image is registered.
+- **Cluster stack**
+  - RKE2 with `write-kubeconfig-group` set to the node user, so tooling needs no
+    root; no sudo on the image (`node_username` plus `su -`).
+  - Rancher, cert-manager, AI Factory operator and NVIDIA GPU operator, selected
+    with `components`.
+  - Storage: `local-path-provisioner` or `suse-storage` (Longhorn), not both.
+    `suse_storage_nodes` places the disks by role or pool key and needs at least
+    three nodes.
+  - SUSE registry and NVIDIA NGC credentials are optional; Application Collection
+    credentials are required with local-path-provisioner or suse-storage.
+  - evroc pod MTU follows `vpc_mtu`.
+- **Deploy tooling**
+  - `examples/<provider>/deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <tf args>]`
+    on every provider; it only defines passes, the rest is in `scripts/lib/`.
+  - Flow: `plan -out`, list replacements and destroys, confirm, `apply -json`
+    of the saved plan rendered with `jq`. Full logs in `.deploy/logs/<timestamp>/`.
+  - Terraform 1.16.4 crash detection with one reconcile and retry; evroc 409
+    retry; optional orphan adoption on evroc (`EVROC_ADOPT_ON_CRASH=1`).
+  - `--destroy` prints the matching leftovers command and never runs it.
+  - `docs/manual-deploy.md`: the passes as plain `terraform` commands.
+- **Helper scripts**
+  - `scripts/kubeconfig.sh`: stdout by default, `-o` writes mode 600 and refuses
+    to overwrite without `--force`.
+  - `scripts/ssh.sh`: SSH to any node through the jumphost.
+  - `scripts/build-logs.sh`: follows the image build during the apply, through
+    `terraform_data.build_access` while outputs are missing.
+  - `next_steps` output prints how to run them.
+- **Tools**
+  - `tools/multicluster/cluster.sh` (`new`, `deploy`, `destroy`, `register`,
+    `list`, `cost`): several clusters from one checkout under `clusters/`,
+    downstream clusters imported into a management Rancher through the
+    `rancher2` provider, optional `--bootstrap` of the admin password.
+  - `tools/cost` (Go): pre-deploy cost estimate from tfvars for aws, evroc and
+    vultr (`make cost`, [ADR 007](docs/decisions/007-cost-estimator.md)).
+    Rows with quantity 0 are omitted; evroc needs no region.
+  - `tools/leftovers/{aws,evroc,vultr}.sh`: read-only leftover check after a
+    destroy, same output and exit codes.
+  - `tools/orphans/evroc`: finds objects missing from state after a crash and
+    proposes import blocks.
+  - `tools/vultr/passthrough-stock.sh`: lists GPU passthrough plans in stock.
+  - `modules/aws/scripts/check-and-reserve.sh`: finds NVIDIA GPU capacity in a
+    region (cheapest first, up to a cost limit) and holds it with an On-Demand
+    Capacity Reservation.
+- **Conventions** ([docs/conventions.md](docs/conventions.md))
+  - One naming style for variables, outputs and files on every provider.
+  - Identical output set on every provider; provider-only data in
+    `provider_details`.
+  - Common variables declared once in `modules/common/variables-common.tf`,
+    symlinked into each provider module.
+  - Resource labels `elemental-{cluster,managed-by,module,created}` plus
+    `elemental-{role,pool,build,listener}` where they apply; user `tags` cannot
+    use the prefix.
+  - Tfvars layering: `common-all.tfvars`, `common-<provider>.tfvars`, per-cluster
+    `terraform.tfvars`.
+  - Availability and quota checks fail the plan on every provider.
+- **Security** ([docs/security.md](docs/security.md))
+  - `api_cidrs` (default `0.0.0.0/0`) limits the public Kubernetes API listener
+    on 6443; `admin_cidrs` limits SSH (no default) and `ingress_cidrs` the
+    ingress on 80/443.
+  - Terraform state is treated as secret (`rke2_token` reaches it through
+    user_data, [ADR 005](docs/decisions/005-state-secrets.md)); an encrypted
+    remote backend is recommended. `rke2_token` is not an output.
+  - Instances never read from object storage; only the aws jumphost uploads the
+    raw image.
+  - SSH uses a throwaway `ssh_config` and `known_hosts`; no Terraform-managed
+    host keys. `permit_root_ssh` is a debug toggle, default false.
+  - aws: optional pre-created IAM roles (`vmimport_role_name`,
+    `jumphost_instance_profile_name`); policies in `docs/providers/aws.md`.
+- **Testing and CI**
+  - GitHub Actions: `fmt -check`, `validate` per provider, `tflint`,
+    `shellcheck`, symlink and output consistency checks, `terraform test` with
+    `mock_provider`, `go test`, and generated module README tables
+    (`make docs-check`).
+- **Documentation**
+  - Architecture diagrams, ADRs in `docs/decisions/`, the workaround register
+    in `docs/workarounds.md`, manual deploy, scaling, security and conventions
+    guides, and the list of end-to-end checks not yet run in `docs/e2e-checklist.md`.
+
+### Known limitations
+
+- Terraform 1.16.4 crashes during apply
+  ([hashicorp/terraform#39283](https://github.com/hashicorp/terraform/issues/39283)).
+  `deploy.sh` handles it; `required_version` stays `>= 1.16.4` until 1.16.5.
+- GA `elemental3ctl` 3.0.x ignores `initrdExtensions`, so `core_platform_override`,
+  `sysext_image_overrides` and a beta `elemental_image` are the defaults. They go
+  away once a GA image ships `elemental3ctl` 3.1 or later.
+- The GPU operator uses an experimental precompiled NVIDIA driver for SLES 16.1
+  (`gpu_driver_repository`, `gpu_driver_version`) until driver packages are published.
+- Not tested end-to-end yet: vultr GPU pools and bare metal nodes, booting a
+  new evroc node after the third pass deleted the build disks, and re-running or
+  extending `cluster.sh register` ([docs/e2e-checklist.md](docs/e2e-checklist.md)).
+- Provider quirks handled by workarounds (evroc load balancer pins, vultr load
+  balancer and snapshot waits, aws snapshot description, aws capacity retries,
+  Leap 16 mirror and AMI lookups) are listed in [docs/workarounds.md](docs/workarounds.md).
+
+[Unreleased]: https://github.com/e-minguez/suse-ai-factory-cloud-providers/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/e-minguez/suse-ai-factory-cloud-providers/releases/tag/v0.1.0

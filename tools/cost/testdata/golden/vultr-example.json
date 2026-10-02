@@ -1,0 +1,219 @@
+{
+  "disclaimer": "ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.",
+  "provider": "vultr",
+  "region": "ams",
+  "cluster_name": "suse-ai-factory",
+  "currency": "USD",
+  "catalog": {
+    "source": "file"
+  },
+  "durations": [
+    "1h",
+    "8h",
+    "24h",
+    "7d",
+    "30d"
+  ],
+  "resources": [
+    {
+      "resource": "jumphost",
+      "kind": "compute",
+      "role": "jumphost",
+      "rate_id": "vc2-6c-16gb",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.11,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.11,
+        "24h": 2.64,
+        "30d": 79.2,
+        "7d": 18.48,
+        "8h": 0.88
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "control plane",
+      "kind": "compute",
+      "role": "control_plane",
+      "pool": "cp",
+      "rate_id": "vx1-g-4c-16g-240s",
+      "qty": 3,
+      "rate_found": true,
+      "hourly": 0.153,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.459,
+        "24h": 11.016,
+        "30d": 330.48,
+        "7d": 77.112,
+        "8h": 3.672
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "load balancer (api)",
+      "kind": "fixed",
+      "role": "lb",
+      "rate_id": "lb",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.015,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.015,
+        "24h": 0.36,
+        "30d": 10,
+        "7d": 2.52,
+        "8h": 0.12
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": true,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "load balancer (ingress)",
+      "kind": "fixed",
+      "role": "lb",
+      "rate_id": "lb",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.015,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.015,
+        "24h": 0.36,
+        "30d": 10,
+        "7d": 2.52,
+        "8h": 0.12
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": true,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "nat gateway",
+      "kind": "fixed",
+      "role": "network",
+      "rate_id": "nat-gateway",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.03,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.03,
+        "24h": 0.72,
+        "30d": 20,
+        "7d": 5.04,
+        "8h": 0.24
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": true,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "image snapshot",
+      "kind": "storage",
+      "role": "image",
+      "rate_id": "storage:snapshot",
+      "qty": 1,
+      "size_gb": 8,
+      "rate_found": true,
+      "hourly": 0.000068,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.000548,
+        "24h": 0.013151,
+        "30d": 0.394521,
+        "7d": 0.092055,
+        "8h": 0.004384
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "vpc, firewall groups and rules",
+      "kind": "free",
+      "role": "network",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0,
+        "24h": 0,
+        "30d": 0,
+        "7d": 0,
+        "8h": 0
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    }
+  ],
+  "totals": {
+    "1h": 0.629548,
+    "24h": 15.109151,
+    "30d": 450.074521,
+    "7d": 105.764055,
+    "8h": 5.036384
+  },
+  "build_only_totals": {
+    "1h": 0,
+    "24h": 0,
+    "30d": 0,
+    "7d": 0,
+    "8h": 0
+  },
+  "recurring_after_destroy_per_month": 0,
+  "excluded": [
+    {
+      "resource": "bandwidth overage",
+      "reason": "traffic-dependent"
+    }
+  ],
+  "incomplete": false,
+  "warnings": [],
+  "notes": []
+}

@@ -1,0 +1,11 @@
+SERVER_PID=""
+FIREWALLD_OPENED=false
+SERVE_DIR="/srv/img/${serve_path}"
+# Two firewalls front port 80: the cloud firewall group (image.tf) and
+# firewalld. Runtime-only change; on_exit undoes it.
+if command -v firewall-cmd >/dev/null && systemctl is-active --quiet firewalld; then
+  firewall-cmd --zone=public --add-port=80/tcp
+  FIREWALLD_OPENED=true
+else
+  log "firewalld not present/active, nothing to open there"
+fi

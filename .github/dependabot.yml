@@ -1,0 +1,20 @@
+---
+# Weekly update PRs. Actions are pinned to commit SHAs in ci.yml; dependabot
+# bumps the SHA and the version comment together.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: gomod
+    directory: /tools/cost
+    schedule:
+      interval: weekly
+    groups:
+      go:
+        patterns: ["*"]

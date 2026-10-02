@@ -1,0 +1,19 @@
+# Written by per-node Ignition into RKE2's own manifests directory (servers
+# only), so it exists before RKE2 installs the canal chart.
+# see docs/decisions/001-elemental-config-rationale.md
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: rke2-canal
+  namespace: kube-system
+spec:
+  valuesContent: |-
+%{ if iface_regex != null ~}
+    flannel:
+      regexIface: '${iface_regex}'
+%{ endif ~}
+    calico:
+%{ if veth_mtu != null ~}
+      vethuMTU: ${veth_mtu}
+%{ endif ~}
+      felixPrometheusMetricsEnabled: false

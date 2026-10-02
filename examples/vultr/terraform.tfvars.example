@@ -1,0 +1,109 @@
+# Per-cluster values. Loaded last, so it wins over ../../common-all.tfvars and
+# ../common-vultr.tfvars (deploy.sh layers them, later wins). Values every
+# provider declares (admin_cidrs, password hashes, ssh_authorized_keys,
+# registry credentials, aif_release) can live in common-all.tfvars instead;
+# vultr_api_key and region fit common-vultr.tfvars.
+
+region = "ams"
+
+# Used by the vultr provider, the plan-time stock checks and the wait scripts.
+vultr_api_key = "REPLACE_WITH_YOUR_API_KEY"
+
+# CIDRs allowed to SSH into the jumphost: your admin IP(s) or VPN range.
+admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
+
+# Generate both with `openssl passwd -6`. They must differ.
+root_password_hash      = "REPLACE_WITH_OUTPUT_OF_openssl_passwd_-6"
+node_user_password_hash = "REPLACE_WITH_A_DIFFERENT_OUTPUT_OF_openssl_passwd_-6"
+
+# At least one public key, installed for node_username and on the jumphost.
+ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
+
+# Login on the nodes; escalate with `su -` (no sudo in the image).
+# node_username = "suse"
+
+# Allow `ssh root@<node>`. Debug toggle; changing it rebuilds the image.
+# permit_root_ssh = true
+
+# --- Registry credentials -------------------------------------------------
+
+# Registry credentials. Application Collection is required with
+# local-path-provisioner (in the default components) or suse-storage; the SUSE
+# registry and NVIDIA NGC ones are optional. With aif-operator, set all of them
+# so AI Factory can pull its workloads right after deployment; plan warns about
+# any that are missing.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# --- GPU workers ----------------------------------------------------------
+# gpu_pools defaults to {}: a control-plane-only cluster. Price a pool first.
+#
+#   kind = "bare_metal": vbm-* plans, a mandatory public IP with no Vultr
+#     firewall. The public_ip field is ignored.
+#   kind = "vm" (default): cloud plans. public_ip = false (default) gives a
+#     single VPC-only NIC with egress through the NAT gateway; true adds a
+#     firewalled public NIC.
+#
+# Only passthrough plans work: type vdm (vcg-a100/h100/b200/mi3*, vcg-a16-6c/96c-*,
+# vcg-a40-24c/96c-*) and the L40S plans (vcg-l40s-16c/32c/64c-*, type vcg but
+# passthrough). Other vcg-a16-*/vcg-a40-* are fractional vGPU. disk_size_gb, zone and
+# placement must stay null on this provider.
+#
+# Pool names become hostnames "<cluster_name>-<pool>-NN"; "cp" is reserved.
+# Check stock first:
+#   curl -s -H "Authorization: Bearer $VULTR_API_KEY" \
+#     "https://api.vultr.com/v2/regions/$REGION/availability"
+# (no ?type=: untyped returns every family). Across regions:
+# tools/vultr/passthrough-stock.sh
+#
+# gpu_pools = {
+#   gpu  = { instance_type = "vbm-256c-3072gb-8-mi325x-gpu", kind = "bare_metal", count = 2 }
+#   a100 = { instance_type = "vcg-a100-12c-120g-80vram", count = 2 }
+#   big  = { instance_type = "vcg-a100-96c-960g-640vram", count = 1, public_ip = true }
+# }
+#
+# --- Worker pools (no GPU) -------------------------------------------------
+# worker_pools defaults to {}. Same fields, limits and kinds as gpu_pools, and
+# pool names are unique across both maps. Nodes get role "worker"; use
+# suse_storage_nodes to put Longhorn disks on them. Also covers the worker path
+# (join, firewall group, dual-NIC metadata, scale-out) without GPU stock.
+#
+# worker_pools = {
+#   wrk = { instance_type = "vc2-6c-16gb", count = 2 }
+#   bm  = { instance_type = "vbm-6c-32gb-amd", kind = "bare_metal" }
+# }
+
+# --- Optional -------------------------------------------------------------
+
+# Vultr SSH key IDs for the jumphost and nodes with a public NIC (vpc_only
+# nodes have none). ssh_authorized_keys is what grants access on the nodes.
+# ssh_key_ids = ["REPLACE_WITH_VULTR_SSH_KEY_ID"]
+
+# Managed disks of bare metal pools only: raid1, jbod or none (default).
+# mdisk_mode = "none"
+
+# AI Factory: a version X.Y.Z (tag aif-operator-<version>, 2.1.0 or newer) or
+# a manifest URL (branch, fork or mirror).
+# aif_release = "2.2.0"
+# aif_release = "https://raw.githubusercontent.com/SUSE/aif/refs/heads/main/uc-release-manifest/release_manifest.yaml"
+
+# Changing components rebuilds the image and replaces every node.
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+# components = ["rancher", "suse-storage", "aif-operator"]
+# suse_storage_nodes = ["control_plane"]  # roles (control_plane, worker, gpu) and/or pool keys; 3+ nodes
+
+# rancher_hostname           = null  # defaults to "rancher-<ingress IP>.sslip.io"
+# rancher_bootstrap_password = null  # defaults to a generated password
+# api_cidrs                  = ["0.0.0.0/0"]  # who may reach the Kubernetes API on 6443
+# ingress_cidrs              = ["0.0.0.0/0"]  # who may reach the ingress on 80/443
+
+# cluster_name                = "suse-ai-factory"
+# control_plane_count         = 3  # 1 = single node; the LBs stay, so it scales out later
+# control_plane_instance_type = "vx1-g-4c-16g-240s"
+# jumphost_instance_type      = "vc2-6c-16gb"
+# tags replaces (not merges with) any tags map in common-*.tfvars.
+# tags                        = { env = "test" }  # sent as "env=test"
+# image_id                    = "..."  # boot an existing snapshot instead of building

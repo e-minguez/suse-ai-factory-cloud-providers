@@ -1,0 +1,26 @@
+mkdir -p "$SERVE_DIR"
+mv "$1" "$SERVE_DIR/${image_file}"
+# Apparent size is what the fetcher pulls; a zero-byte raw would still answer 200.
+log "serving ${image_file}: $(du -h --apparent-size "$SERVE_DIR/${image_file}" | cut -f1) apparent"
+# An empty index.html hides the directory listing (and so the random path).
+: > /srv/img/index.html
+
+python3 -m http.server 80 --bind 0.0.0.0 --directory /srv/img &
+SERVER_PID=$!
+log "http server started, pid $SERVER_PID"
+sleep 2
+
+if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+  log "ERROR: http server (pid $SERVER_PID) died right after starting"
+  exit 1
+fi
+if ! curl -fsS -o /dev/null "http://127.0.0.1/${serve_path}/${image_file}"; then
+  log "ERROR: raw image not fetchable at http://127.0.0.1/${serve_path}/${image_file}"
+  exit 1
+fi
+log "http server confirmed serving the raw image"
+
+# Fixed window: knowing when the import ends would need an API key on this
+# host. Non-loopback GETs in this log are the platform fetcher.
+log "serving for ${serve_seconds}s"
+sleep "${serve_seconds}"

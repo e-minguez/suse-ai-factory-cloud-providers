@@ -1,0 +1,26 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: aws   Region: us-east-1   Cluster: suse-ai-factory   Catalog: file (2026-09-01T00:00:00Z)
+
+  RESOURCE                                                 ROLE           POOL  QTY  TYPE                   USD/hr     1h     8h    24h      7d     30d
+  jumphost                                                 jumphost               1  c6i.xlarge             0.1700   0.17   1.36   4.08   28.56  122.40
+  jumphost root disk (gp3) (100 GB)                        jumphost               1  storage:disk      0.000110/GB   0.01   0.09   0.26    1.84    7.89
+  public IPv4 (jumphost)                                   jumphost               1  public-ipv4            0.0050   0.01   0.04   0.12    0.84    3.60
+  control plane                                            control_plane  cp      3  m7i.xlarge             0.2016   0.60   4.84  14.52  101.61  435.46
+  control plane root disk (gp3) (100 GB)                   control_plane  cp      3  storage:disk      0.000110/GB   0.03   0.26   0.79    5.52   23.67
+  network load balancer (api, internal)                    lb                     1  lb                     0.0225   0.02   0.18   0.54    3.78   16.20
+  network load balancer (public)                           lb                     1  lb                     0.0225   0.02   0.18   0.54    3.78   16.20
+  public IPv4 (public NLB, one per zone)                   lb                     3  public-ipv4            0.0050   0.02   0.12   0.36    2.52   10.80
+  nat gateway                                              network                1  nat-gateway            0.0450   0.05   0.36   1.08    7.56   32.40
+  public IPv4 (nat gateway)                                network                1  public-ipv4            0.0050   0.01   0.04   0.12    0.84    3.60
+  image snapshot (8 GB)                                    image                  1  storage:snapshot  0.000068/GB  <0.01  <0.01   0.01    0.09    0.39
+  vpc, subnets, routes, security groups, iam, s3 endpoint  network                   -- free --                 --     --     --     --      --      --
+                                                                                                             TOTAL   0.93   7.47  22.42  156.94  672.61
+
+  All amounts in USD.
+  Not included:
+    - data transfer: traffic-dependent
+    - network load balancer capacity units (LCU): traffic-dependent
+    - nat gateway data processing: per-GB, traffic-dependent
+    - raw image in S3: stored for one day (until destroy with keep_build_artifacts); storage and requests are small and not estimated
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.

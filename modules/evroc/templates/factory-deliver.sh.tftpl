@@ -1,0 +1,53 @@
+# Prints the one hotswap SCSI disk. Return 1 when none is attached yet, 2 when
+# several are: the exactly-one rule keeps dd off the root disk.
+resolve_target_disk() {
+  local matches
+  matches=$(find /dev/disk/by-id -maxdepth 1 -name 'scsi-0QEMU_QEMU_HARDDISK_*' \
+    -exec readlink -f {} \; 2>/dev/null | sort -u)
+  [ -n "$matches" ] || return 1
+  if [ "$(printf '%s\n' "$matches" | wc -l)" -ne 1 ]; then
+    log "ERROR: more than one hotswap SCSI disk attached, refusing to guess:"
+    printf '%s\n' "$matches" | while IFS= read -r line; do log "  $line"; done
+    return 2
+  fi
+  printf '%s\n' "$matches"
+}
+
+# The attachment can land after this script starts: wait up to 20 x 15 s.
+TARGET=""
+for attempt in $(seq 1 20); do
+  rc=0
+  TARGET=$(resolve_target_disk) || rc=$?
+  [ "$rc" -eq 0 ] && break
+  TARGET=""
+  [ "$rc" -eq 2 ] && exit 1
+  log "target disk not found yet (attempt $attempt/20), waiting 15s"
+  sleep 15
+done
+if [ -z "$TARGET" ]; then
+  log "ERROR: target disk never appeared"
+  exit 1
+fi
+log "target disk: $TARGET"
+
+# No conv=sparse: the disk outlives the build host and rebuilds, so zero
+# regions must be written or an earlier image shows through.
+dd if="$1" of="$TARGET" bs=4M conv=fsync
+sync
+blockdev --flushbufs "$TARGET"
+
+SIG=$(dd if="$TARGET" bs=1 skip=512 count=8 status=none)
+if [ "$SIG" != "EFI PART" ]; then
+  log "ERROR: no GPT signature at offset 512 on $TARGET, got: $SIG"
+  exit 1
+fi
+log "GPT signature confirmed"
+sha256sum "$1" | cut -d' ' -f1 > "$STATE_DIR/image.sha256"
+
+# Published here, not from on_step finished: a failed publish must fail the
+# build, and on_step failures only warn.
+echo "$BUILD_ID" > "$DONE_FILE"
+if ! publish "done" "image written to $TARGET"; then
+  log "ERROR: image is on $TARGET but the relay never accepted done"
+  exit 1
+fi

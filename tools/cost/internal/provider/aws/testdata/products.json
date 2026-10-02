@@ -1,0 +1,629 @@
+{
+  "AmazonEC2": [
+    {
+      "product": {
+        "productFamily": "Compute Instance",
+        "sku": "SKUM7IXL1",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "instanceType": "m7i.xlarge",
+          "operatingSystem": "Linux",
+          "preInstalledSw": "NA",
+          "capacitystatus": "Used",
+          "tenancy": "Shared",
+          "licenseModel": "No License required",
+          "usagetype": "BoxUsage:m7i.xlarge"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUM7IXL1.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUM7IXL1",
+            "priceDimensions": {
+              "SKUM7IXL1.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUM7IXL1.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.2016000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Compute Instance",
+        "sku": "SKUM7IXL2",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "instanceType": "m7i.xlarge",
+          "operatingSystem": "Windows",
+          "preInstalledSw": "NA",
+          "capacitystatus": "Used",
+          "tenancy": "Shared",
+          "licenseModel": "No License required",
+          "usagetype": "BoxUsage:m7i.xlarge"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUM7IXL2.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUM7IXL2",
+            "priceDimensions": {
+              "SKUM7IXL2.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUM7IXL2.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.3880000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Compute Instance",
+        "sku": "SKUM7IXL3",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "instanceType": "m7i.xlarge",
+          "operatingSystem": "Linux",
+          "preInstalledSw": "NA",
+          "capacitystatus": "Used",
+          "tenancy": "Dedicated",
+          "licenseModel": "No License required",
+          "usagetype": "BoxUsage:m7i.xlarge"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUM7IXL3.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUM7IXL3",
+            "priceDimensions": {
+              "SKUM7IXL3.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUM7IXL3.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.2300000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Compute Instance",
+        "sku": "SKUM7IXL4",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "instanceType": "m7i.xlarge",
+          "operatingSystem": "Linux",
+          "preInstalledSw": "NA",
+          "capacitystatus": "AllocatedCapacityReservation",
+          "tenancy": "Shared",
+          "licenseModel": "No License required",
+          "usagetype": "BoxUsage:m7i.xlarge"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUM7IXL4.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUM7IXL4",
+            "priceDimensions": {
+              "SKUM7IXL4.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUM7IXL4.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.2016000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Compute Instance",
+        "sku": "SKUC6IXL1",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "instanceType": "c6i.xlarge",
+          "operatingSystem": "Linux",
+          "preInstalledSw": "NA",
+          "capacitystatus": "Used",
+          "tenancy": "Shared",
+          "licenseModel": "No License required",
+          "usagetype": "BoxUsage:c6i.xlarge"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUC6IXL1.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUC6IXL1",
+            "priceDimensions": {
+              "SKUC6IXL1.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUC6IXL1.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.1700000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Compute Instance",
+        "sku": "SKUG5N2XL",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "instanceType": "g5.2xlarge",
+          "operatingSystem": "Linux",
+          "preInstalledSw": "NA",
+          "capacitystatus": "Used",
+          "tenancy": "Shared",
+          "licenseModel": "No License required",
+          "usagetype": "BoxUsage:g5.2xlarge"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUG5N2XL.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUG5N2XL",
+            "priceDimensions": {
+              "SKUG5N2XL.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUG5N2XL.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "1.2120000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Storage",
+        "sku": "SKUGP3",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "volumeApiName": "gp3",
+          "volumeType": "General Purpose",
+          "usagetype": "EBS:VolumeUsage.gp3"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUGP3.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUGP3",
+            "priceDimensions": {
+              "SKUGP3.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "GB-Mo",
+                "description": "on demand",
+                "rateCode": "SKUGP3.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0800000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Storage",
+        "sku": "SKUGP2",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "volumeApiName": "gp2",
+          "volumeType": "General Purpose",
+          "usagetype": "EBS:VolumeUsage.gp2"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUGP2.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUGP2",
+            "priceDimensions": {
+              "SKUGP2.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "GB-Mo",
+                "description": "on demand",
+                "rateCode": "SKUGP2.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.1000000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "System Operation",
+        "sku": "SKUGP3IOPS",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "volumeApiName": "gp3",
+          "usagetype": "EBS:VolumeP-IOPS.gp3"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUGP3IOPS.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUGP3IOPS",
+            "priceDimensions": {
+              "SKUGP3IOPS.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "IOPS-Mo",
+                "description": "on demand",
+                "rateCode": "SKUGP3IOPS.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0050000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Storage Snapshot",
+        "sku": "SKUSNAPARCH",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "EBS:SnapshotArchiveStorage"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUSNAPARCH.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUSNAPARCH",
+            "priceDimensions": {
+              "SKUSNAPARCH.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "GB-Mo",
+                "description": "on demand",
+                "rateCode": "SKUSNAPARCH.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0125000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Storage Snapshot",
+        "sku": "SKUSNAP",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "EBS:SnapshotUsage"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUSNAP.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUSNAP",
+            "priceDimensions": {
+              "SKUSNAP.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "GB-Mo",
+                "description": "on demand",
+                "rateCode": "SKUSNAP.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0500000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "NAT Gateway",
+        "sku": "SKUNATB",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "NatGateway-Bytes",
+          "group": "NGW:NatGateway"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUNATB.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUNATB",
+            "priceDimensions": {
+              "SKUNATB.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "GB",
+                "description": "on demand",
+                "rateCode": "SKUNATB.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0450000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "NAT Gateway",
+        "sku": "SKUNATH",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "NatGateway-Hours",
+          "group": "NGW:NatGateway"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUNATH.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUNATH",
+            "priceDimensions": {
+              "SKUNATH.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUNATH.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0450000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "AmazonVPC": [
+    {
+      "product": {
+        "productFamily": "",
+        "sku": "SKUIPIDLE",
+        "attributes": {
+          "group": "VPCPublicIPv4Address",
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "USE1-PublicIPv4:IdleAddress"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUIPIDLE.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUIPIDLE",
+            "priceDimensions": {
+              "SKUIPIDLE.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUIPIDLE.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0050000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "",
+        "sku": "SKUIPUSE",
+        "attributes": {
+          "group": "VPCPublicIPv4Address",
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "USE1-PublicIPv4:InUseAddress"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUIPUSE.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUIPUSE",
+            "priceDimensions": {
+              "SKUIPUSE.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUIPUSE.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0050000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "AWSELB": [
+    {
+      "product": {
+        "productFamily": "Load Balancer-Network",
+        "sku": "SKULCU",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "LCUUsage"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKULCU.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKULCU",
+            "priceDimensions": {
+              "SKULCU.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "LCU-Hrs",
+                "description": "on demand",
+                "rateCode": "SKULCU.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0060000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Load Balancer-Network",
+        "sku": "SKUNLB",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "LoadBalancerUsage"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUNLB.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUNLB",
+            "priceDimensions": {
+              "SKUNLB.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUNLB.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0225000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "productFamily": "Load Balancer-Application",
+        "sku": "SKUALB",
+        "attributes": {
+          "regionCode": "us-east-1",
+          "servicecode": "x",
+          "usagetype": "LoadBalancerUsage"
+        }
+      },
+      "serviceCode": "x",
+      "version": "20260901000000",
+      "publicationDate": "2026-09-01T00:00:00Z",
+      "terms": {
+        "OnDemand": {
+          "SKUALB.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "SKUALB",
+            "priceDimensions": {
+              "SKUALB.JRTCKXETXF.6YS6EN2CT7": {
+                "unit": "Hrs",
+                "description": "on demand",
+                "rateCode": "SKUALB.JRTCKXETXF.6YS6EN2CT7",
+                "pricePerUnit": {
+                  "USD": "0.0225000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

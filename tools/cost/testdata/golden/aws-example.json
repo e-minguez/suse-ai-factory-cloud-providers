@@ -1,0 +1,360 @@
+{
+  "disclaimer": "ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.",
+  "provider": "aws",
+  "region": "us-east-1",
+  "cluster_name": "suse-ai-factory",
+  "currency": "USD",
+  "catalog": {
+    "source": "file",
+    "as_of": "2026-09-01T00:00:00Z"
+  },
+  "durations": [
+    "1h",
+    "8h",
+    "24h",
+    "7d",
+    "30d"
+  ],
+  "resources": [
+    {
+      "resource": "jumphost",
+      "kind": "compute",
+      "role": "jumphost",
+      "rate_id": "c6i.xlarge",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.17,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.17,
+        "24h": 4.08,
+        "30d": 122.4,
+        "7d": 28.56,
+        "8h": 1.36
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "jumphost root disk (gp3)",
+      "kind": "storage",
+      "role": "jumphost",
+      "rate_id": "storage:disk",
+      "qty": 1,
+      "size_gb": 100,
+      "rate_found": true,
+      "hourly": 0.00011,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.010959,
+        "24h": 0.263014,
+        "30d": 7.890411,
+        "7d": 1.841096,
+        "8h": 0.087671
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "public IPv4 (jumphost)",
+      "kind": "fixed",
+      "role": "jumphost",
+      "rate_id": "public-ipv4",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.005,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.005,
+        "24h": 0.12,
+        "30d": 3.6,
+        "7d": 0.84,
+        "8h": 0.04
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "control plane",
+      "kind": "compute",
+      "role": "control_plane",
+      "pool": "cp",
+      "rate_id": "m7i.xlarge",
+      "qty": 3,
+      "rate_found": true,
+      "hourly": 0.2016,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.6048,
+        "24h": 14.5152,
+        "30d": 435.456,
+        "7d": 101.6064,
+        "8h": 4.8384
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "control plane root disk (gp3)",
+      "kind": "storage",
+      "role": "control_plane",
+      "pool": "cp",
+      "rate_id": "storage:disk",
+      "qty": 3,
+      "size_gb": 100,
+      "rate_found": true,
+      "hourly": 0.00011,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.032877,
+        "24h": 0.789042,
+        "30d": 23.671233,
+        "7d": 5.523288,
+        "8h": 0.263013
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "network load balancer (api, internal)",
+      "kind": "fixed",
+      "role": "lb",
+      "rate_id": "lb",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.0225,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.0225,
+        "24h": 0.54,
+        "30d": 16.2,
+        "7d": 3.78,
+        "8h": 0.18
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "network load balancer (public)",
+      "kind": "fixed",
+      "role": "lb",
+      "rate_id": "lb",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.0225,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.0225,
+        "24h": 0.54,
+        "30d": 16.2,
+        "7d": 3.78,
+        "8h": 0.18
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "public IPv4 (public NLB, one per zone)",
+      "kind": "fixed",
+      "role": "lb",
+      "rate_id": "public-ipv4",
+      "qty": 3,
+      "rate_found": true,
+      "hourly": 0.005,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.015,
+        "24h": 0.36,
+        "30d": 10.8,
+        "7d": 2.52,
+        "8h": 0.12
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "nat gateway",
+      "kind": "fixed",
+      "role": "network",
+      "rate_id": "nat-gateway",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.045,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.045,
+        "24h": 1.08,
+        "30d": 32.4,
+        "7d": 7.56,
+        "8h": 0.36
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "public IPv4 (nat gateway)",
+      "kind": "fixed",
+      "role": "network",
+      "rate_id": "public-ipv4",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.005,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.005,
+        "24h": 0.12,
+        "30d": 3.6,
+        "7d": 0.84,
+        "8h": 0.04
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "image snapshot",
+      "kind": "storage",
+      "role": "image",
+      "rate_id": "storage:snapshot",
+      "qty": 1,
+      "size_gb": 8,
+      "rate_found": true,
+      "hourly": 0.000068,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.000548,
+        "24h": 0.013151,
+        "30d": 0.394521,
+        "7d": 0.092055,
+        "8h": 0.004384
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "vpc, subnets, routes, security groups, iam, s3 endpoint",
+      "kind": "free",
+      "role": "network",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0,
+        "24h": 0,
+        "30d": 0,
+        "7d": 0,
+        "8h": 0
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    }
+  ],
+  "totals": {
+    "1h": 0.934184,
+    "24h": 22.420407,
+    "30d": 672.612165,
+    "7d": 156.942839,
+    "8h": 7.473468
+  },
+  "build_only_totals": {
+    "1h": 0,
+    "24h": 0,
+    "30d": 0,
+    "7d": 0,
+    "8h": 0
+  },
+  "recurring_after_destroy_per_month": 0,
+  "excluded": [
+    {
+      "resource": "data transfer",
+      "reason": "traffic-dependent"
+    },
+    {
+      "resource": "network load balancer capacity units (LCU)",
+      "reason": "traffic-dependent"
+    },
+    {
+      "resource": "nat gateway data processing",
+      "reason": "per-GB, traffic-dependent"
+    },
+    {
+      "resource": "raw image in S3",
+      "reason": "stored for one day (until destroy with keep_build_artifacts); storage and requests are small and not estimated"
+    }
+  ],
+  "incomplete": false,
+  "warnings": [],
+  "notes": []
+}

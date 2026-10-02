@@ -1,0 +1,57 @@
+# --------------------------------------------------------------------------
+# common-all.tfvars.example
+#
+# Template for values shared by EVERY provider: credentials, SSH access and
+# the AI Factory release/components choice. Copy to common-all.tfvars (never
+# committed -- see .gitignore) and fill in real values, or pass it directly
+# with -var-file.
+#
+# Load order (later wins): common-all.tfvars -> common-<provider>.tfvars ->
+# per-cluster terraform.tfvars (deploy.sh passes them in that order).
+# common-all.tfvars may only set variables that every provider declares:
+# Terraform errors on a -var-file value for an undeclared variable, so
+# provider-only settings (region, sizes, API keys, ...) belong in
+# common-<provider>.tfvars instead. Do not set image_rebuild here; use
+# deploy.sh --rebuild.
+# --------------------------------------------------------------------------
+
+# CIDRs allowed to reach the admin-facing endpoints (SSH to the jumphost and,
+# where the provider restricts it, the public Kubernetes API). Your IP(s)/VPN
+# range, never 0.0.0.0/0.
+admin_cidrs = ["REPLACE-ME/32"]
+
+# At least one public key, injected onto node_username on every node (and
+# onto root only if permit_root_ssh is true).
+ssh_authorized_keys = ["REPLACE-ME-ssh-ed25519-OR-ssh-rsa-PUBLIC-KEY"]
+
+# Generate both with: openssl passwd -6
+# root's is used by `su -` and on the console, the node user's on the console;
+# SSH logins use ssh_authorized_keys. Use different passwords.
+root_password_hash      = "REPLACE-ME"
+node_user_password_hash = "REPLACE-ME"
+
+# Unprivileged SSH login on every node. Optional -- "suse" is the module
+# default.
+# node_username = "suse"
+
+# Allow `ssh root@<node>`. Off by default; rebuilds the image when changed.
+# permit_root_ssh = false
+
+# Registry credentials. Application Collection is required with
+# local-path-provisioner (in the default components) or suse-storage; the SUSE
+# registry and NVIDIA NGC ones are optional. With aif-operator, set all of them
+# so AI Factory can pull its workloads right after deployment; plan warns about
+# any that are missing.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# Which SUSE AI Factory Helm charts to enable. Changing this rebuilds the
+# image and replaces every node.
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# AI Factory release: a version (X.Y.Z, resolved to the SUSE/aif tag
+# aif-operator-<version>) or a manifest URL (http:// or https://).
+# aif_release = "2.2.0"

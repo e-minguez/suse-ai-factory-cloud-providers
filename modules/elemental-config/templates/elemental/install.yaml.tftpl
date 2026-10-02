@@ -1,0 +1,15 @@
+schema: v0
+
+bootloader: grub
+
+# ignition.platform.id selects where per-node Ignition config is read from.
+kernelCmdLine: ${jsonencode(kernel_cmdline)}
+%{ if fips ~}
+
+# Every node must be FIPS-ready once this is set.
+cryptoPolicy: fips
+%{ endif ~}
+
+# The image is EFI-only; the platform must boot it with UEFI.
+raw:
+  diskSize: ${disk_size}

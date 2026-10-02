@@ -1,0 +1,38 @@
+#cloud-config
+# Jumphost user_data: accounts, the factory script and the elemental config
+# tree, all inline (gz+b64). Instances read nothing from S3.
+disable_root: false
+
+# Accounts are listed explicitly, without cloud-init's `default`, so no
+# unrequested ec2-user gets the keys. root stays: jumphost_username = "" is a
+# root-only jumphost, and disable_root does not install a key.
+users:
+%{ if jumphost_username != "" ~}
+  - name: ${jumphost_username}
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+      - ${key}
+%{ endfor ~}
+%{ endif ~}
+  - name: root
+    ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+      - ${key}
+%{ endfor ~}
+
+# Config files carry credentials: mode 0600.
+write_files:
+%{ for f in files ~}
+  - path: ${f.path}
+    owner: root:root
+    permissions: '${f.mode}'
+    encoding: gz+b64
+    content: ${f.content}
+%{ endfor ~}
+
+# The factory script logs to ${log_file} itself; detached so cloud-init finishes.
+runcmd:
+  - 'nohup setsid /opt/image-factory.sh </dev/null >/dev/null 2>&1 &'

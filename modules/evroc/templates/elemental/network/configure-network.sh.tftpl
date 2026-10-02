@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# elemental network/configure-network.sh hook, run in the initrd on first boot.
+# Link-level only (MTU, IPv6); expects one NIC and does nothing otherwise.
+# ip-link and /proc, not nmstate; bash builtins only (read-only initrd sandbox).
+# See docs/decisions/004-evroc-module-rationale.md.
+set -euo pipefail
+
+log() {
+  echo "[configure-network] $*"
+}
+
+die() {
+  log "ERROR: $*"
+  exit 1
+}
+
+# NIC count from /sys, as write-node-ip.sh.tftpl counts it.
+physical_ifaces=()
+for sys_path in /sys/class/net/*/device; do
+  [ -e "$sys_path" ] || continue
+  ifname=$${sys_path%/device}
+  ifname=$${ifname##*/}
+  physical_ifaces+=("$ifname")
+done
+log "found $${#physical_ifaces[@]} physical NIC(s) via /sys/class/net: $${physical_ifaces[*]:-none}"
+
+if [ "$${#physical_ifaces[@]}" -eq 0 ]; then
+  die "no physical NIC found under /sys/class/net -- nothing to configure"
+fi
+
+if [ "$${#physical_ifaces[@]}" -gt 1 ]; then
+  # Unexpected shape: keep NetworkManager's defaults rather than guess a primary NIC.
+  log "WARNING: found $${#physical_ifaces[@]} physical NICs ($${physical_ifaces[*]}), expected exactly 1 on evroc."
+  log "WARNING: taking no nmstate action -- leaving every interface as NetworkManager's own defaults configured it."
+  log "network configuration skipped (multi-NIC shape not handled by this script)"
+  exit 0
+fi
+
+iface=$${physical_ifaces[0]}
+log "single physical NIC $iface -- applying MTU/IPv6 policy directly, no nmstate document, no nmc invocation"
+
+ip link set dev "$iface" mtu ${vpc_mtu}
+log "set mtu ${vpc_mtu} on $iface directly via ip-link"
+
+if [ -w "/proc/sys/net/ipv6/conf/$iface/disable_ipv6" ]; then
+  echo 1 > "/proc/sys/net/ipv6/conf/$iface/disable_ipv6"
+  log "disabled IPv6 on $iface via sysctl"
+else
+  log "could not disable IPv6 on $iface via sysctl (not writable) -- leaving it as-is, not fatal"
+fi
+
+# Diagnostic only: log the address after a short DHCP wait; the prefix is not enforced.
+sleep 2
+log "$iface current address(es): $(ip -4 -o addr show dev "$iface" scope global 2>&1) (expected prefix-length ${vpc_prefix})"
+
+# A VM can come up with its network port unlit (NO-CARRIER). Nothing here can fix
+# it, so warn instead of exiting.
+carrier=""
+if [ -r "/sys/class/net/$iface/carrier" ]; then
+  # EINVAL on an administratively-down interface; only "0" indicates a fault.
+  read -r carrier < "/sys/class/net/$iface/carrier" || true
+fi
+if [ "$carrier" = "0" ]; then
+  log "WARNING: interface $iface reports NO CARRIER -- its network port is not up."
+  log "WARNING: the configuration above is correct and will activate by itself if the link ever comes up."
+  log "WARNING: until then this node cannot reach the cluster. This is a link-layer fault, not a"
+  log "WARNING: configuration one -- check the VM's network attachment on evroc."
+fi
+
+log "network configuration complete (hostname is set separately, via Ignition user_data)"

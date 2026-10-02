@@ -1,0 +1,14 @@
+{
+  "region": "us-east-1",
+  "fetched_at": "2026-09-01T00:00:00Z",
+  "plans": {
+    "c6i.xlarge": {"hourly_micros": 170000, "min_hours": 0.016666666666666666},
+    "g5.2xlarge": {"hourly_micros": 1212000, "min_hours": 0.016666666666666666},
+    "m7i.xlarge": {"hourly_micros": 201600, "min_hours": 0.016666666666666666},
+    "lb": {"hourly_micros": 22500, "min_hours": 1},
+    "nat-gateway": {"hourly_micros": 45000, "min_hours": 1},
+    "public-ipv4": {"hourly_micros": 5000, "min_hours": 1},
+    "storage:disk": {"gb_monthly_micros": 80000, "min_hours": 0.016666666666666666},
+    "storage:snapshot": {"gb_monthly_micros": 50000}
+  }
+}

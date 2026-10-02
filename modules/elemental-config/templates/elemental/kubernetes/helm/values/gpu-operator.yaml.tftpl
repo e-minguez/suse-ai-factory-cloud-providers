@@ -1,0 +1,6 @@
+# Overrides the manifest's driver source; see docs/workarounds.md.
+# The operator pulls <repository>/driver:<version>-<uname -r>-sles16.1.
+driver:
+  repository: ${jsonencode(repository)}
+  usePrecompiled: true
+  version: ${jsonencode(version)}

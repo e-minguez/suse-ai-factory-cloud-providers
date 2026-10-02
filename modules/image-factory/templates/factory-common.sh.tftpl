@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# Builds the Elemental raw image with podman. Common steps live here; the
+# provider supplies the hooks (is_already_built, pre_build, on_step,
+# deliver_raw, on_exit). Delivering the image is the hook's job.
+set -euo pipefail
+
+exec >> "${log_file}" 2>&1
+# fd 3 is the log sink: functions that return values through $(...) must not
+# capture log lines.
+exec 3>> "${log_file}"
+
+log() {
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >&3
+}
+
+CONFIG_DIR="${config_dir}"
+ELEMENTAL_IMAGE="${elemental_image}"
+BUILD_ID="${build_id}"
+STATE_DIR="${state_dir}"
+DONE_FILE="$STATE_DIR/done"
+RAW_IMAGE=""
+STEP="start"
+mkdir -p "$CONFIG_DIR" "$STATE_DIR"
+
+# --- provider hooks --------------------------------------------------------
+
+is_already_built() {
+${hook_is_already_built}
+}
+
+pre_build() {
+${hook_pre_build}
+}
+
+on_step() {
+${hook_on_step}
+}
+
+deliver_raw() {
+${hook_deliver_raw}
+}
+
+on_exit() {
+${hook_on_exit}
+}
+
+# --- common steps ----------------------------------------------------------
+
+step() {
+  STEP=$1
+  log "step $1: $2"
+  on_step "$1" "$2" || log "WARNING: on_step hook failed for $1 (continuing)"
+}
+
+cleanup() {
+  local status=$?
+  if [ "$status" -ne 0 ]; then
+    rm -f "$DONE_FILE"
+    log "build failed (exit $status) at step $STEP"
+    on_step failed "step $STEP exit $status" || true
+  fi
+  if [ -n "$RAW_IMAGE" ] && [ -f "$RAW_IMAGE" ]; then
+    log "removing $RAW_IMAGE"
+    rm -f "$RAW_IMAGE"
+  fi
+  on_exit "$status" || log "WARNING: on_exit hook failed (continuing)"
+  log "=== image-factory exiting with status $status ==="
+  exit "$status"
+}
+trap cleanup EXIT
+
+log "=== image-factory starting (build $BUILD_ID) ==="
+
+step prereqs "installing ${packages}"
+# Leap 16 mirrors 404 on zypper's parallel package preload; see docs/workarounds.md.
+export ZYPP_PCK_PRELOAD=0
+zypper -n --gpg-auto-import-keys refresh \
+  || log "zypper refresh reported a non-zero exit, continuing"
+zypper -n install ${packages} \
+  || log "zypper install reported a non-zero exit (packages may already be present), continuing"
+for cmd in ${packages}; do
+  if ! command -v "$cmd" >/dev/null; then
+    log "ERROR: $cmd is not installed after zypper install"
+    exit 1
+  fi
+done
+systemctl enable --now podman.socket
+
+step pre_build "provider preparation"
+pre_build
+
+step check "checking for an existing build"
+if is_already_built; then
+  log "image already built, nothing to do"
+  echo "$BUILD_ID" > "$DONE_FILE"
+  step finished "already built"
+  exit 0
+fi
+
+step customize "running elemental customize against $CONFIG_DIR"
+# No --local: it needs every OCI image in the local store.
+# label=disable: SELinux is enforcing and the build needs broad access.
+# Each attempt starts clean so a partial raw is never picked up.
+customize_attempts=${customize_attempts}
+for ((attempt = 1; ; attempt++)); do
+  rm -f "$CONFIG_DIR"/image-*.raw
+  podman run --rm \
+    --security-opt label=disable \
+    -v "$CONFIG_DIR:/config" \
+    "$ELEMENTAL_IMAGE" customize --type raw && break
+  if ((attempt >= customize_attempts)); then
+    log "ERROR: elemental customize failed $customize_attempts times, giving up"
+    exit 1
+  fi
+  log "elemental customize failed (attempt $attempt/$customize_attempts), retrying in ${customize_retry_delay}s"
+  on_step customize "retrying (attempt $((attempt + 1))/$customize_attempts)" || true
+  sleep ${customize_retry_delay}
+done
+
+step locate "locating produced raw image"
+RAW_IMAGE=""
+for f in "$CONFIG_DIR"/image-*.raw; do
+  [ -e "$f" ] || continue
+  if [ -z "$RAW_IMAGE" ] || [ "$f" -nt "$RAW_IMAGE" ]; then RAW_IMAGE=$f; fi
+done
+if [ -z "$RAW_IMAGE" ]; then
+  log "ERROR: no $CONFIG_DIR/image-*.raw produced by elemental customize"
+  exit 1
+fi
+log "found raw image: $RAW_IMAGE ($(du -h --apparent-size "$RAW_IMAGE" | cut -f1) apparent, $(du -h "$RAW_IMAGE" | cut -f1) on disk)"
+
+step deliver "delivering $RAW_IMAGE"
+deliver_raw "$RAW_IMAGE"
+
+echo "$BUILD_ID" > "$DONE_FILE"
+step finished "image delivered"
+log "=== image-factory finished successfully ==="

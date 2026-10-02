@@ -1,0 +1,6 @@
+# No nodes: list. Roles come from per-node /var/lib/elemental/runtime.env
+# (see ignition.tf), so changing the node set never changes the image.
+network:
+  apiVIP: ${api_vip}
+  apiVIPMode: ${api_vip_mode}
+  apiHost: ${api_host}

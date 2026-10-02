@@ -1,0 +1,14 @@
+# Flat RKE2 server config; elemental derives the join URL from network.apiVIP.
+token: ${token}
+selinux: true
+embedded-registry: false
+# Group-readable kubeconfig: node_username reads it without root (scripts/kubeconfig.sh).
+write-kubeconfig-group: ${jsonencode(node_username)}
+write-kubeconfig-mode: "0640"
+ingress-controller: ${ingress_controller}
+%{ if length(tls_san) > 0 ~}
+tls-san:
+%{ for s in tls_san ~}
+  - ${s}
+%{ endfor ~}
+%{ endif ~}

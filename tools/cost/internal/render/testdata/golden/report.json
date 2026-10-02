@@ -1,0 +1,213 @@
+{
+  "disclaimer": "ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.",
+  "provider": "evroc",
+  "region": "se-sto",
+  "cluster_name": "demo",
+  "currency": "EUR",
+  "catalog": {
+    "source": "ratecard",
+    "as_of": "2026-09-11"
+  },
+  "durations": [
+    "1h",
+    "24h",
+    "30d"
+  ],
+  "resources": [
+    {
+      "resource": "control plane",
+      "kind": "compute",
+      "role": "control_plane",
+      "pool": "cp",
+      "rate_id": "c1a.m",
+      "qty": 3,
+      "rate_found": true,
+      "hourly": 0.206,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.618,
+        "24h": 14.832,
+        "30d": 444.96
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false
+      }
+    },
+    {
+      "resource": "gpu node",
+      "kind": "compute",
+      "role": "gpu",
+      "pool": "gpu",
+      "rate_id": "gn-l40s.s",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 1.5,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 1.5,
+        "24h": 36,
+        "30d": 1080
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false
+      }
+    },
+    {
+      "resource": "worker node",
+      "kind": "compute",
+      "role": "worker",
+      "pool": "w",
+      "rate_id": "c1a.m",
+      "qty": 0,
+      "rate_found": true,
+      "hourly": 0.206,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0,
+        "24h": 0,
+        "30d": 0
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false
+      }
+    },
+    {
+      "resource": "load balancer",
+      "kind": "fixed",
+      "role": "lb",
+      "rate_id": "lb",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.015,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.015,
+        "24h": 0.36,
+        "30d": 10
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": true
+      }
+    },
+    {
+      "resource": "node disk",
+      "kind": "storage",
+      "role": "control_plane",
+      "pool": "cp",
+      "rate_id": "storage:disk",
+      "qty": 3,
+      "size_gb": 100,
+      "rate_found": true,
+      "hourly": 0.000137,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.0411,
+        "24h": 0.9864,
+        "30d": 29.592
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false
+      }
+    },
+    {
+      "resource": "builder",
+      "kind": "compute",
+      "role": "builder",
+      "rate_id": "c1a.m",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.206,
+      "build_only": true,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.206,
+        "24h": 4.944,
+        "30d": 148.32
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false
+      }
+    },
+    {
+      "resource": "image snapshot",
+      "kind": "storage",
+      "role": "image",
+      "rate_id": "storage:snapshot",
+      "qty": 1,
+      "size_gb": 8,
+      "rate_found": true,
+      "hourly": 0.000068,
+      "build_only": false,
+      "survives_destroy": true,
+      "costs": {
+        "1h": 0.000548,
+        "24h": 0.013151,
+        "30d": 0.394521
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false
+      }
+    },
+    {
+      "resource": "vpc",
+      "kind": "free",
+      "role": "network",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0,
+        "24h": 0,
+        "30d": 0
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false
+      }
+    }
+  ],
+  "totals": {
+    "1h": 2.174648,
+    "24h": 52.191551,
+    "30d": 1564.946521
+  },
+  "build_only_totals": {
+    "1h": 0.206,
+    "24h": 4.944,
+    "30d": 148.32
+  },
+  "recurring_after_destroy_per_month": 0.4,
+  "excluded": [
+    {
+      "resource": "outbound transfer",
+      "reason": "traffic-dependent"
+    }
+  ],
+  "incomplete": false,
+  "warnings": [
+    "tfvars sets \"x\", which is not declared in the module's variables"
+  ],
+  "notes": []
+}

@@ -1,0 +1,28 @@
+# Runs on control planes only (hostPort 80/443) and requires PROXY protocol
+# from the VPC CIDR; /ping on 8080 is the health-check entrypoint.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: rke2-traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: "true"
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: CriticalAddonsOnly
+        operator: Exists
+    ports:
+      traefik:
+        hostPort: 8080
+      web:
+        proxyProtocol:
+          trustedIPs:
+            - ${vpc_cidr}
+      websecure:
+        proxyProtocol:
+          trustedIPs:
+            - ${vpc_cidr}

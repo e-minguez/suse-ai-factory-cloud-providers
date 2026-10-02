@@ -1,0 +1,11 @@
+{
+  "format_version": "1.0",
+  "values": {"root_module": {"child_modules": [{"address": "module.ai_factory", "resources": [
+    {"address": "module.ai_factory.aws_instance.jumphost[0]", "mode": "managed", "type": "aws_instance", "name": "jumphost", "index": 0,
+     "values": {"public_ip": "203.0.113.50", "private_ip": "10.0.0.50"}},
+    {"address": "module.ai_factory.terraform_data.build_access[0]", "mode": "managed", "type": "terraform_data", "name": "build_access", "index": 0,
+     "values": {"input": {"build_id": "new123",
+       "jumphost": {"public_ip": "203.0.113.50", "private_ip": "10.0.0.50", "ssh_user": "suse"},
+       "build_status": {"method": "s3", "url_or_key": "s3://b/images/c-new123.raw", "hosts": ["10.0.0.50"]}}}}
+  ]}]}}
+}

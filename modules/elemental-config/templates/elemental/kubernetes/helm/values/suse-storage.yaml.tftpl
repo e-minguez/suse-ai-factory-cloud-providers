@@ -1,0 +1,9 @@
+# registryUrl points the chart images at Application Collection.
+privateRegistry:
+  createSecret: true
+  registryUrl: dp.apps.rancher.io
+  registryUser: ${jsonencode(appco_username)}
+  registryPasswd: ${jsonencode(appco_password)}
+  registrySecret: application-collection
+defaultSettings:
+  createDefaultDiskLabeledNodes: true

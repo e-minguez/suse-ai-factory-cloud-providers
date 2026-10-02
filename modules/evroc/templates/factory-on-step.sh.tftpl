@@ -1,0 +1,31 @@
+# Status relay client. Defined here so the helpers exist from the first step;
+# functions defined in on_step are global and deliver_raw reuses them.
+STATUS_URL="http://127.0.0.1:${status_relay_port}/zones"
+if [ -s /etc/image-factory/status-url ]; then
+  STATUS_URL=$(cat /etc/image-factory/status-url)
+fi
+
+push() {
+  local i
+  for ((i = 1; i <= $3; i++)); do
+    curl -fsS -m 10 -T "$1" "$2" && return 0
+    sleep 5
+  done
+  log "WARNING: could not push $1 to $2 after $3 attempt(s)"
+  return 1
+}
+
+# Line format "<state> <build id> <text>". Only building tolerates misses;
+# done and failed retry for about 5 minutes.
+publish() {
+  local tries=3
+  [ "$1" = building ] || tries=20
+  printf '%s %s %s\n' "$1" "$BUILD_ID" "$2" > "$STATE_DIR/status"
+  push "$STATE_DIR/status" "$STATUS_URL/${zone}" "$tries"
+}
+
+case "$1" in
+  finished) ;;
+  failed) publish failed "$2" || true ;;
+  *) publish building "$1: $2" || true ;;
+esac

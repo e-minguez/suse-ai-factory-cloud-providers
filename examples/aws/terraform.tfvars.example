@@ -1,0 +1,111 @@
+# Per-cluster values. deploy.sh layers var files, later wins: common-all.tfvars
+# (values every provider declares), examples/common-aws.tfvars, then this file.
+# Values already set in a lower layer can be dropped here.
+#
+# AWS credentials are not set here: the provider reads them from the usual
+# sources (environment, AWS_PROFILE, instance role, SSO). The AWS CLI must be
+# on PATH: modules/aws/scripts/wait-for-raw.sh uses it during apply.
+#
+# Do not set image_rebuild here: deploy.sh --rebuild manages it.
+
+region = "us-east-1"
+
+# Availability zone suffixes to span. Empty (default) uses the first three
+# zones of the region.
+# zones = ["a", "b", "c"]
+
+# CIDRs allowed to SSH into the build host and reach the Kubernetes API.
+admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
+
+# Generate both with `openssl passwd -6`. They must differ.
+root_password_hash      = "REPLACE_WITH_OUTPUT_OF_openssl_passwd_-6"
+node_user_password_hash = "REPLACE_WITH_A_DIFFERENT_OUTPUT_OF_openssl_passwd_-6"
+
+# At least one key: installed for node_username and the build host (and root
+# when permit_root_ssh is true).
+ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
+
+# The image has no sudo: log in as node_username and run `su -`.
+# node_username = "suse"
+
+# Allow SSH as root. Debug toggle. Changing it
+# rebuilds the image and replaces every node.
+# permit_root_ssh = true
+
+# Hostname of the Rancher ingress. A DNS name that points at the public NLB;
+# the NLB's own DNS name is used when null.
+# rancher_hostname = null
+# rancher_bootstrap_password = null  # generated when null
+# api_host                   = null  # NLB DNS names when null
+
+# Registry credentials. Application Collection is required with
+# local-path-provisioner (in the default components) or suse-storage; the SUSE
+# registry and NVIDIA NGC ones are optional. With aif-operator, set all of them
+# so AI Factory can pull its workloads right after deployment; plan warns about
+# any that are missing.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# AI Factory Helm charts, rendered in canonical order. Changing this rebuilds
+# the image and replaces every node.
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+# suse-storage (Longhorn) instead of local-path-provisioner is a new cluster,
+# not a migration:
+# components = ["rancher", "suse-storage", "aif-operator"]
+# suse_storage_nodes = ["control_plane"]  # roles (control_plane, worker, gpu) and/or pool keys; 3+ nodes
+
+# AI Factory release: a full version X.Y.Z (tag aif-operator-<version>,
+# 2.1.0 or newer, pre-releases allowed) or a manifest URL.
+# aif_release = "2.2.0"
+# aif_release = "https://raw.githubusercontent.com/SUSE/aif/refs/heads/main/uc-release-manifest/release_manifest.yaml"
+
+# Sizing. Null uses the module defaults shown.
+# cluster_name                = "suse-ai-factory"  # at most 21 characters; IAM role names use it and are account-wide
+# control_plane_count         = 3  # 1 = single node; the LBs stay, so it scales out later
+# control_plane_instance_type = "m7i.xlarge"
+# control_plane_disk_size_gb  = 100
+# jumphost_instance_type      = "c6i.xlarge"  # the Marketplace image rejects 7th-generation types (m7i, c7i)
+# jumphost_disk_size_gb       = 100           # holds the raw image and the pulled OCI layers
+
+# Use an existing AMI instead of building one (drops the build host and the
+# import chain). It must not be an AMI this module registered.
+# image_id = "ami-REPLACE_WITH_AN_AMI_ID"
+
+# Keep the raw image in S3 instead of expiring it after a day.
+# keep_build_artifacts = true
+
+# Pre-created IAM for accounts where the deployer cannot create roles. Set both
+# or neither; see docs/providers/aws.md#pre-created-iam.
+# vmimport_role_name             = "aif-precreated-vmimport"
+# jumphost_instance_profile_name = "aif-precreated-jumphost"
+
+# Kubernetes API CIDRs for 6443 (default open).
+# api_cidrs = ["0.0.0.0/0"]
+
+# Ingress CIDRs for 80/443 (default open).
+# ingress_cidrs = ["0.0.0.0/0"]
+
+# Non-GPU workers. Same fields and hostname scheme as gpu_pools; keys must
+# differ from gpu_pools keys.
+# worker_pools = {
+#   cpu = { instance_type = "m7i.xlarge", count = 2 }
+# }
+
+# GPU workers. The default {} adds none. GPU instance types are expensive, and
+# the default vCPU service quota of a new account is usually 0: request an
+# increase in Service Quotas before applying.
+# Pool names become hostnames (<cluster_name>-<pool>-NN); renaming replaces
+# the nodes. zone is a suffix from zones (default: the first zone);
+# disk_size_gb defaults to 200.
+# gpu_pools = {
+#   a10 = { instance_type = "g5.2xlarge", count = 1, zone = "a" }
+# }
+
+# Replaces (not merges with) any tags map in common-*.tfvars.
+# tags = {
+#   Environment = "dev"
+#   Owner       = "REPLACE_ME"
+# }

@@ -1,0 +1,331 @@
+#!/usr/bin/env bash
+# elemental initrd hook, run on first boot. Hostname and RKE2 role come from
+# per-node Ignition user_data; metadata's hostname only names the nmstate file.
+#
+# The node shape is the physical NIC count in /sys/class/net. A single-NIC
+# (vpc_only) node gets MTU and IPv6 settings only; a dual-NIC node gets its VPC
+# address from instance metadata. Rationale: docs/providers/vultr.md#network.
+#
+# Initrd toolbox: curl and bash builtins only (no tr, basename, mktemp, jq).
+set -euo pipefail
+
+METADATA_BASE="http://169.254.169.254/v1"
+
+log() {
+  echo "[configure-network] $*"
+}
+
+die() {
+  log "ERROR: $*"
+  exit 1
+}
+
+fetch() {
+  # $1 = path under $METADATA_BASE. Callers that accept absence add "|| true":
+  # metadata is unreachable over a VPC NIC until its DHCP completes.
+  curl -fsS "$METADATA_BASE/$1"
+}
+
+# MAC -> kernel interface name via /sys/class/net/*/address. Echoes the name
+# and returns 0, or returns 1 when nothing matches.
+resolve_ifname() {
+  local want=$${1,,} sys_path sys_mac ifname
+  for sys_path in /sys/class/net/*/address; do
+    [ -e "$sys_path" ] || continue
+    read -r sys_mac < "$sys_path"
+    sys_mac=$${sys_mac,,}
+    if [ "$sys_mac" = "$want" ]; then
+      ifname=$${sys_path%/address}
+      ifname=$${ifname##*/}
+      printf '%s' "$ifname"
+      return 0
+    fi
+  done
+  return 1
+}
+
+read_mac() {
+  # $1 = kernel interface name
+  local mac
+  read -r mac < "/sys/class/net/$1/address"
+  printf '%s' "$mac"
+}
+
+# A dotted quad with every octet in range; metadata reports the literal "dhcp"
+# for a DHCP-configured VPC attachment.
+is_ipv4() {
+  local candidate=$1 octet
+  [[ $candidate =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]] || return 1
+  local IFS=.
+  for octet in $candidate; do
+    [ "$((10#$octet))" -le 255 ] || return 1
+  done
+  return 0
+}
+
+# One nmstate entry for a VPC NIC: static address from metadata, MTU
+# ${vpc_mtu}, no DHCP, no default route. Only for nodes that also have a public
+# NIC (bare metal); never a load balancer backend.
+vpc_interface_yaml() {
+  # $1 = kernel interface name, $2 = MAC, $3 = VPC address (from metadata)
+  printf '%s' "
+  - name: $1
+    type: ethernet
+    state: up
+    mac-address: $2
+    mtu: ${vpc_mtu}
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: $3
+          prefix-length: ${vpc_prefix}
+    ipv6:
+      enabled: false"
+}
+
+# A vpc_only NIC keeps NetworkManager's own profile: Vultr grants the registered
+# VPC address to the first DHCP transaction only, and a new profile triggers a
+# second one that gets a CGNAT-range address. MTU and IPv6 are set outside
+# NetworkManager for the same reason.
+
+log "fetching hostname from metadata"
+node_hostname=$(fetch hostname || true)
+if [ -z "$node_hostname" ] && [ -r /etc/hostname ]; then
+  # Metadata may be unreachable this early on a vpc_only node; fall back to
+  # /etc/hostname from Ignition.
+  read -r node_hostname < /etc/hostname || true
+  log "metadata gave no hostname, fell back to /etc/hostname"
+fi
+[ -n "$node_hostname" ] || die "no hostname from metadata or /etc/hostname, refusing to continue"
+log "hostname is $node_hostname"
+
+# Physical NIC count from /sys: it decides the node shape and detects an
+# incomplete /v1/interfaces/ listing, which can lag the VPC NIC on bare metal.
+physical_ifaces=0
+for sys_path in /sys/class/net/*/address; do
+  ifname=$${sys_path%/address}
+  ifname=$${ifname##*/}
+  # A real NIC has a backing device; skips lo and virtual interfaces.
+  [ -e "/sys/class/net/$ifname/device" ] || continue
+  physical_ifaces=$((physical_ifaces + 1))
+done
+log "found $physical_ifaces physical NIC(s) via /sys/class/net"
+
+# Set on the single-NIC path only, where the NIC keeps NetworkManager's profile.
+vpc_dhcp=""
+
+retry_attempt=0
+max_retry_attempts=10
+retry_sleep_seconds=3
+
+public_ifname=""
+vpc_ifname=""
+vpc_address=""
+interfaces_yaml=""
+
+# Shape is the NIC count, not whether metadata serves /v1/interfaces/: the tree
+# is also served on a vpc_only node once its DHCP completes, so metadata alone
+# would race.
+if [ "$physical_ifaces" -le 1 ]; then
+  log "single physical NIC -- treating this as a vpc_only node, metadata not consulted"
+
+  candidates=()
+  for sys_path in /sys/class/net/*/address; do
+    ifname=$${sys_path%/address}
+    ifname=$${ifname##*/}
+    [ -e "/sys/class/net/$ifname/device" ] || continue
+    candidates+=("$ifname")
+  done
+
+  [ "$${#candidates[@]}" -eq 1 ] || die "expected exactly one physical NIC on a vpc_only node, found $${#candidates[@]}: $${candidates[*]:-none}"
+
+  vpc_ifname=$${candidates[0]}
+  vpc_dhcp=true
+  # No nmstate entry for this NIC.
+  log "single NIC $vpc_ifname is the VPC NIC -- leaving NetworkManager's own existing profile for it untouched"
+else
+  while :; do
+    public_ifname=""
+    vpc_ifname=""
+    vpc_address=""
+    interfaces_yaml=""
+
+    iface_listing=$(fetch "interfaces/" || true)
+
+    if [ -z "$iface_listing" ]; then
+      # Multi-NIC with no metadata: retry, then fail.
+      [ "$retry_attempt" -lt "$max_retry_attempts" ] ||
+        die "no interface listing in metadata after $retry_attempt retries on a node with $physical_ifaces physical NICs"
+      retry_attempt=$((retry_attempt + 1))
+      log "no interface listing yet -- retrying in $${retry_sleep_seconds}s (attempt $retry_attempt/$max_retry_attempts)"
+      sleep "$retry_sleep_seconds"
+      continue
+    fi
+
+    listed_ifaces=0
+    for entry in $iface_listing; do
+      listed_ifaces=$((listed_ifaces + 1))
+    done
+
+    if [ "$listed_ifaces" -lt "$physical_ifaces" ] && [ "$retry_attempt" -lt "$max_retry_attempts" ]; then
+      retry_attempt=$((retry_attempt + 1))
+      log "metadata lists only $listed_ifaces of $physical_ifaces physical NIC(s) -- retrying in $${retry_sleep_seconds}s (attempt $retry_attempt/$max_retry_attempts)"
+      sleep "$retry_sleep_seconds"
+      continue
+    fi
+
+    log "metadata lists interfaces -- classifying them by gateway"
+
+    for entry in $iface_listing; do
+      n=$${entry%/}
+      [ -n "$n" ] || continue
+
+      mac=$(fetch "interfaces/$n/mac")
+      net_type=$(fetch "interfaces/$n/network-type" || true)
+      gateway=$(fetch "interfaces/$n/ipv4/gateway" || true)
+      log "interface $n: mac=$mac network-type='$net_type' gateway='$gateway'"
+
+      if ! ifname=$(resolve_ifname "$mac"); then
+        log "no kernel interface matches MAC $mac (metadata interface $n), skipping it"
+        continue
+      fi
+      log "interface $n ($mac) resolved to kernel interface $ifname"
+
+      # A non-empty ipv4/gateway marks the public NIC; the VPC has none. The
+      # gateway wins over network-type on disagreement.
+      if [ -n "$gateway" ]; then
+        [ "$net_type" = "public" ] || log "interface $n: has a gateway but network-type says '$net_type' -- trusting the gateway, treating it as public"
+        public_ifname=$ifname
+        interfaces_yaml="$interfaces_yaml
+  - name: $ifname
+    type: ethernet
+    state: up
+    mac-address: $mac
+    ipv4:
+      enabled: true
+      dhcp: true
+    ipv6:
+      enabled: false"
+      else
+        [ "$net_type" = "public" ] && log "interface $n: network-type says 'public' but has no gateway -- trusting the empty gateway, treating it as private"
+        if [ -n "$vpc_ifname" ]; then
+          log "interface $n ($ifname) is a second VPC NIC -- leaving it unconfigured, $vpc_ifname already carries $vpc_address"
+          continue
+        fi
+        address=$(fetch "interfaces/$n/ipv4/address" || true)
+        # is_ipv4, not -n: metadata answers "dhcp" for a DHCP attachment, which
+        # nmstate cannot take as an address.
+        is_ipv4 "$address" || die "interface $n ($ifname) classified private but metadata gave ipv4/address='$address', not an IPv4 address"
+        vpc_ifname=$ifname
+        vpc_address=$address
+        log "interface $n ($ifname) is the VPC NIC, static $vpc_address/${vpc_prefix}, mtu ${vpc_mtu}"
+        interfaces_yaml="$interfaces_yaml$(vpc_interface_yaml "$ifname" "$mac" "$vpc_address")"
+      fi
+    done
+
+    break
+  done
+fi
+
+[ -n "$vpc_ifname" ] || die "no VPC interface resolved after $retry_attempt retries -- refusing to produce a node that cannot reach the rest of the cluster"
+
+extra_yaml=""
+
+if [ -n "$vpc_dhcp" ]; then
+  # DHCP supplies the default route and resolvers (NAT gateway on this VPC).
+  log "vpc_only + DHCP -- trusting DHCP for the default route and resolvers too, no manual route/dns added"
+
+  # MTU and IPv6 are set outside NetworkManager (no second DHCP transaction).
+  ip link set dev "$vpc_ifname" mtu ${vpc_mtu}
+  log "set mtu ${vpc_mtu} on $vpc_ifname directly via ip-link (bypassing NetworkManager, deliberately)"
+
+  if [ -w "/proc/sys/net/ipv6/conf/$vpc_ifname/disable_ipv6" ]; then
+    echo 1 > "/proc/sys/net/ipv6/conf/$vpc_ifname/disable_ipv6"
+    log "disabled IPv6 on $vpc_ifname via sysctl (bypassing NetworkManager, deliberately)"
+  else
+    log "could not disable IPv6 on $vpc_ifname via sysctl (not writable) -- leaving it as-is, not fatal"
+  fi
+
+  # Diagnostic only: RKE2 finds this address itself via the default route.
+  # Short wait in case DHCP is still in flight.
+  sleep 2
+  log "VPC NIC $vpc_ifname current address(es): $(ip -4 -o addr show dev "$vpc_ifname" scope global 2>&1)"
+elif [ -z "$public_ifname" ]; then
+  # Static VPC NIC without a public NIC: route via the NAT gateway. No current
+  # node shape reaches this branch.
+  log "no public interface -- routing default via NAT gateway ${nat_gateway_ip} out $vpc_ifname"
+  extra_yaml="
+routes:
+  config:
+    - destination: 0.0.0.0/0
+      next-hop-address: ${nat_gateway_ip}
+      next-hop-interface: $vpc_ifname
+dns-resolver:
+  config:
+    server:
+%{ for server in dns_servers ~}
+      - ${server}
+%{ endfor ~}"
+else
+  log "public interface $public_ifname present -- DHCP supplies the default route and resolvers, no static route/dns added"
+fi
+
+if [ -z "$interfaces_yaml" ]; then
+  # vpc_only node: nothing to apply, and nmc is not invoked.
+  log "no interfaces_yaml to apply -- skipping nmc entirely for this node"
+else
+  # /dev/shm first: catalyst-net-initrd-script.service mounts everything except
+  # /proc, /sys and /dev read-only. The others are fallbacks.
+  work_dir=""
+  for candidate in /dev/shm /run /var/tmp /tmp; do
+    if mkdir_err=$(mkdir -p "$candidate/nmc" 2>&1); then
+      work_dir="$candidate/nmc"
+      break
+    fi
+    log "candidate directory $candidate/nmc not usable: $mkdir_err"
+  done
+  [ -n "$work_dir" ] || die "no writable directory among /dev/shm /run /var/tmp /tmp -- nowhere to stage the nmstate document"
+  log "staging nmstate config under $work_dir"
+
+  states_dir="$work_dir/desired-states"
+  generated_dir="$work_dir/generated"
+  mkdir -p "$states_dir" "$generated_dir"
+  nmstate_file="$states_dir/$node_hostname.yaml"
+
+  {
+    echo "interfaces:$interfaces_yaml"
+    if [ -n "$extra_yaml" ]; then
+      echo "$extra_yaml"
+    fi
+  } > "$nmstate_file"
+
+  log "generated nmstate document at $nmstate_file:"
+  while IFS= read -r line; do
+    log "  $line"
+  done < "$nmstate_file"
+
+  log "running: nmc generate --config-dir $states_dir --output-dir $generated_dir"
+  nmc generate --config-dir "$states_dir" --output-dir "$generated_dir"
+
+  log "running: nmc apply --config-dir $generated_dir"
+  nmc apply --config-dir "$generated_dir"
+fi
+
+# A bare metal server can arrive with its VPC switch port unlit: the profile is
+# correct but the NIC stays NO-CARRIER. The script cannot fix that and must not
+# die (the shell is needed to diagnose), so it logs a warning.
+carrier=""
+if [ -r "/sys/class/net/$vpc_ifname/carrier" ]; then
+  # EINVAL on an administratively-down interface; absent carrier is not proof
+  # of a fault, only "0" is.
+  read -r carrier < "/sys/class/net/$vpc_ifname/carrier" || true
+fi
+if [ "$carrier" = "0" ]; then
+  log "WARNING: VPC interface $vpc_ifname reports NO CARRIER -- its switch port is not up."
+  log "WARNING: the configuration above is correct and will activate by itself if the link ever comes up."
+  log "WARNING: until then this node cannot reach the cluster. This is a link-layer fault, not a"
+  log "WARNING: configuration one -- check the VPC attachment in the Vultr API."
+fi
+
+log "network configuration complete (hostname is set separately, via Ignition user_data)"

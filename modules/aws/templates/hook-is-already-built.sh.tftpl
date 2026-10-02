@@ -1,0 +1,8 @@
+# Checks S3 for the raw (see docs/decisions/002-aws-factory-hooks.md).
+local existing
+existing=$(aws s3api list-objects-v2 \
+  --bucket "${bucket}" \
+  --prefix "${raw_key}" \
+  --query 'KeyCount' \
+  --output text)
+[ "$existing" != "0" ] && [ "$existing" != "None" ]

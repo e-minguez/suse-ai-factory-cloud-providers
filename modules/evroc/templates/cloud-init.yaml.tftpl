@@ -1,0 +1,72 @@
+#cloud-config
+disable_root: false
+ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+  - ${key}
+%{ endfor ~}
+%{ if jumphost_username != "" ~}
+
+users:
+  - default
+  - name: ${jumphost_username}
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+      - ${key}
+%{ endfor ~}
+%{ endif ~}
+
+write_files:
+%{ for path in file_names ~}
+  - path: ${config_dir}/${path}
+    encoding: gz+b64
+    content: ${base64gzip(files[path])}
+    owner: root:root
+    permissions: '${endswith(path, ".sh") ? "0755" : "0600"}'
+%{ endfor ~}
+  - path: /opt/image-factory.sh
+    encoding: gz+b64
+    content: ${base64gzip(factory_script)}
+    owner: root:root
+    permissions: '0700'
+%{ if status_relay_script != "" ~}
+  - path: /opt/status-relay.py
+    encoding: gz+b64
+    content: ${base64gzip(status_relay_script)}
+    owner: root:root
+    permissions: '0755'
+  - path: /etc/systemd/system/status-relay.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=image-factory build-status relay
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Environment=STATUS_PORT=${status_relay_port}
+      Environment="PUSH_CIDR=${status_relay_push_cidrs}"
+      Environment="ZONES=${status_relay_zones}"
+      ExecStart=/usr/bin/python3 /opt/status-relay.py
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+%{ endif ~}
+%{ if status_url != "" ~}
+  - path: /etc/image-factory/status-url
+    owner: root:root
+    permissions: '0644'
+    content: '${status_url}'
+%{ endif ~}
+
+runcmd:
+%{ if status_relay_script != "" ~}
+  - 'systemctl daemon-reload'
+  - 'systemctl enable --now status-relay.service'
+%{ endif ~}
+  - 'nohup setsid /opt/image-factory.sh </dev/null >/dev/null 2>&1 &'

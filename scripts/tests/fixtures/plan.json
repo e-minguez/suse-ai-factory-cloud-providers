@@ -1,0 +1,10 @@
+{"format_version":"1.2","resource_changes":[
+{"address":"aws_vpc.main","type":"aws_vpc","change":{"actions":["create"]}},
+{"address":"aws_subnet.a","type":"aws_subnet","change":{"actions":["create"]}},
+{"address":"aws_security_group.x","type":"aws_security_group","change":{"actions":["create"]}},
+{"address":"aws_lb.api","type":"aws_lb","change":{"actions":["create"]}},
+{"address":"aws_instance.jump","type":"aws_instance","action_reason":"replace_because_cannot_update","change":{"actions":["delete","create"]}},
+{"address":"aws_instance.old","type":"aws_instance","change":{"actions":["delete"]}},
+{"address":"data.aws_ami.x","type":"aws_ami","mode":"data","change":{"actions":["read"]}},
+{"address":"aws_iam_role.keep","type":"aws_iam_role","change":{"actions":["no-op"]}}
+]}

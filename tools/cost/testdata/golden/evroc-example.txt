@@ -1,0 +1,25 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: evroc   Region: eu-central   Cluster: suse-ai-factory   Catalog: ratecard derived from the public calculator because evroc provides no pricing API (2026-09-11)
+
+  RESOURCE                                     ROLE           POOL  QTY  TYPE               EUR/hr    1h    8h    24h      7d     30d
+  jumphost                                     jumphost               1  a1a.m              0.2740  0.27  2.19   6.58   46.03  197.28
+  jumphost disk (200 GB)                       jumphost               1  storage:disk  0.000137/GB  0.03  0.22   0.66    4.60   19.73
+  public ip (jumphost)                         jumphost               1  public-ipv4        0.0100  0.01  0.08   0.24    1.68    7.20
+  public ip (api, ingress)                     lb                     1  public-ipv4        0.0100  0.01  0.08   0.24    1.68    7.20
+  control plane                                control_plane  cp      3  c1a.m              0.2060  0.62  4.94  14.83  103.82  444.96
+  control plane disk (200 GB)                  control_plane  cp      3  storage:disk  0.000137/GB  0.08  0.66   1.97   13.81   59.18
+  image builder (build only)                   builder                2  a1a.m              0.2740  0.55  4.38  13.15   92.06  394.56
+  image builder disk (200 GB) (build only)     builder                2  storage:disk  0.000137/GB  0.05  0.44   1.32    9.21   39.46
+  image target disk (32 GB) (build only)       image                  3  storage:disk  0.000137/GB  0.01  0.11   0.32    2.21    9.47
+  vpc, subnets, security and placement groups  network                   -- free --             --    --    --     --      --      --
+                                                                                             TOTAL  1.02  8.17  24.52  171.63  735.55
+                                                                                        BUILD-ONLY  0.62  4.93  14.78  103.48  443.49
+
+  All amounts in EUR.
+  (build only) rows exist only while the image is built; BUILD-ONLY is not part of TOTAL.
+  Not included:
+    - load balancer: evroc does not publish this rate and provides no pricing API
+    - outbound transfer: traffic-dependent; the first 100 GB are free, then billed per GB
+    - image snapshots (one per zone): evroc does not publish this rate and provides no pricing API
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
