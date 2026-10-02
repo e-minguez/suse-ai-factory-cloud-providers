@@ -5,8 +5,10 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 `github.com/e-minguez/suse-ai-factory-cloud-providers`. Public, community project, not an official SUSE product.
 
 ## Status
-- `v0.1.0` is the first release (single initial commit). End-to-end checks not yet run: `docs/e2e-checklist.md`; everything else passed on all three providers.
+- `v0.1.0` is the first release. End-to-end checks not yet run: `docs/e2e-checklist.md`; everything else passed on all three providers.
 - From `v0.1.0` on, user-facing changes (variables, outputs, `deploy.sh` interface) need a `CHANGELOG.md` entry under `[Unreleased]`.
+- `main` is protected (ruleset `protect-main`): no direct pushes, force pushes or history rewrites. Every change goes through a PR from a branch, merged by squash or rebase (linear history) once the 11 CI jobs pass. Renaming a CI job means updating the ruleset's required checks.
+- Actions in `.github/workflows/ci.yml` are pinned to commit SHAs (version in a trailing comment); dependabot bumps them and the `tools/cost` Go modules weekly.
 - The user runs all end-to-end deploys. Only provide commands and checks.
 
 ## Layout
