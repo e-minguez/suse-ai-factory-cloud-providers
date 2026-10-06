@@ -1,0 +1,10 @@
+if [ "$${FIREWALLD_OPENED:-false}" = true ]; then
+  log "cleanup: closing port 80 in firewalld"
+  firewall-cmd --zone=public --remove-port=80/tcp \
+    || log "cleanup: firewall-cmd --remove-port failed (continuing)"
+fi
+if [ -n "$${SERVER_PID:-}" ]; then
+  log "cleanup: stopping http server (pid $SERVER_PID)"
+  kill "$SERVER_PID" 2>/dev/null || true
+fi
+rm -f "$${SERVE_DIR:-/nonexistent}/${image_base}.qcow2" "$${SERVE_DIR:-/nonexistent}/${image_base}.qcow2.md5"

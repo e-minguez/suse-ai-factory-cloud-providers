@@ -1,0 +1,34 @@
+mkdir -p "$SERVE_DIR"
+QCOW="$SERVE_DIR/${image_base}.qcow2"
+# Templates take qcow2 only, virtual size ${template_min_gib}-1000 GiB. Growing
+# the virtual size is metadata only: the file keeps the used blocks.
+qemu-img convert -f raw -O qcow2 -o preallocation=off "$1" "$QCOW"
+rm -f "$1"
+vsize=$(qemu-img info "$QCOW" | sed -n 's/.*(\([0-9]*\) bytes).*/\1/p' | head -n 1)
+if [ "$${vsize:-0}" -lt $(( ${template_min_gib} * 1024 * 1024 * 1024 )) ]; then
+  qemu-img resize -f qcow2 "$QCOW" "${template_min_gib}G"
+fi
+md5sum "$QCOW" | cut -d' ' -f1 >"$QCOW.md5"
+log "serving ${image_base}.qcow2: $(du -h "$QCOW" | cut -f1) file, $(qemu-img info "$QCOW" | grep 'virtual size'), md5 $(cat "$QCOW.md5")"
+# An empty index.html hides the directory listing (and so the random path).
+: > /srv/img/index.html
+
+python3 -m http.server 80 --bind 0.0.0.0 --directory /srv/img &
+SERVER_PID=$!
+log "http server started, pid $SERVER_PID"
+sleep 2
+
+if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+  log "ERROR: http server (pid $SERVER_PID) died right after starting"
+  exit 1
+fi
+if ! curl -fsS -o /dev/null "http://127.0.0.1/${serve_path}/${image_base}.qcow2.md5"; then
+  log "ERROR: image not fetchable at http://127.0.0.1/${serve_path}/${image_base}.qcow2.md5"
+  exit 1
+fi
+log "http server confirmed serving the image"
+
+# Fixed window: knowing when the import ends would need an API key on this
+# host. Non-loopback GETs in this log are the platform fetcher.
+log "serving for ${serve_seconds}s"
+sleep "${serve_seconds}"
