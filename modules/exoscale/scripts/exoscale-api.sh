@@ -32,7 +32,7 @@ api_get() {
   expires=$(($(date +%s) + 600))
   sig=$(printf 'GET %s\n\n\n\n%s' "$path" "$expires" |
     openssl dgst -sha256 -hmac "$secret" -binary | openssl base64 -A)
-  out=$(curl -sS --retry 2 -w '\n%{http_code}' "https://api-${zone}.exoscale.com${path}" \
+  out=$(curl -sS --connect-timeout 10 --max-time 60 --retry 2 -w '\n%{http_code}' "https://api-${zone}.exoscale.com${path}" \
     -H "Authorization: EXO2-HMAC-SHA256 credential=${key},expires=${expires},signature=${sig}") ||
     die "GET $path failed"
   [ "${out##*$'\n'}" = 200 ] || die "GET $path returned HTTP ${out##*$'\n'}: ${out%$'\n'*}"

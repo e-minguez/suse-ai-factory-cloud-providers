@@ -20,7 +20,7 @@ url="" auth=""
 while [ $# -gt 0 ]; do
   case "$1" in
     -H) auth=$2; shift ;;
-    -w | --retry) shift ;;
+    -w | --retry | --connect-timeout | --max-time) shift ;;
     -*) ;;
     *) url=$1 ;;
   esac
