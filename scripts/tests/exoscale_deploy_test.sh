@@ -47,6 +47,13 @@ grep -qF "==> [2/2] Scale control plane" "$W/out" || fail "pass 2 header"
 [ "$(applies)" -eq 2 ] || fail "new cluster: expected 2 applies"
 [ "$(pins)" = '[true,false]' ] || fail "new cluster: pins $(pins)"
 
+# --- pass 1 failed earlier (pool in state, pin still false): bootstrap again.
+printf '{"cp_initialized":false,"image_import_port_open":true}\n' >"$PINS"
+run FAKE_TF_STATE_LIST="$POOL" -- --yes
+[ "$RC" -eq 0 ] || fail "failed pass 1 rerun: rc $RC"
+grep -qF "==> [1/2] Bootstrap control plane" "$W/out" || fail "failed pass 1 rerun: not bootstrapping"
+[ "$(pins)" = '[true,false]' ] || fail "failed pass 1 rerun: pins $(pins)"
+
 # --- initialized cluster, no new template: one pass, pins unchanged.
 run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-vultr-update.json -- --yes
 [ "$RC" -eq 0 ] || fail "rerun: rc $RC"

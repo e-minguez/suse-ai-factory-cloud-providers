@@ -32,3 +32,8 @@ log "http server confirmed serving the image"
 # host. Non-loopback GETs in this log are the platform fetcher.
 log "serving for ${serve_seconds}s"
 sleep "${serve_seconds}"
+# The server stays up for the .md5: Terraform reads it on every plan until
+# deploy.sh closes port 80. Only the image goes.
+rm -f "$QCOW"
+SERVER_PID=""
+log "image removed; the .md5 stays served until port 80 closes"

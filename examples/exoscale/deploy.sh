@@ -29,11 +29,14 @@ exo_pin() {
     >"$PASS2_FILE.tmp" && mv "$PASS2_FILE.tmp" "$PASS2_FILE"
 }
 
-exo_pinned() { jq -r --arg k "$1" '.[$k] // empty' "$PASS2_FILE" 2>/dev/null || true; }
+exo_pinned() { jq -r --arg k "$1" 'if has($k) then .[$k] else empty end' "$PASS2_FILE" 2>/dev/null || true; }
 
-# The pool in state means the cluster has bootstrapped: only then may
-# cp_initialized be true. A stale pin file never makes a new cluster skip init.
-exo_pool_in_state() { terraform state list 2>/dev/null | grep -qxF "${POOL}[0]"; }
+# Bootstrapped: the pool is in state and pass 1 finished (the pin is written
+# false before it and true after it). A stale pin file never makes a new
+# cluster skip init, and a failed pass 1 is rerun with the init configuration.
+exo_bootstrapped() {
+  terraform state list 2>/dev/null | grep -qxF "${POOL}[0]" && [ "$(exo_pinned cp_initialized)" != false ]
+}
 
 # Plan hook. Aborts when an initialized pool would be created or replaced (a
 # pool with the join configuration and no member to join); reopens port 80
@@ -51,7 +54,7 @@ exo_plan_hook() {
 }
 
 deploy_passes() {
-  if exo_pool_in_state; then
+  if exo_bootstrapped; then
     # Keeps an open import port from an interrupted run; closes it below.
     exo_pin true "$([ "$(exo_pinned image_import_port_open)" = true ] && echo true || echo false)"
     # shellcheck disable=SC2034 # read by tf_pass
