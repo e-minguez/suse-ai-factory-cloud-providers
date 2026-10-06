@@ -22,3 +22,4 @@ with `# see docs/decisions/NNN-title.md`.
 - [005](005-state-secrets.md) secrets in Terraform state
 - [006](006-vultr-two-passes.md) vultr deploys in two passes
 - [007](007-cost-estimator.md) cost estimator
+- [008](008-exoscale-module.md) exoscale module design
