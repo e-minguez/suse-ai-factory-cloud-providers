@@ -57,7 +57,7 @@ flowchart LR
 |---|:---:|---|---|---|
 | **aws** | 1 | Raw image uploaded to S3, imported as an EBS snapshot and AMI | NLB DNS names | [aws.md](docs/providers/aws.md) |
 | **evroc** | 2 (+1 optional) | Raw image written to a disk, one snapshot per zone | sslip.io | [evroc.md](docs/providers/evroc.md) |
-| **exoscale** | 2 | Raw image converted to qcow2, served over HTTP, template per zone | sslip.io | [exoscale.md](docs/providers/exoscale.md) |
+| **exoscale** | 2 | Raw image converted to qcow2, served over HTTP, template per zone | sslip.io | [exoscale.md](docs/providers/exoscale.md); every node has a public IPv4, single zone ([limitations](docs/providers/exoscale.md#limitations)) |
 | **vultr** | 2 | Raw image served over HTTP, account-wide snapshot from the URL | sslip.io | [vultr.md](docs/providers/vultr.md) |
 
 Each provider has an example root with its own README:

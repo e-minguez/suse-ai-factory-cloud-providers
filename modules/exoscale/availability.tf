@@ -8,6 +8,9 @@ locals {
     for k, p in local.agent_pools : k if p.zone != null || p.placement != null || p.kind != "vm"
   ])
 
+  # Every node has a public IPv4 (ADR 008): pools must say so explicitly.
+  agent_pool_private = sort([for k, p in local.agent_pools : k if !p.public_ip])
+
   agent_pools_active = { for k, p in local.agent_pools : k => p if p.count > 0 }
 
   # Instance type per requester, for the availability check and its messages.

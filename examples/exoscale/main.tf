@@ -16,6 +16,7 @@ module "ai_factory" {
 
   control_plane_count         = var.control_plane_count
   control_plane_instance_type = var.control_plane_instance_type
+  control_plane_public_ip     = var.control_plane_public_ip
   jumphost_instance_type      = var.jumphost_instance_type
   gpu_pools                   = var.gpu_pools
   worker_pools                = var.worker_pools

@@ -88,7 +88,8 @@ variables {
   suse_registry_username  = "DUMMY-REGCODE"
   suse_registry_password  = "DUMMY-REGISTRY-PASSWORD"
   nvidia_api_key          = "DUMMY-NVIDIA-API-KEY"
-  gpu_pools               = { gpu = { instance_type = "gpu3.small", count = 2 } }
+  control_plane_public_ip = true
+  gpu_pools               = { gpu = { instance_type = "gpu3.small", count = 2, public_ip = true } }
   # A template ID skips the name lookup, whose id the mock cannot fill.
   jumphost_image = "00000000-0000-0000-0000-00000000000a"
 }
@@ -217,7 +218,7 @@ run "type_not_available" {
   command = plan
 
   variables {
-    gpu_pools = { gpu = { instance_type = "gpurtx6000pro.small", count = 1 } }
+    gpu_pools = { gpu = { instance_type = "gpurtx6000pro.small", count = 1, public_ip = true } }
   }
 
   expect_failures = [terraform_data.api_check]
@@ -227,7 +228,7 @@ run "gpu_quota_short" {
   command = plan
 
   variables {
-    gpu_pools = { gpu = { instance_type = "gpu3.small", count = 3 } }
+    gpu_pools = { gpu = { instance_type = "gpu3.small", count = 3, public_ip = true } }
   }
 
   expect_failures = [terraform_data.api_check]
@@ -238,7 +239,7 @@ run "worker_on_gpu_type" {
 
   variables {
     gpu_pools    = {}
-    worker_pools = { cpu = { instance_type = "gpu3.small", count = 1 } }
+    worker_pools = { cpu = { instance_type = "gpu3.small", count = 1, public_ip = true } }
   }
 
   expect_failures = [terraform_data.api_check]
@@ -258,7 +259,7 @@ run "pool_fields_unsupported" {
   command = plan
 
   variables {
-    gpu_pools = { gpu = { instance_type = "gpu3.small", count = 1, placement = "spread" } }
+    gpu_pools = { gpu = { instance_type = "gpu3.small", count = 1, public_ip = true, placement = "spread" } }
   }
 
   expect_failures = [exoscale_private_network.this]
@@ -269,6 +270,27 @@ run "control_plane_count_anti_affinity" {
 
   variables {
     control_plane_count = 9
+  }
+
+  expect_failures = [exoscale_private_network.this]
+}
+
+# Every node has a public IPv4: false is rejected, not ignored.
+run "control_plane_public_ip_false" {
+  command = plan
+
+  variables {
+    control_plane_public_ip = false
+  }
+
+  expect_failures = [exoscale_private_network.this]
+}
+
+run "pool_public_ip_default" {
+  command = plan
+
+  variables {
+    worker_pools = { cpu = { instance_type = "standard.medium", count = 1 } }
   }
 
   expect_failures = [exoscale_private_network.this]

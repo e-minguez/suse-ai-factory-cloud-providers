@@ -6,6 +6,13 @@ control planes as an instance pool behind a network load balancer, and optional
 GPU and worker pools, in one zone. `deploy.sh` runs it in two passes. Platform
 notes: [`docs/providers/exoscale.md`](../../docs/providers/exoscale.md).
 
+**Before you start:** every node gets a public IPv4, filtered by security
+groups only, and the cluster runs in a single zone. Exoscale's load balancer,
+metadata service and missing NAT gateway leave no alternative today:
+[Limitations](../../docs/providers/exoscale.md#limitations).
+`control_plane_public_ip` defaults to `true` here and every pool needs
+`public_ip = true`; `false` fails the plan.
+
 ## Prerequisites
 
 - Terraform 1.16.4 or later, `jq`, `curl`, `openssl`, `ssh`.

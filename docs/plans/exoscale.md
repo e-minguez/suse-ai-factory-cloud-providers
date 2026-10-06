@@ -102,7 +102,7 @@ Spike S2 (private Elemental node, `private = true`): console shows
 "Timed out waiting for device /dev/disk/by-label/ignition", "catalyst-prepare:
 No config source found", "Failed to start Ignition (fetch)", emergency mode.
 The NoCloud drive of private instances is not an Ignition source. Public IPv4
-on every node is required; `public_ip` cannot opt out (no effect on this provider; `control_plane_public_ip` only decides whether `nodes` reports the control planes' public IPs).
+on every node is required; `control_plane_public_ip` and pool `public_ip` must be `true` (`false` fails the plan; user decision 2026-10-06).
 
 `runtime.env` is read only by `/usr/bin/elemental3ctl`, in the initrd
 firstboot stage after Ignition (no systemd unit references it);
@@ -227,8 +227,8 @@ Record in an ADR (`docs/decisions/008-exoscale-module.md`).
 ## 5. Network and firewall (B2)
 
 - Every node: public IPv4 (NLB members, metadata/Ignition, egress; ADR 008).
-  `control_plane_public_ip` and pool `public_ip` cannot opt out; documented as
-  having no effect (rejecting `false` would break the common default) (confirmed by S2).
+  `control_plane_public_ip` and pool `public_ip` must be `true`: `false` fails
+  the plan; the example defaults `control_plane_public_ip` to `true` (confirmed by S2).
 - `exoscale_private_network` with managed DHCP from `vpc_cidr` (pool members
   cannot have static leases). Cluster traffic on the second NIC (`ens6`).
 - `vpc_mtu` default 1500, precondition ≤ 1500. Pod MTU = 1450 via existing

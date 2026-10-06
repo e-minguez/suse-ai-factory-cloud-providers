@@ -60,8 +60,9 @@ the keys differ between the two maps. Hostnames are `<cluster_name>-<pool>-NN`
 (at most 63 characters). A provider rejects with a precondition the fields it
 cannot honour: aws `public_ip = true`, `placement` and `kind = "bare_metal"`;
 vultr `zone`, `disk_size_gb` and `placement`; evroc `kind = "bare_metal"`;
-exoscale `zone`, `placement` and `kind = "bare_metal"` (`public_ip` has no
-effect there: every node has a public IPv4, [ADR 008](decisions/008-exoscale-module.md)).
+exoscale `zone`, `placement`, `kind = "bare_metal"` and `public_ip = false`
+(every node has a public IPv4, so `public_ip` and `control_plane_public_ip`
+must be `true` there; [ADR 008](decisions/008-exoscale-module.md)).
 
 Exception: exoscale control planes are one instance pool, whose members
 Exoscale names `<cluster_name>-cp-<5 characters of the pool ID>-<random>`

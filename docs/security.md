@@ -54,6 +54,12 @@ meant to be tracked. `.deploy/` logs can contain sensitive values.
 - SSH reaches the jumphost from `admin_cidrs` only; nodes are reached through
   it with `ProxyJump`. Node public IPs (`control_plane_public_ip`, pool
   `public_ip`) are off by default where the platform allows it.
+- exoscale: every node has a public IPv4 and both settings must be `true`
+  (load balancer direct return, metadata service, no managed NAT;
+  [limitations](providers/exoscale.md#limitations)). Security groups are the
+  only filter: worker and GPU nodes have no inbound rules, control planes admit
+  only the load balancer ports, no node admits SSH from outside, and private
+  network traffic is not filtered.
 - Kubernetes API (6443): the public listener admits `api_cidrs`, default
   `0.0.0.0/0`, so by default the API is protected by its certificates and
   tokens alone. Narrow it to keep the API off the internet.
@@ -61,8 +67,11 @@ meant to be tracked. `.deploy/` logs can contain sensitive values.
   it. On vultr the API load balancer admits it from the NAT gateway and the
   public addresses of agent nodes. On evroc it is open to any source: the load
   balancer has a public address only and nodes without a public IP join from
-  egress addresses the platform does not disclose. Joining requires TLS and the
-  join token.
+  egress addresses the platform does not disclose. On exoscale the control plane
+  security group admits it from the control plane and agent security groups
+  (nodes join from their public IPs) and from the managed
+  `public-nlb-healthcheck-sources` group. Joining requires TLS and the join
+  token.
 - Ingress (80/443, the Rancher UI) admits `ingress_cidrs`, default
   `0.0.0.0/0`. Narrow it for clusters that are not public.
 - During an evroc image build, the status relay on the jumphost is readable from

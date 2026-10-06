@@ -56,6 +56,12 @@ variable "control_plane_instance_type" {
   description = "Exoscale instance type (family.size) of the control-plane nodes. Null uses the module default (standard.extra-large)."
 }
 
+variable "control_plane_public_ip" {
+  type        = bool
+  default     = true
+  description = "Must be true on Exoscale: every node has a public IPv4 (load balancer, metadata service, egress), filtered by security groups."
+}
+
 variable "jumphost_instance_type" {
   type        = string
   default     = null
@@ -73,7 +79,7 @@ variable "gpu_pools" {
     placement     = optional(string)
   }))
   default     = {}
-  description = "GPU worker pools keyed by pool name, with Exoscale GPU types such as gpu3.small. zone and placement must stay null and kind \"vm\" on this provider."
+  description = "GPU worker pools keyed by pool name, with Exoscale GPU types such as gpu3.small. public_ip must be true, zone and placement null and kind \"vm\" on this provider."
 }
 
 variable "worker_pools" {

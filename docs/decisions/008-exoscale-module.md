@@ -53,7 +53,10 @@ unless marked as documented:
   writes the RKE2 `node-name` drop-in. Control plane hostnames are
   `<cluster>-cp-<pool id>-<random>`, a documented exception to the naming
   convention.
-- **Public IPv4 on every node, the jumphost as the only SSH entry.** Security
+- **Public IPv4 on every node, the jumphost as the only SSH entry.**
+  `control_plane_public_ip` and each pool's `public_ip` must be `true`: the
+  module rejects `false` rather than ignoring it, so the exposure is explicit
+  (the example root defaults `control_plane_public_ip` to `true`). Security
   groups are the only ingress filter and do not apply to the private network:
   - jumphost: 22 from `admin_cidrs`;
   - all nodes: no 22 rule; SSH goes through the jumphost to the node's private

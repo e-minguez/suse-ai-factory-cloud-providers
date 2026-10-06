@@ -7,6 +7,33 @@ Decision record: [ADR 008](../decisions/008-exoscale-module.md). The behaviour
 below was confirmed by spike tests in de-fra-1 (2026-10, provider v0.74.2)
 unless marked as documented only.
 
+## Limitations
+
+Read these before choosing this provider:
+
+- **Every node has a public IPv4**: control planes, workers, GPU nodes and the
+  jumphost. The network load balancer returns traffic directly from its
+  members' public interface, Ignition reads its configuration from the
+  metadata service (instances without a public IP do not get one), and egress
+  uses it: Exoscale has no managed NAT gateway, and its VPC is beta and cannot
+  be attached from Terraform. `control_plane_public_ip` and each pool's
+  `public_ip` must be `true`, so this is an explicit choice.
+- **Inbound traffic is filtered by security groups only.** Worker and GPU nodes
+  accept nothing from outside; control planes accept the load balancer ports
+  (6443 from `api_cidrs`, 80/443 from `ingress_cidrs`, healthchecks, joins);
+  the jumphost is the only SSH entry. Clients admitted to 6443 or 80/443 can
+  also reach a control plane directly on those ports.
+- **No fixed egress address**: each node egresses from its own public IP
+  (`egress_ips` lists them); there is no NAT address to allow-list.
+- **Single zone**: private networks, instance pools and templates are
+  zone-scoped.
+- **Control plane names** are `<cluster_name>-cp-<pool id>-<random>`, set by
+  the instance pool, not `-cp-NN`.
+- No cost estimate (`tools/cost`) yet.
+
+To revisit when the Exoscale VPC is generally available and the Terraform
+provider can attach instances to VPC subnets ([ADR 008](../decisions/008-exoscale-module.md)).
+
 ## Passes: 2, and why
 
 Diagrams: [architecture](../architecture.md#exoscale-two-passes).
@@ -178,9 +205,10 @@ only, the instances (pool members included), the instance pool, the NLB and the
 private network by `elemental-cluster` label, and the security groups, the
 anti-affinity group and the templates by name. Exit 0 means nothing is left.
 
-## Known limitations
+## Operational limits
 
-- Single zone: private networks, pools and templates are zone-scoped.
+In addition to [Limitations](#limitations):
+
 - Scaling the control plane down removes the oldest member first and leaves
   its etcd member behind (`docs/scaling.md`).
 - A rebuild updates the pool's template in place: existing control plane

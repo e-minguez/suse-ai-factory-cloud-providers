@@ -35,6 +35,18 @@ resource "exoscale_private_network" "this" {
       error_message = "cluster_name must be at most 27 characters on this provider: the control plane pool's instance_prefix \"<cluster_name>-cp\" is limited to 30."
     }
 
+    # Rejected rather than ignored: every node gets a public IPv4 on this
+    # provider, and nobody should get one without asking for it.
+    precondition {
+      condition     = var.control_plane_public_ip
+      error_message = "control_plane_public_ip must be true: every Exoscale node has a public IPv4 (the NLB returns traffic from it, Ignition needs the metadata service, and egress uses it). Security groups filter it. See docs/providers/exoscale.md#limitations."
+    }
+
+    precondition {
+      condition     = length(local.agent_pool_private) == 0
+      error_message = "gpu_pools or worker_pools entries ${join(", ", local.agent_pool_private)} need public_ip = true: every Exoscale node has a public IPv4 (egress and the metadata service), with no inbound rules for worker and GPU nodes. See docs/providers/exoscale.md#limitations."
+    }
+
     precondition {
       condition     = length(local.agent_pool_unsupported) == 0
       error_message = "gpu_pools or worker_pools entries ${join(", ", local.agent_pool_unsupported)} set a field this provider does not support: zone and placement must be null and kind must be \"vm\"."
