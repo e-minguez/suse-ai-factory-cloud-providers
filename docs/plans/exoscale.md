@@ -504,6 +504,9 @@ answers; a rerun plans no changes. A deleted member was replaced by the pool
 and joined after `kubectl delete node <dead>`. Bugs found and fixed: no `init`
 node in `nodes` (kubeconfig.sh), and deploy.sh misreading the state
 (`| grep -q` + pipefail) into a bootstrap plan, caught before apply.
+Destroy left nothing (`tools/leftovers/exoscale.sh`: 0 live) once its
+signing bug (/v2 missing from the signed path) was fixed. Not run yet:
+`--rebuild`, GPU pools, scale-down.
 
 ## 12. Open questions for the maintainer
 
