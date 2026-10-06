@@ -18,8 +18,8 @@ metadata service and missing NAT gateway leave no alternative today:
 - Terraform 1.16.4 or later, `jq`, `curl`, `openssl`, `ssh`.
 - An Exoscale API key and secret (`exoscale_api_key`, `exoscale_api_secret`,
   for example in `../common-exoscale.tfvars`) bound to an IAM role that allows
-  the Compute service. Terraform passes them to the provider and the signed
-  plan-time checks.
+  the Compute service: see [API key](#api-key). Terraform passes them to the
+  provider and the signed plan-time checks.
 - Two different `openssl passwd -6` hashes: `root_password_hash` and
   `node_user_password_hash`.
 - `ssh_authorized_keys` (at least one) and `admin_cidrs` (your IP or VPN range).
@@ -29,6 +29,40 @@ metadata service and missing NAT gateway leave no alternative today:
   `local-path-provisioner` (default) or `suse-storage`; the others are optional.
   See [Registry credentials](../../README.md#registry-credentials).
 - GPU pools: a GPU quota for the family (0 by default; ask Exoscale support).
+
+## API key
+
+Exoscale API keys are bound to an IAM role; the predefined roles are Owner and
+Billing. Owner can also manage IAM, and the key ends up in the Terraform state,
+so create a role limited to the Compute service, which covers everything the
+module uses (instances, instance pools, load balancer, private network,
+security groups, anti-affinity groups, templates, quotas):
+
+```json
+{
+  "default-service-strategy": "deny",
+  "services": {
+    "compute": { "type": "allow" }
+  }
+}
+```
+
+Portal: **IAM → Roles → Add**, name it (for example `ai-factory-deploy`) and
+paste the policy in the JSON editor; then **IAM → Keys → Add** with that role.
+The secret is shown once. With the `exo` CLI, using a key that may manage IAM:
+
+```bash
+exo iam role create ai-factory-deploy --policy - <<'EOF'
+{"default-service-strategy": "deny", "services": {"compute": {"type": "allow"}}}
+EOF
+exo iam api-key create ai-factory-deploy ai-factory-deploy
+```
+
+A rule such as
+`{"action": "deny", "expression": "timestamp(identity.created) < timestamp(now) - duration('72h')"}`
+before an `allow` rule (with `"type": "rules"`) makes the key expire; leave
+enough time for the destroy. Delete the key and the role once the cluster is
+gone. Policy reference: [IAM policy examples](https://community.exoscale.com/product/security/iam/how-to/policy-examples/).
 
 ## Quickstart
 
