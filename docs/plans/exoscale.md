@@ -495,6 +495,16 @@ Commit order inside the branch, each `terraform validate`/`test` clean:
    nodes` shows the member names, not the `<cluster>-cp` placeholder.
 9. Full component set builds within the default `image_disk_size`.
 
+Results of the first e2e run (2026-10-06, de-fra-1, 3 control planes + 1
+worker, default components): both passes complete; member hostnames from
+metadata; all INTERNAL-IPs on the private network; `nodes` has a private IP for
+every member (leases include dynamic leases); SSH to public IPs times out and
+works through the jumphost; 9345 and worker ports closed from outside; Rancher
+answers; a rerun plans no changes. A deleted member was replaced by the pool
+and joined after `kubectl delete node <dead>`. Bugs found and fixed: no `init`
+node in `nodes` (kubeconfig.sh), and deploy.sh misreading the state
+(`| grep -q` + pipefail) into a bootstrap plan, caught before apply.
+
 ## 12. Open questions for the maintainer
 
 All answered (2026-10-06):

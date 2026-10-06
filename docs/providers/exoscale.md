@@ -210,6 +210,12 @@ anti-affinity group and the templates by name. Exit 0 means nothing is left.
 
 In addition to [Limitations](#limitations):
 
+- A lost control plane member is replaced by the pool automatically, outside
+  Terraform, but the replacement joins only after the dead member's node is
+  deleted: `kubectl delete node <name>` removes its etcd member, and RKE2 waits
+  for a healthy etcd before a server joins (observed in an e2e test: the new
+  member logged an unhealthy etcd until then). Run `./deploy.sh` afterwards to
+  refresh the `nodes` output.
 - Scaling the control plane down removes the oldest member first and leaves
   its etcd member behind (`docs/scaling.md`).
 - A rebuild updates the pool's template in place: existing control plane
