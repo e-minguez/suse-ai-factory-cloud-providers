@@ -69,6 +69,21 @@ grep -qF "==> [2/2] Close image import port" "$W/out" || fail "rebuild: no close
 [ "$(applies)" -eq 2 ] || fail "rebuild: expected 2 applies"
 [ "$(pins)" = '[true,false]' ] || fail "rebuild: pins $(pins)"
 
+# --- a long state list with the pool near the top: `| grep -q` would exit
+# early and, with pipefail, read terraform's SIGPIPE as "not in state".
+{ printf '%s\n' "$POOL"; for i in $(seq 1 20000); do echo "module.ai_factory.exoscale_security_group_rule.control_plane[\"r-$i\"]"; done; } >"$W/state-list"
+run FAKE_TF_STATE_LIST_FILE="$W/state-list" FAKE_TF_PLAN=plan-vultr-update.json -- --yes
+[ "$RC" -eq 0 ] || fail "long state: rc $RC"
+grep -qF "==> [1/1] Apply" "$W/out" || fail "long state: bootstrap path taken on a bootstrapped cluster"
+
+# --- a plan that shrinks the pool to one member aborts, whatever the path.
+printf '{"cp_initialized":false,"image_import_port_open":true}\n' >"$PINS"
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-pool-shrink.json -- --yes
+[ "$RC" -ne 0 ] || fail "pool shrink: deploy.sh succeeded"
+grep -qF "shrinks the control plane pool to one member" "$W/out" || fail "pool shrink: message"
+[ "$(applies)" -eq 0 ] || fail "pool shrink: applied"
+printf '{"cp_initialized":true,"image_import_port_open":false}\n' >"$PINS"
+
 # --- initialized cluster whose pool would be replaced: abort before any apply.
 run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-pool-replace.json -- --yes
 [ "$RC" -ne 0 ] || fail "pool replace: deploy.sh succeeded"

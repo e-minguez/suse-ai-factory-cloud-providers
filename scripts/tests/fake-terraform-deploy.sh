@@ -2,7 +2,8 @@
 # Fake terraform for deploy tests. Env: FAKE_TF_DIR (fixtures), FAKE_TF_STATE (scratch dir),
 # FAKE_TF_PLAN (plan fixture name), FAKE_TF_PLAN_FAIL, FAKE_TF_VERSION,
 # FAKE_TF_PLAN_WARN, FAKE_TF_IMAGE (JSON answered for `output -json image`), FAKE_TF_APPLY_SEQ ("fixture:rc ..." consumed one per apply call), FAKE_TF_NEXT_STEPS,
-# FAKE_TF_STATE_LIST (lines answered for `state list`).
+# FAKE_TF_STATE_LIST (lines answered for `state list`), FAKE_TF_STATE_LIST_FILE (same, from a file,
+# written line by line, so an early-exiting reader gets SIGPIPE as with real terraform).
 echo "$*" >>"$FAKE_TF_STATE/calls.log"
 cmd=${1:-}
 shift || true
@@ -12,6 +13,9 @@ case "$cmd" in
   state)
     [ "${1:-}" = list ] || exit 1
     [ -z "${FAKE_TF_STATE_LIST:-}" ] || printf "%s\n" "$FAKE_TF_STATE_LIST"
+    if [ -n "${FAKE_TF_STATE_LIST_FILE:-}" ]; then
+      while IFS= read -r l; do echo "$l"; done <"$FAKE_TF_STATE_LIST_FILE"
+    fi
     ;;
   plan)
     if [ -n "${FAKE_TF_PLAN_FAIL:-}" ]; then

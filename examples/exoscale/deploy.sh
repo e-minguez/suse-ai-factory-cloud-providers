@@ -34,17 +34,27 @@ exo_pinned() { jq -r --arg k "$1" 'if has($k) then .[$k] else empty end' "$PASS2
 # Bootstrapped: the pool is in state and pass 1 finished (the pin is written
 # false before it and true after it). A stale pin file never makes a new
 # cluster skip init, and a failed pass 1 is rerun with the init configuration.
+# The list is read in full first: `| grep -q` exits on the first match, and
+# with pipefail the SIGPIPE it gives terraform would read as "not in state".
 exo_bootstrapped() {
-  terraform state list 2>/dev/null | grep -qxF "${POOL}[0]" && [ "$(exo_pinned cp_initialized)" != false ]
+  local list
+  list=$(terraform state list 2>/dev/null) || return 1
+  grep -qxF "${POOL}[0]" <<<"$list" && [ "$(exo_pinned cp_initialized)" != false ]
 }
 
 # Plan hook. Aborts when an initialized pool would be created or replaced (a
-# pool with the join configuration and no member to join); reopens port 80
-# and has the plan redone when the plan registers a new template.
+# pool with the join configuration and no member to join), or when a plan
+# would shrink the pool to one member (members removed, init configuration
+# back); reopens port 80 and has the plan redone when the plan registers a
+# new template.
 exo_plan_hook() {
   if [ "$(exo_pinned cp_initialized)" = true ] &&
     jq -e --arg a "${POOL}[0]" '[.resource_changes[]? | select(.address == $a and (.change.actions | index("create")))] | length > 0' "$1" >/dev/null; then
     deploy_die "the plan creates or replaces the control plane pool of an initialized cluster; its members would have no cluster to join. Check the change (for example the zone), or destroy and deploy again."
+  fi
+  if jq -e --arg a "${POOL}[0]" '[.resource_changes[]? | select(.address == $a
+      and ((.change.before.size // 0) > 1) and (.change.after.size == 1))] | length > 0' "$1" >/dev/null; then
+    deploy_die "the plan shrinks the control plane pool to one member, which removes members and brings back the init configuration. Nothing was applied. Check $PASS2_FILE (cp_initialized must be true on a running cluster) and report this."
   fi
   [ "$(exo_pinned image_import_port_open)" != true ] || return 0
   jq -e '[.resource_changes[]? | select(.type == "exoscale_template" and (.change.actions | index("create")))] | length == 0' "$1" >/dev/null && return 0
