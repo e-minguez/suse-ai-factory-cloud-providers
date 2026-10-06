@@ -83,8 +83,8 @@ Spike S1 (2026-10-06, de-fra-1):
   template rejection came back within seconds, so bad images fail fast.
 - **qcow2 accepted**: `boot_mode = "uefi"`, 10 GiB virtual, 887 MB file,
   registered in **16 s**. With `components = []` a 5G raw builds (customize
-  ~30 s, jumphost → served ~2 min). Exoscale default `image_disk_size = "5G"`
-  (decided); the first e2e deploy with the full component set confirms it.
+  ~30 s, jumphost → served ~2 min). The raw is sparse (887M used at 5G; unused space is not written), so the module keeps the shared
+  `image_disk_size` default; set `5G` if wanted.
 
 Spike S3 (Elemental on Exoscale, standalone control plane + pool agent):
 - Ignition with `ignition.platform.id=exoscale` applies hostname,
@@ -102,7 +102,7 @@ Spike S2 (private Elemental node, `private = true`): console shows
 "Timed out waiting for device /dev/disk/by-label/ignition", "catalyst-prepare:
 No config source found", "Failed to start Ignition (fetch)", emergency mode.
 The NoCloud drive of private instances is not an Ignition source. Public IPv4
-on every node is required; precondition rejects `public_ip = false`.
+on every node is required; `public_ip` cannot opt out (no effect on this provider; `control_plane_public_ip` only decides whether `nodes` reports the control planes' public IPs).
 
 `runtime.env` is read only by `/usr/bin/elemental3ctl`, in the initrd
 firstboot stage after Ignition (no systemd unit references it);
@@ -227,8 +227,8 @@ Record in an ADR (`docs/decisions/008-exoscale-module.md`).
 ## 5. Network and firewall (B2)
 
 - Every node: public IPv4 (NLB members, metadata/Ignition, egress; ADR 008).
-  `control_plane_public_ip` and pool `public_ip = false` → precondition error
-  explaining why (confirmed by S2).
+  `control_plane_public_ip` and pool `public_ip` cannot opt out; documented as
+  having no effect (rejecting `false` would break the common default) (confirmed by S2).
 - `exoscale_private_network` with managed DHCP from `vpc_cidr` (pool members
   cannot have static leases). Cluster traffic on the second NIC (`ens6`).
 - `vpc_mtu` default 1500, precondition ≤ 1500. Pod MTU = 1450 via existing
@@ -414,12 +414,12 @@ Commit order inside the branch, each `terraform validate`/`test` clean:
    (`exoscale_api_key`, `exoscale_api_secret`, `cp_initialized`,
    `image_import_port_open`), `variables-common.tf` symlink, `locals.tf`
    (coalesce defaults: `region = "de-fra-1"`, `vpc_mtu = 1500`,
-   `image_disk_size = "5G"`, labels, naming).
+   shared `image_disk_size` default, labels, naming).
 2. `availability.tf` + `scripts/exoscale-api.sh` (openssl signing, `jq`) behind
    `data "external"`: type in signed `/v2/instance-type` and zone; quota
    headroom (instances incl. jumphost and pool max, NLB, templates, GPU per
    family); preconditions on the private network resource. Rejections: more
-   than one zone, pool `zone`, `public_ip = false`, `placement`, `bare_metal`,
+   than one zone, pool `zone`, `placement`, `bare_metal`,
    `vpc_mtu > 1500`, `image_disk_size` > 1000G, `cluster_name` length for
    `instance_prefix` (30), `control_plane_count` > 8 (anti-affinity).
 3. `network.tf` (managed private network from `vpc_cidr`), `firewall.tf`
@@ -457,7 +457,7 @@ Commit order inside the branch, each `terraform validate`/`test` clean:
 - Before merge, user runs e2e (below) and adds required check
   `validate (exoscale)` to ruleset `protect-main` (12 → 13 required checks).
 
-### PR 3 - `tools/leftovers/exoscale.sh`
+### PR 3 - `tools/leftovers/exoscale.sh` (moved into PR 2: `deploy.sh` prints it)
 - On `scripts/lib/leftovers.sh` and `scripts/exoscale-api.sh` (no `exo` CLI):
   labelled objects by `elemental-cluster`, unlabelled ones (security groups,
   anti-affinity group, SSH key, templates) by name prefix; test with a fake
@@ -488,6 +488,12 @@ Commit order inside the branch, each `terraform validate`/`test` clean:
    intended (`ignore_changes` on user_data/template as in other providers).
 6. `deploy.sh --destroy`, then the leftover check prints nothing.
 7. GPU pool once quota is granted (separate run).
+8. Module-specific: `terraform output nodes` lists every control plane member
+   with a `private_ip` (private network `leases` include dynamic leases);
+   `systemctl status node-hostname wait-privnet` on a member: both ran before
+   `rke2-server` (`RequiredBy=` honoured by Ignition's enable); `kubectl get
+   nodes` shows the member names, not the `<cluster>-cp` placeholder.
+9. Full component set builds within the default `image_disk_size`.
 
 ## 12. Open questions for the maintainer
 
@@ -498,8 +504,8 @@ All answered (2026-10-06):
 - Single zone: accepted.
 - Control plane hostnames `<cluster>-cp-<pool id>-<random>`: accepted as a
   documented naming exception.
-- `image_disk_size` default for Exoscale: `5G` (first full e2e deploy confirms
-  the full component set fits).
+- `image_disk_size`: shared default kept (8G); 5G was accepted, but the raw is
+  sparse, so it changes neither build nor transfer time.
 
 Future work: private worker nodes (`proxmoxve` platform id, NAT instance) once
 the VPC is GA and attachable from Terraform.

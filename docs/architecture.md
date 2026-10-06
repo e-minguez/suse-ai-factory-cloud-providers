@@ -65,6 +65,7 @@ flowchart TD
         aws["aws: upload to aws_s3_bucket →<br/>aws_ebs_snapshot_import → aws_ami"]
         vultr["vultr: HTTP on jumphost :80 →<br/>vultr_snapshot_from_url"]
         evroc["evroc: dd to evroc_disk (image target) →<br/>detach → evroc_snapshot per zone"]
+        exoscale["exoscale: qemu-img convert to qcow2 (≥ 10 GiB),<br/>HTTP on jumphost :80 → exoscale_template"]
     end
 
     deliver --> nodes["Nodes: boot from the image,<br/>Ignition sets role, hostname, node-ip"]
@@ -73,8 +74,9 @@ flowchart TD
 ```
 
 Terraform waits for the build from the workstation: aws polls S3
-(`wait-for-raw.sh`), vultr polls the served URL (`wait-for-image.sh`), evroc
-polls the build-status relay on the jumphost (`wait-for-image.sh`).
+(`wait-for-raw.sh`), vultr and exoscale poll the served URL
+(`wait-for-image.sh`), evroc polls the build-status relay on the jumphost
+(`wait-for-image.sh`).
 `scripts/build-logs.sh` follows the build log on the build host over SSH.
 
 ## Passes
@@ -177,6 +179,43 @@ flowchart TD
 Once the snapshots are in state, `deploy.sh` runs one apply with
 `image_ready=true`; `--rebuild` goes through all passes again.
 
+### exoscale: two passes
+
+The NLB targets instance pools only and a pool has one `user_data`, so the
+control plane pool starts with one init member and switches to the join
+configuration in a second apply ([ADR 008](decisions/008-exoscale-module.md)).
+
+```mermaid
+flowchart TD
+    subgraph p1 ["Pass 1: Bootstrap control plane (cp_initialized=false)"]
+        net["network: exoscale_private_network,<br/>exoscale_security_group per role<br/>(incl. tcp/80 for the image import)"]
+        lb["lb: exoscale_nlb"]
+        jh["jumphost: exoscale_compute_instance<br/>(builds and serves the qcow2)"]
+        img["image: exoscale_template"]
+        pool["control_plane: exoscale_instance_pool, size 1,<br/>init configuration + exoscale_nlb_service"]
+        ag["worker, gpu: exoscale_compute_instance"]
+        wait["cp_init_ready: API answers through the NLB"]
+        net --> lb
+        net --> jh
+        lb -- "NLB address in the image config" --> jh
+        jh --> img --> pool --> wait
+        img --> ag
+    end
+
+    wait --> pin["deploy.sh: cp_initialized=true,<br/>image_import_port_open=false"]
+
+    subgraph p2 ["Pass 2: Scale control plane"]
+        scale["exoscale_instance_pool: join configuration,<br/>size = control_plane_count (in place)"]
+        fwclose["tcp/80 import rule removed"]
+    end
+
+    pin --> scale
+    pin --> fwclose
+```
+
+Once the pool is in state, `deploy.sh` runs one apply with the pins; a new
+template reopens tcp/80 and a second apply closes it.
+
 ## Network
 
 Main traffic paths. SSH always goes through the jumphost (`ProxyJump`,
@@ -272,4 +311,33 @@ flowchart LR
     cp --> pnat
     ag --> pnat
     pnat --> inet
+```
+
+### exoscale
+
+```mermaid
+flowchart LR
+    admin(["Admin"])
+    users(["Users / kubectl"])
+    inet(["Internet"])
+
+    subgraph pn ["exoscale_private_network (security groups do not apply)"]
+        jh["jumphost<br/>exoscale_compute_instance (static lease)"]
+        cp["control_plane<br/>exoscale_instance_pool"]
+        ag["worker, gpu<br/>exoscale_compute_instance"]
+    end
+    nlb["exoscale_nlb<br/>6443, 9345, 80/443"]
+    hc(["public-nlb-healthcheck-sources"])
+    tpl[("exoscale_template")]
+
+    admin -- "SSH (admin_cidrs)" --> jh
+    jh -- "SSH (private network)" --> cp
+    jh -- "SSH (private network)" --> ag
+    users -- "80/443 (ingress_cidrs)<br/>6443 (api_cidrs)" --> nlb --> cp
+    cp -- "9345 joins (public IP)" --> nlb
+    ag -- "6443, 9345 (public IP)" --> nlb
+    hc -- "healthchecks" --> cp
+    cp -- "public IP" --> inet
+    ag -- "public IP" --> inet
+    tpl -- "fetch over HTTP :80 (pass 1)" --> jh
 ```

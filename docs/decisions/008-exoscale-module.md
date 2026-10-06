@@ -1,9 +1,9 @@
 # 008 - exoscale module design
 
 ## Status
-Proposed. Based on spike tests in de-fra-1 on 2026-10-05/06 with provider
-`exoscale/exoscale` v0.74.2; not implemented yet
-([plan](../plans/exoscale.md)).
+Accepted. Based on spike tests in de-fra-1 on 2026-10-05/06 with provider
+`exoscale/exoscale` v0.74.2 ([plan](../plans/exoscale.md)); implemented in
+`modules/exoscale`, end-to-end checks pending (`docs/plans/exoscale.md`, section 11).
 
 ## Context
 Platform behaviour that shapes the module, each confirmed by a spike test
@@ -76,9 +76,10 @@ unless marked as documented:
   by public IP, `exoscale_instance_pool` has no private option, and there is no
   managed NAT gateway.
 - **Single zone**: private networks and pools cannot span zones.
-- **Image**: the jumphost builds a 5G raw image (Exoscale default for
-  `image_disk_size`), converts it to qcow2, grows the virtual size to 10 GiB
-  and serves it over HTTP;
+- **Image**: the jumphost builds the raw image (shared `image_disk_size`
+  default; the raw is sparse, so a smaller size does not speed up the build or
+  the transfer), converts it to qcow2, grows the virtual size to 10 GiB when
+  smaller and serves it over HTTP;
   `exoscale_template` reads the MD5 at apply time through a deferred
   `data.http`. The jumphost is replaced on every new build.
 - **Plan-time checks** through a signing script (bash, `openssl`, `jq`) behind
@@ -113,6 +114,5 @@ Alternatives considered:
   on it within the same apply.
 - The leftover tool matches unlabelled objects by name prefix.
 - GPU instances need a quota increase through support before the first deploy.
-- Not covered by the spike tests: GPU nodes, the full component set in a 5G
-  image (first e2e deploy confirms it), multiple control plane members running
-  RKE2.
+- Not covered by the spike tests: GPU nodes, the full component set,
+  multiple control plane members running RKE2.

@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Fake terraform for deploy tests. Env: FAKE_TF_DIR (fixtures), FAKE_TF_STATE (scratch dir),
 # FAKE_TF_PLAN (plan fixture name), FAKE_TF_PLAN_FAIL, FAKE_TF_VERSION,
-# FAKE_TF_PLAN_WARN, FAKE_TF_IMAGE (JSON answered for `output -json image`), FAKE_TF_APPLY_SEQ ("fixture:rc ..." consumed one per apply call), FAKE_TF_NEXT_STEPS.
+# FAKE_TF_PLAN_WARN, FAKE_TF_IMAGE (JSON answered for `output -json image`), FAKE_TF_APPLY_SEQ ("fixture:rc ..." consumed one per apply call), FAKE_TF_NEXT_STEPS,
+# FAKE_TF_STATE_LIST (lines answered for `state list`).
 echo "$*" >>"$FAKE_TF_STATE/calls.log"
 cmd=${1:-}
 shift || true
 case "$cmd" in
   version) echo "{\"terraform_version\":\"${FAKE_TF_VERSION:-1.9.0}\"}" ;;
   init) echo "Terraform has been successfully initialized!" ;;
+  state)
+    [ "${1:-}" = list ] || exit 1
+    [ -z "${FAKE_TF_STATE_LIST:-}" ] || printf "%s\n" "$FAKE_TF_STATE_LIST"
+    ;;
   plan)
     if [ -n "${FAKE_TF_PLAN_FAIL:-}" ]; then
       echo "Error: bad variable" >&2

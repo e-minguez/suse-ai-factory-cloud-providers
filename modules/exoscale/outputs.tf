@@ -15,7 +15,8 @@ locals {
   }
 
   # Members as the API lists them; init is not tracked per member (the pool
-  # has one Ignition entry).
+  # has one Ignition entry). Every member has a public IPv4 (NLB);
+  # control_plane_public_ip only decides whether nodes reports it.
   cp_nodes = {
     for m in local.cp_members : m.name => {
       role          = "control_plane"
@@ -24,7 +25,7 @@ locals {
       zone          = local.zone
       ssh_user      = var.node_username
       private_ip    = m.private_ip
-      public_ip     = m.public_ip
+      public_ip     = var.control_plane_public_ip ? m.public_ip : null
       instance_type = local.control_plane_type
       id            = m.id
     }
