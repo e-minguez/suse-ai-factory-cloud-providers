@@ -41,9 +41,10 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 # --- GPU workers ----------------------------------------------------------
 # gpu_pools defaults to {}: a control-plane-only cluster. Types are
 # "family.size"; GPU quotas are 0 until Exoscale support raises them, and the
-# plan fails while the quota has no room. public_ip = true is required: every
-# Exoscale node has a public IPv4 (egress, metadata service), with no inbound
-# rules on worker and GPU nodes (docs/providers/exoscale.md#limitations).
+# plan fails while the quota has no room. public_ip defaults to true here and
+# false fails the plan: every Exoscale node has a public IPv4 (egress, metadata
+# service), with no inbound rules on worker and GPU nodes
+# (docs/providers/exoscale.md#limitations).
 # zone and placement must stay null.
 # Per zone (2026-10): gpu3 (A40) de-fra-1; gpurtx6000pro ch-dk-2, de-fra-1,
 # hr-zag-1; gpua30 and gpub300 ch-gva-2; gpua5000 and gpu3080ti at-vie-2;
@@ -52,15 +53,15 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 # Pool names become hostnames "<cluster_name>-<pool>-NN"; "cp" is reserved.
 #
 # gpu_pools = {
-#   gpu = { instance_type = "gpu3.small", count = 2, public_ip = true }
+#   gpu = { instance_type = "gpu3.small", count = 2 }
 # }
 #
 # --- Worker pools (no GPU) -------------------------------------------------
-# worker_pools defaults to {}. Same fields and public_ip = true as gpu_pools;
+# worker_pools defaults to {}. Same fields and public_ip rule as gpu_pools;
 # the type must have no GPUs.
 #
 # worker_pools = {
-#   wrk = { instance_type = "standard.large", count = 2, public_ip = true }
+#   wrk = { instance_type = "standard.large", count = 2 }
 # }
 
 # --- Optional -------------------------------------------------------------

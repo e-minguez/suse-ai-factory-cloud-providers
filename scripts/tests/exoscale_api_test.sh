@@ -48,10 +48,10 @@ api /v2/instance-type '{"instance-types":[
   {"id":"t-vie","family":"gpua5000","size":"small","zones":["at-vie-2"],"gpus":1}]}'
 api /v2/quota '{"quotas":[{"resource":"instance","usage":3,"limit":20},{"resource":"gpu3","usage":1,"limit":2}]}'
 api /v2/instance '{"instances":[
-  {"id":"i-1","name":"c1-cp-abcde-xyzab","labels":{"elemental-cluster":"c1"},"instance-type":{"id":"t-std"},"public-ip":"198.51.100.1"},
+  {"id":"i-1","name":"c1-cp-abcde-xyzab","labels":{"elemental-cluster":"c1"},"instance-type":{"id":"t-std"},"public-ip":"198.51.100.1","created-at":"2026-10-06T10:00:00Z"},
   {"id":"i-2","name":"c1-gpu-01","labels":{"elemental-cluster":"c1"},"instance-type":{"id":"t-gpu"},"public-ip":"198.51.100.2"},
   {"id":"i-3","name":"other","labels":{"elemental-cluster":"c2"},"instance-type":{"id":"t-gpu"},"public-ip":"198.51.100.3"},
-  {"id":"i-4","name":"c1-cp-abcde-qwert","labels":{"elemental-cluster":"c1"},"instance-type":{"id":"t-std"},"public-ip":"198.51.100.4"}]}'
+  {"id":"i-4","name":"c1-cp-abcde-qwert","labels":{"elemental-cluster":"c1"},"instance-type":{"id":"t-std"},"public-ip":"198.51.100.4","created-at":"2026-10-06T10:05:00Z"}]}'
 api /v2/load-balancer '{"load-balancers":[{"id":"l-1","labels":{"elemental-cluster":"c1"}}]}'
 api /v2/instance-pool/p-1 '{"id":"p-1","instances":[{"id":"i-1"},{"id":"i-4"}]}'
 api /v2/private-network/n-1 '{"id":"n-1","leases":[{"instance-id":"i-1","ip":"10.20.0.11"},{"instance-id":"i-2","ip":"10.20.0.12"}]}'
@@ -69,10 +69,10 @@ eq "$(jq -r .existing <<<"$out" | jq -c .)" '{"instances":3,"gpus":{"gpu3":1},"n
 grep -q 'Authorization: EXO2-HMAC-SHA256 credential=EXOtest,expires=[0-9]*,signature=' "$FAKE_LOG" || fail "request not signed"
 grep -q 'https://api-de-fra-1.exoscale.com/v2/quota' "$FAKE_LOG" || fail "zone endpoint not used"
 
-# members: pool members with their privnet lease, sorted by name.
+# members: pool members with their privnet lease, oldest first.
 out=$(run "{\"mode\":\"members\",$base,\"pool_id\":\"p-1\",\"network_id\":\"n-1\"}")
 eq "$(jq -r .members <<<"$out" | jq -c .)" \
-  '[{"id":"i-4","name":"c1-cp-abcde-qwert","public_ip":"198.51.100.4","private_ip":null},{"id":"i-1","name":"c1-cp-abcde-xyzab","public_ip":"198.51.100.1","private_ip":"10.20.0.11"}]' \
+  '[{"id":"i-1","name":"c1-cp-abcde-xyzab","public_ip":"198.51.100.1","private_ip":"10.20.0.11","created_at":"2026-10-06T10:00:00Z"},{"id":"i-4","name":"c1-cp-abcde-qwert","public_ip":"198.51.100.4","private_ip":null,"created_at":"2026-10-06T10:05:00Z"}]' \
   "members"
 
 # Errors: non-200 answers and missing credentials fail with a message.

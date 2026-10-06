@@ -74,12 +74,12 @@ variable "gpu_pools" {
     count         = optional(number, 1)
     disk_size_gb  = optional(number)
     zone          = optional(string)
-    public_ip     = optional(bool, false)
+    public_ip     = optional(bool, true)
     kind          = optional(string, "vm")
     placement     = optional(string)
   }))
   default     = {}
-  description = "GPU worker pools keyed by pool name, with Exoscale GPU types such as gpu3.small. public_ip must be true, zone and placement null and kind \"vm\" on this provider."
+  description = "GPU worker pools keyed by pool name, with Exoscale GPU types such as gpu3.small. public_ip defaults to true here and must stay true; zone and placement null and kind \"vm\" on this provider."
 }
 
 variable "worker_pools" {
@@ -88,7 +88,7 @@ variable "worker_pools" {
     count         = optional(number, 1)
     disk_size_gb  = optional(number)
     zone          = optional(string)
-    public_ip     = optional(bool, false)
+    public_ip     = optional(bool, true)
     kind          = optional(string, "vm")
     placement     = optional(string)
   }))

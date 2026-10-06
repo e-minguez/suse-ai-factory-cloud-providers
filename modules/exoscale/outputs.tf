@@ -14,13 +14,14 @@ locals {
     hosts      = [local.jumphost_private_ip]
   }
 
-  # Members as the API lists them; init is not tracked per member (the pool
-  # has one Ignition entry).
+  # Members as the API lists them, oldest first. The pool has one Ignition
+  # entry; init marks the oldest member, the one scripts/kubeconfig.sh and
+  # tools/multicluster talk to (the bootstrap member while it exists).
   cp_nodes = {
-    for m in local.cp_members : m.name => {
+    for i, m in local.cp_members : m.name => {
       role          = "control_plane"
       pool          = "cp"
-      init          = false
+      init          = i == 0
       zone          = local.zone
       ssh_user      = var.node_username
       private_ip    = m.private_ip

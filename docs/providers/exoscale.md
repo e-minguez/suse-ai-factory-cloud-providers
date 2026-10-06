@@ -17,7 +17,8 @@ Read these before choosing this provider:
   metadata service (instances without a public IP do not get one), and egress
   uses it: Exoscale has no managed NAT gateway, and its VPC is beta and cannot
   be attached from Terraform. `control_plane_public_ip` and each pool's
-  `public_ip` must be `true`, so this is an explicit choice.
+  `public_ip` must be `true`: the example root defaults both to `true`, and
+  the module rejects `false` instead of ignoring it.
 - **Inbound traffic is filtered by security groups only.** Worker and GPU nodes
   accept nothing from outside; control planes accept the load balancer ports
   (6443 from `api_cidrs`, 80/443 from `ingress_cidrs`, healthchecks, joins);

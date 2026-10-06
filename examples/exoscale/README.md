@@ -10,8 +10,8 @@ notes: [`docs/providers/exoscale.md`](../../docs/providers/exoscale.md).
 groups only, and the cluster runs in a single zone. Exoscale's load balancer,
 metadata service and missing NAT gateway leave no alternative today:
 [Limitations](../../docs/providers/exoscale.md#limitations).
-`control_plane_public_ip` defaults to `true` here and every pool needs
-`public_ip = true`; `false` fails the plan.
+`control_plane_public_ip` and the pools' `public_ip` default to `true` here;
+`false` fails the plan.
 
 ## Prerequisites
 

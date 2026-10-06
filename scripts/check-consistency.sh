@@ -49,7 +49,7 @@ done
 mapfile -t keys < <(sed -n 's/^#\{0,1\} \{0,1\}\([a-z][a-z0-9_]*\) *= .*/\1/p' common-all.tfvars.example | sort -u)
 common_names=$(declared "$common")
 # Variables whose default legitimately differs per provider.
-provider_specific=" region rancher_hostname gpu_driver_repository gpu_driver_version control_plane_public_ip "
+provider_specific=" region rancher_hostname gpu_driver_repository gpu_driver_version control_plane_public_ip gpu_pools worker_pools "
 for k in "${keys[@]}"; do
   grep -qx "$k" <<<"$common_names" || err "common-all.tfvars.example: $k is not in variables-common.tf"
   for p in "${providers[@]}"; do

@@ -7,7 +7,8 @@
 #   check    types (comma-separated family.size), cluster
 #            -> types, quotas, existing (JSON-encoded strings)
 #   members  pool_id, network_id
-#            -> members (JSON-encoded list of {id, name, public_ip, private_ip})
+#            -> members (JSON-encoded list of {id, name, public_ip, private_ip,
+#               created_at}, oldest first)
 set -euo pipefail
 
 die() {
@@ -81,8 +82,9 @@ case "$mode" in
       (($net.leases // []) | map({key: .["instance-id"], value: .ip}) | from_entries) as $lease
       | ([($pool.instances // [])[].id]) as $ids
       | {members: ([($in.instances // [])[] | select(.id as $i | $ids | index($i))
-          | {id, name, public_ip: (.["public-ip"] // null), private_ip: ($lease[.id] // null)}]
-          | sort_by(.name) | tojson)}'
+          | {id, name, public_ip: (.["public-ip"] // null), private_ip: ($lease[.id] // null),
+             created_at: (.["created-at"] // "")}]
+          | sort_by(.created_at, .name) | tojson)}'
     ;;
 
   *) die "unknown mode: $mode" ;;
