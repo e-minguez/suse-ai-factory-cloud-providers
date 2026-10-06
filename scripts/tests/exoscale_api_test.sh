@@ -12,10 +12,13 @@ mkdir "$W/bin" "$W/api"
 export FAKE_API="$W/api" FAKE_LOG="$W/curl.log"
 
 # Fake curl: the body is $FAKE_API/<url path, non-alnum as _>.json and the
-# status <same>.code (default 200); a missing body answers 404. Prints the
-# body, a newline and the status, as the script's -w '\n%{http_code}' expects.
+# status <same>.code (default 200); a missing body answers 404 and a wrong
+# signature 403. Prints the body, a newline and the status, as the script's
+# -w '\n%{http_code}' expects.
 cat >"$W/bin/curl" <<'FAKE'
 #!/usr/bin/env bash
+# shellcheck source=/dev/null
+. "$FAKE_SIG"
 url="" auth=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -31,11 +34,12 @@ key=$(printf '%s' "$path" | tr -c 'A-Za-z0-9' _)
 echo "GET $url $auth" >>"$FAKE_LOG"
 code=200
 [ -f "$FAKE_API/$key.code" ] && code=$(cat "$FAKE_API/$key.code")
+if ! exo_sig_ok "$url" "$auth"; then printf '{"message":"bad signature"}\n403'; exit 0; fi
 if [ -f "$FAKE_API/$key.json" ]; then cat "$FAKE_API/$key.json"; else code=404; printf '{}'; fi
 printf '\n%s' "$code"
 FAKE
 chmod +x "$W/bin/curl"
-export PATH="$W/bin:$PATH"
+export PATH="$W/bin:$PATH" FAKE_SECRET=s3cret FAKE_SIG="$T/fake-exoscale-sig.sh"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 eq() { [ "$1" = "$2" ] || fail "$3: got '$1', want '$2'"; }

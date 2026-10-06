@@ -33,8 +33,9 @@ API_BASE="${EXOSCALE_API_BASE:-https://api-$ZONE.exoscale.com}"
 # stdin so it never shows in `ps`.
 api_get() {
   local url=$1 out=$2 path query="" names="" values="" k v expires sig pragma=""
-  path=${url%%\?*}
-  [ "$path" = "$url" ] || query=${url#*\?}
+  # The signed path is the request path, /v2 prefix included.
+  path=/v2${url%%\?*}
+  [ "${url%%\?*}" = "$url" ] || query=${url#*\?}
   if [ -n "$query" ]; then
     while IFS='=' read -r k v; do
       names="${names:+$names;}$k" values="$values$v"

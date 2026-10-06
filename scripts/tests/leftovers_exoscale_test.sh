@@ -13,15 +13,17 @@ export TMPDIR="$W/tmp"
 export FAKE_API="$W/api" FAKE_LOG="$W/curl.log"
 
 # Fake curl: the body is $FAKE_API/<url path+query, non-alnum as _>.json, the
-# status <same>.code (default 200); a missing body answers 404. -K - reads the
-# Authorization header from stdin, which is logged.
+# status <same>.code (default 200); a missing body answers 404 and a wrong
+# signature 403. -K - reads the Authorization header from stdin, which is logged.
 cat >"$W/bin/curl" <<'FAKE'
 #!/usr/bin/env bash
-out="" url=""
+# shellcheck source=/dev/null
+. "$FAKE_SIG"
+out="" url="" auth=""
 while [ $# -gt 0 ]; do
   case "$1" in
     -o) out=$2; shift ;;
-    -K) cat >>"$FAKE_LOG.auth"; shift ;;
+    -K) auth=$(cat); echo "$auth" >>"$FAKE_LOG.auth"; shift ;;
     -w | --max-time) shift ;;
     -*) ;;
     *) url=$1 ;;
@@ -33,12 +35,13 @@ key=$(printf '%s' "$path" | tr -c 'A-Za-z0-9' _)
 echo "GET $url" >>"$FAKE_LOG"
 code=200
 [ -f "$FAKE_API/$key.code" ] && code=$(cat "$FAKE_API/$key.code")
+if ! exo_sig_ok "$url" "$auth"; then echo '{"message":"bad signature"}' >"$out"; printf 403; exit 0; fi
 if [ -f "$FAKE_API/$key.json" ]; then cat "$FAKE_API/$key.json" >"$out"; else code=404; echo '{}' >"$out"; fi
 printf '%s' "$code"
 FAKE
 chmod +x "$W/bin/curl"
 export PATH="$W/bin:$PATH"
-export EXOSCALE_API_KEY=EXOtest EXOSCALE_API_SECRET=s3cret
+export EXOSCALE_API_KEY=EXOtest EXOSCALE_API_SECRET=s3cret FAKE_SECRET=s3cret FAKE_SIG="$T/fake-exoscale-sig.sh"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 has() { grep -qF -- "$2" <<<"$1" || fail "missing '$2' in: $1"; }
