@@ -452,9 +452,10 @@ Commit order inside the branch, each `terraform validate`/`test` clean:
     `docs/providers/exoscale.md`, `docs/conventions.md` (pool field table,
     `provider` enum, CP naming exception, unlabelled types),
     `docs/architecture.md`, `README.md` tables, `CLAUDE.md` (provider facts,
-    passes, platform id, user_data limit), ADR 008 → Accepted, `CHANGELOG.md`.
+    passes, platform id, user_data limit), ADR 008 → Accepted. No `CHANGELOG.md` edit: release-please writes it from the
+    Conventional Commits PR title (`feat(exoscale): ...`).
 - Before merge, user runs e2e (below) and adds required check
-  `validate (exoscale)` to ruleset `protect-main` (11 → 12).
+  `validate (exoscale)` to ruleset `protect-main` (12 → 13 required checks).
 
 ### PR 3 - `tools/leftovers/exoscale.sh`
 - On `scripts/lib/leftovers.sh` and `scripts/exoscale-api.sh` (no `exo` CLI):
