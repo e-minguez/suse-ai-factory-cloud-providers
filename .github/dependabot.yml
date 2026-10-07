@@ -1,5 +1,5 @@
 ---
-# Weekly update PRs. Actions are pinned to commit SHAs in ci.yml; dependabot
+# Weekly update PRs. Actions are pinned to commit SHAs in .github/workflows; dependabot
 # bumps the SHA and the version comment together.
 version: 2
 updates:
@@ -7,6 +7,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
     groups:
       actions:
         patterns: ["*"]
@@ -15,6 +18,9 @@ updates:
     directory: /tools/cost
     schedule:
       interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
     groups:
       go:
         patterns: ["*"]
