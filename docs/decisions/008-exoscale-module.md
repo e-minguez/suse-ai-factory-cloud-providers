@@ -85,6 +85,13 @@ unless marked as documented:
   smaller and serves it over HTTP;
   `exoscale_template` reads the MD5 at apply time through a deferred
   `data.http`. The jumphost is replaced on every new build.
+- **Retained templates.** Exoscale refuses to delete a template while
+  instances from it run, and a rebuild keeps the control plane members. A
+  replaced template is moved in state to `exoscale_template.retained`
+  (`ignore_changes = all`) and deleted on destroy, after the pool, which
+  depends on it. `create_before_destroy` on the template was rejected: it
+  propagates to the jumphost, whose static lease cannot exist twice, and the
+  old template would still be in use by the members.
 - **Plan-time checks** through a signing script (bash, `openssl`, `jq`) behind
   `data "external"`, with preconditions for instance type availability and
   quota headroom.
@@ -116,6 +123,8 @@ Alternatives considered:
   list fewer members until the next refresh; outputs and gates must not rely
   on it within the same apply.
 - The leftover tool matches unlabelled objects by name prefix.
+- Every rebuild leaves one template until destroy (or until every control
+  plane member has been replaced and its id is removed from the pin).
 - GPU instances need a quota increase through support before the first deploy.
 - Not covered by the spike tests: GPU nodes, the full component set,
   multiple control plane members running RKE2.

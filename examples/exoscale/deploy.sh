@@ -22,10 +22,15 @@ DEPLOY_PASS_TOTAL=2
 
 PASS2_FILE=pass2.auto.tfvars.json
 POOL=module.ai_factory.exoscale_instance_pool.control_plane
+TEMPLATE="module.ai_factory.exoscale_template.ai_factory[0]"
 
-# exo_pin <cp_initialized> <image_import_port_open>
+# exo_pin <cp_initialized> <image_import_port_open> [retained_template_ids JSON]
+# Keeps the pinned retained_template_ids unless the third argument replaces them.
 exo_pin() {
-  jq -n --argjson cp "$1" --argjson port "$2" '{cp_initialized: $cp, image_import_port_open: $port}' \
+  local retained=${3:-}
+  [ -n "$retained" ] || retained=$(jq -c '.retained_template_ids // []' "$PASS2_FILE" 2>/dev/null || echo '[]')
+  jq -n --argjson cp "$1" --argjson port "$2" --argjson r "$retained" \
+    '{cp_initialized: $cp, image_import_port_open: $port} + (if $r == [] then {} else {retained_template_ids: $r} end)' \
     >"$PASS2_FILE.tmp" && mv "$PASS2_FILE.tmp" "$PASS2_FILE"
 }
 
@@ -42,11 +47,30 @@ exo_bootstrapped() {
   grep -qxF "${POOL}[0]" <<<"$list" && [ "$(exo_pinned cp_initialized)" != false ]
 }
 
+# A rebuild replaces the template, but Exoscale refuses to delete a template
+# while instances from it run, and the pool keeps its members. Moves the old
+# template to exoscale_template.retained (deleted on destroy, after the pool)
+# and pins its id. An id already retained is not moved again.
+exo_retain_template() {
+  local id
+  jq -e --arg a "${POOL}[0]" '[.resource_changes[]? | select(.address == $a and (.change.actions | index("create") | not))] | length > 0' "$1" >/dev/null || return 0
+  id=$(jq -r --arg a "$TEMPLATE" '.resource_changes[]? | select(.address == $a and (.change.actions | index("delete"))) | .change.before.id // empty' "$1")
+  [ -n "$id" ] || return 0
+  jq -e --arg id "$id" '(.retained_template_ids // []) | index($id)' "$PASS2_FILE" >/dev/null 2>&1 && return 0
+  terraform state mv "$TEMPLATE" "module.ai_factory.exoscale_template.retained[\"$id\"]" >/dev/null ||
+    deploy_die "could not move $TEMPLATE to exoscale_template.retained in state; nothing was applied."
+  exo_pin "$(exo_pinned cp_initialized)" "$(exo_pinned image_import_port_open)" \
+    "$(jq -c --arg id "$id" '(.retained_template_ids // []) + [$id]' "$PASS2_FILE")"
+  echo "    the replaced template still runs the control plane members: kept as retained ($id); re-planning..."
+  return 1
+}
+
 # Plan hook. Aborts when an initialized pool would be created or replaced (a
 # pool with the join configuration and no member to join), or when a plan
 # would shrink the pool to one member (members removed, init configuration
-# back); reopens port 80 and has the plan redone when the plan registers a
-# new template.
+# back); retains a replaced template whose control plane members still run;
+# reopens port 80 and has the plan redone when the plan registers a new
+# template.
 exo_plan_hook() {
   if [ "$(exo_pinned cp_initialized)" = true ] &&
     jq -e --arg a "${POOL}[0]" '[.resource_changes[]? | select(.address == $a and (.change.actions | index("create")))] | length > 0' "$1" >/dev/null; then
@@ -56,6 +80,7 @@ exo_plan_hook() {
       and ((.change.before.size // 0) > 1) and (.change.after.size == 1))] | length > 0' "$1" >/dev/null; then
     deploy_die "the plan shrinks the control plane pool to one member, which removes members and brings back the init configuration. Nothing was applied. Check $PASS2_FILE (cp_initialized must be true on a running cluster) and report this."
   fi
+  exo_retain_template "$1" || return 1
   [ "$(exo_pinned image_import_port_open)" != true ] || return 0
   jq -e '[.resource_changes[]? | select(.type == "exoscale_template" and (.change.actions | index("create")))] | length == 0' "$1" >/dev/null && return 0
   echo "    a new template is registered: opening port 80 on the jumphost for the import; re-planning..."
@@ -79,7 +104,15 @@ deploy_passes() {
     return 0
   fi
 
-  exo_pin false true
+  # A stale pin file may list retained templates of an earlier cluster: keep
+  # the list only when such templates are in state.
+  local list
+  list=$(terraform state list 2>/dev/null || true)
+  if grep -qF "exoscale_template.retained[" <<<"$list"; then
+    exo_pin false true
+  else
+    exo_pin false true '[]'
+  fi
   TF_PLAN_HOOK=exo_plan_hook tf_pass "Bootstrap control plane"
   exo_pin true false
   TF_PLAN_HOOK=exo_plan_hook tf_pass "Scale control plane"

@@ -24,3 +24,9 @@ variable "image_import_port_open" {
   default     = true
   description = "Allow tcp/80 from anywhere on the jumphost so Exoscale can fetch the qcow2 image. deploy.sh sets it to false on pass 2, once the template exists."
 }
+
+variable "retained_template_ids" {
+  type        = list(string)
+  default     = []
+  description = "Templates of earlier builds still used by control plane members, kept until destroy because Exoscale refuses to delete a template with deployed instances. deploy.sh adds an id when a rebuild replaces the template."
+}

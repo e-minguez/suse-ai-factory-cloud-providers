@@ -48,4 +48,5 @@ module "ai_factory" {
   # Pinned by deploy.sh: init on pass 1, join and scale-up on pass 2.
   cp_initialized         = var.cp_initialized
   image_import_port_open = var.image_import_port_open
+  retained_template_ids  = var.retained_template_ids
 }

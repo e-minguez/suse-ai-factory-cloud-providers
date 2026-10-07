@@ -236,6 +236,12 @@ variable "image_import_port_open" {
   description = "Allow tcp/80 on the jumphost for the template import; set by deploy.sh."
 }
 
+variable "retained_template_ids" {
+  type        = list(string)
+  default     = []
+  description = "Templates of earlier builds kept until destroy; set by deploy.sh."
+}
+
 variable "image_rebuild" {
   type        = number
   default     = 0

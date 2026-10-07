@@ -2,6 +2,7 @@
 # Fake terraform for deploy tests. Env: FAKE_TF_DIR (fixtures), FAKE_TF_STATE (scratch dir),
 # FAKE_TF_PLAN (plan fixture name), FAKE_TF_PLAN_FAIL, FAKE_TF_VERSION,
 # FAKE_TF_PLAN_WARN, FAKE_TF_IMAGE (JSON answered for `output -json image`), FAKE_TF_APPLY_SEQ ("fixture:rc ..." consumed one per apply call), FAKE_TF_NEXT_STEPS,
+# FAKE_TF_STATE_MV_RC (exit code of `state mv`, default 0),
 # FAKE_TF_STATE_LIST (lines answered for `state list`), FAKE_TF_STATE_LIST_FILE (same, from a file,
 # written line by line, so an early-exiting reader gets SIGPIPE as with real terraform).
 echo "$*" >>"$FAKE_TF_STATE/calls.log"
@@ -11,6 +12,7 @@ case "$cmd" in
   version) echo "{\"terraform_version\":\"${FAKE_TF_VERSION:-1.9.0}\"}" ;;
   init) echo "Terraform has been successfully initialized!" ;;
   state)
+    [ "${1:-}" = mv ] && exit "${FAKE_TF_STATE_MV_RC:-0}"
     [ "${1:-}" = list ] || exit 1
     [ -z "${FAKE_TF_STATE_LIST:-}" ] || printf "%s\n" "$FAKE_TF_STATE_LIST"
     if [ -n "${FAKE_TF_STATE_LIST_FILE:-}" ]; then

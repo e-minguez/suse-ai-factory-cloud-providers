@@ -69,6 +69,32 @@ grep -qF "==> [2/2] Close image import port" "$W/out" || fail "rebuild: no close
 [ "$(applies)" -eq 2 ] || fail "rebuild: expected 2 applies"
 [ "$(pins)" = '[true,false]' ] || fail "rebuild: pins $(pins)"
 
+# --- rebuild that replaces the template of a running pool: the old template
+# is moved to exoscale_template.retained (Exoscale refuses to delete it while
+# members run), its id pinned, then port 80 opens and closes as usual.
+MV='state mv module.ai_factory.exoscale_template.ai_factory[0] module.ai_factory.exoscale_template.retained["tmpl-old"]'
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-template-replace.json -- --yes
+[ "$RC" -eq 0 ] || fail "retain: rc $RC"
+grep -qxF "$MV" "$W/state/calls.log" || fail "retain: no state mv"
+[ "$(grep -c '^state mv ' "$W/state/calls.log")" -eq 1 ] || fail "retain: moved more than once"
+grep -qF "kept as retained (tmpl-old)" "$W/out" || fail "retain: message"
+grep -qF "==> [2/2] Close image import port" "$W/out" || fail "retain: no close pass"
+[ "$(pins)" = '[true,false]' ] || fail "retain: pins $(pins)"
+[ "$(jq -c .retained_template_ids "$PINS")" = '["tmpl-old"]' ] || fail "retain: retained $(jq -c . "$PINS")"
+
+# --- later runs keep the retained ids; a failed state mv aborts before apply.
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-vultr-update.json -- --yes
+[ "$(jq -c .retained_template_ids "$PINS")" = '["tmpl-old"]' ] || fail "retain rerun: retained dropped"
+printf '{"cp_initialized":true,"image_import_port_open":false}\n' >"$PINS"
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-template-replace.json FAKE_TF_STATE_MV_RC=1 -- --yes
+[ "$RC" -ne 0 ] || fail "retain mv failure: deploy.sh succeeded"
+[ "$(applies)" -eq 0 ] || fail "retain mv failure: applied"
+
+# --- a new cluster drops retained ids left in a stale pin file.
+printf '{"cp_initialized":true,"image_import_port_open":false,"retained_template_ids":["gone"]}\n' >"$PINS"
+run -- --yes
+[ "$(jq -c '.retained_template_ids // []' "$PINS")" = '[]' ] || fail "new cluster: stale retained kept"
+
 # --- a long state list with the pool near the top: `| grep -q` would exit
 # early and, with pipefail, read terraform's SIGPIPE as "not in state".
 { printf '%s\n' "$POOL"; for i in $(seq 1 20000); do echo "module.ai_factory.exoscale_security_group_rule.control_plane[\"r-$i\"]"; done; } >"$W/state-list"
