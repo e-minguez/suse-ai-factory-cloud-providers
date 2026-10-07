@@ -175,6 +175,13 @@ on:
 
 Capacity can still run out between plan and apply.
 
+Quota usage drops with a delay after instances are deleted (observed
+2026-10: several minutes after a destroy of 7 instances, the `instance` and
+`gpu3` usage still counted most of them). Deploying again right after a destroy
+can fail the quota check for resources that no longer exist; wait until the
+usage is back down and plan again. Quotas are per organization, so other
+users' instances count too.
+
 ## Security
 
 | Security group | Inbound |

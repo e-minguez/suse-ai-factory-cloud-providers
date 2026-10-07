@@ -117,7 +117,7 @@ Control plane names are `<cluster_name>-cp-<pool id>-<random>`; take them from
 | Symptom | Cause and action |
 |---|---|
 | Plan fails with "Instance types not usable in zone" | Type not offered there, or not activated for the organization (GPU and large types need Exoscale support). |
-| Plan fails with "Quota too low" | Ask Exoscale support for more; GPU families start at 0. |
+| Plan fails with "Quota too low" | Ask Exoscale support for more; GPU families start at 0. Right after a destroy, the usage can still count the deleted instances for a few minutes: wait and plan again ([quota notes](../../docs/providers/exoscale.md#quota-and-availability)). |
 | Pass 1 waits for the Kubernetes API and times out | This machine is not in `api_cidrs`, or the first member failed. Check it through the jumphost (its address is in the portal while outputs are not written yet): `journalctl -b -u node-hostname -u wait-privnet -u write-node-ip -u rke2-server`. |
 | Waiting for the image never ends | Follow `../../scripts/build-logs.sh`; on the jumphost, `grep qcow2 /var/log/elemental-factory.log` shows the fetcher's requests. |
 | Template registration fails "Invalid QCOW image" | The image is not qcow2 or its virtual size is outside 10-1000 GiB; check the `deliver` step in the build log. |
