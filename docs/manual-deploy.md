@@ -235,21 +235,14 @@ Rerun pass 1 as it is when it fails: the pin stays `false` until it finishes.
   new members would have no cluster to join;
 - it must not change the pool `size` from more than 1 to 1: that removes
   members and brings back the init configuration (`cp_initialized` is wrong);
-- when it replaces `exoscale_template.ai_factory[0]` (a rebuild), first keep
-  the old template, which Exoscale cannot delete while the members use it:
-  `terraform state mv 'module.ai_factory.exoscale_template.ai_factory[0]' 'module.ai_factory.exoscale_template.retained["<old id>"]'`,
-  add the id to `retained_template_ids` in `pass2.auto.tfvars.json`, and plan
-  again;
 - when it creates an `exoscale_template` (a rebuild), set
   `image_import_port_open` to `true`, plan and apply, then set it back to
   `false` and apply again to close tcp/80.
 
 ```bash
-# Updates the pins and keeps retained_template_ids.
-jq '. + {cp_initialized: true, image_import_port_open: false}' pass2.auto.tfvars.json > pins.tmp && mv pins.tmp pass2.auto.tfvars.json
+printf '%s\n' '{"cp_initialized":true,"image_import_port_open":false}' > pass2.auto.tfvars.json
 terraform plan -input=false "${VF[@]}" -out=tfplan
 terraform show -json tfplan | jq '[.resource_changes[] | select(.type == "exoscale_template" and (.change.actions | index("create")))] | length'
-terraform show -json tfplan | jq -r '.resource_changes[] | select(.address == "module.ai_factory.exoscale_template.ai_factory[0]" and (.change.actions | index("delete"))) | .change.before.id'   # old id to retain
 terraform apply tfplan
 ```
 

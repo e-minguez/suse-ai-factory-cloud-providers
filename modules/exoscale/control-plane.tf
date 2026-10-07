@@ -12,8 +12,7 @@ resource "exoscale_anti_affinity_group" "control_plane" {
 resource "exoscale_instance_pool" "control_plane" {
   count = var.deploy_nodes ? 1 : 0
 
-  # retained: destroyed after the pool, whose members still use them.
-  depends_on = [terraform_data.api_check, exoscale_template.retained]
+  depends_on = [terraform_data.api_check]
 
   zone            = local.zone
   name            = local.control_plane_prefix

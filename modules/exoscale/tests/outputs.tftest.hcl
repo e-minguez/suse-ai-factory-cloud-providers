@@ -295,16 +295,3 @@ run "pool_public_ip_default" {
 
   expect_failures = [exoscale_private_network.this]
 }
-
-run "retained_templates" {
-  command = plan
-
-  variables {
-    retained_template_ids = ["tmpl-a", "tmpl-b"]
-  }
-
-  assert {
-    condition     = toset(keys(exoscale_template.retained)) == toset(["tmpl-a", "tmpl-b"]) && length(exoscale_template.ai_factory) == 1
-    error_message = "Each retained template id is held next to the current template."
-  }
-}

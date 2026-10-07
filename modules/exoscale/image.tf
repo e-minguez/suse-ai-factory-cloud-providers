@@ -246,24 +246,3 @@ locals {
   # one(): the template has count = 0 when image_id is set.
   effective_template_id = var.image_id != null ? var.image_id : one(exoscale_template.ai_factory[*].id)
 }
-
-# Templates of earlier builds: Exoscale refuses to delete a template while
-# instances from it run, and a rebuild keeps the control plane members. deploy.sh
-# moves the replaced template here in state; Terraform only holds it and
-# deletes it on destroy, after the pool (docs/decisions/008-exoscale-module.md).
-resource "exoscale_template" "retained" {
-  for_each = toset(var.retained_template_ids)
-
-  # Required by the schema only: every argument is ignored.
-  zone             = local.zone
-  name             = "${var.cluster_name}-retained"
-  url              = "http://retained.invalid/${each.key}.qcow2"
-  checksum         = "00000000000000000000000000000000"
-  boot_mode        = "uefi"
-  password_enabled = false
-  ssh_key_enabled  = false
-
-  lifecycle {
-    ignore_changes = all
-  }
-}

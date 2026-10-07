@@ -100,9 +100,6 @@ plan, list replacements and destroys, confirm, apply the saved plan. Logs:
   jumphost's tcp/80 rule goes away.
 - Later runs see the pool in state and apply once with the pins. A new template
   (`--rebuild`) reopens tcp/80 for the import and closes it in a second pass.
-  The old template stays as long as control plane members use it: `deploy.sh`
-  keeps it as a retained template, deleted on destroy
-  ([details](../../docs/providers/exoscale.md#operational-limits)).
 - `deploy.sh` aborts if a plan would create or replace the control plane pool
   of an initialized cluster.
 

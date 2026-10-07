@@ -226,14 +226,6 @@ In addition to [Limitations](#limitations):
   its etcd member behind (`docs/scaling.md`).
 - A rebuild updates the pool's template in place: existing control plane
   members keep the old image until they are replaced one at a time.
-- A template with deployed instances cannot be deleted (API: `403 Forbidden`;
-  portal: "Templates with deployed instances cannot be deleted"), and pointing
-  the pool at another template does not release it. A rebuild therefore keeps
-  the old template as `exoscale_template.retained` (`retained_template_ids`,
-  pinned by `deploy.sh`) until destroy, which deletes it after the pool. Each
-  rebuild adds one (10 GiB, see the cost estimate); to drop one earlier,
-  replace every control plane member, then remove its id from
-  `pass2.auto.tfvars.json` and apply.
 - At most 8 control planes (one anti-affinity group); `cluster_name` at most
   27 characters (pool `instance_prefix` limit of 30).
 
