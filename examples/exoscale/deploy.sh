@@ -80,6 +80,12 @@ exo_plan_hook() {
       and ((.change.before.size // 0) > 1) and (.change.after.size == 1))] | length > 0' "$1" >/dev/null; then
     deploy_die "the plan shrinks the control plane pool to one member, which removes members and brings back the init configuration. Nothing was applied. Check $PASS2_FILE (cp_initialized must be true on a running cluster) and report this."
   fi
+  # An apply interrupted after the serve path rotated and before the template
+  # was replaced leaves replace_triggered_by nothing to trigger on.
+  if jq -e --arg a "$TEMPLATE" '[.resource_changes[]? | select(.address == $a and .change.actions == ["update"]
+      and .change.before.name != .change.after.name)] | length > 0' "$1" >/dev/null; then
+    deploy_die "the plan renames the template without importing the new image (an earlier apply stopped mid-rebuild). Nothing was applied. Run ./deploy.sh --rebuild."
+  fi
   exo_retain_template "$1" || return 1
   [ "$(exo_pinned image_import_port_open)" != true ] || return 0
   jq -e '[.resource_changes[]? | select(.type == "exoscale_template" and (.change.actions | index("create")))] | length == 0' "$1" >/dev/null && return 0

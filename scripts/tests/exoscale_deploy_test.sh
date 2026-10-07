@@ -90,6 +90,13 @@ run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-template-replace.json 
 [ "$RC" -ne 0 ] || fail "retain mv failure: deploy.sh succeeded"
 [ "$(applies)" -eq 0 ] || fail "retain mv failure: applied"
 
+# --- a plan that renames the template in place (apply stopped mid-rebuild)
+# aborts and asks for --rebuild.
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-template-rename.json -- --yes
+[ "$RC" -ne 0 ] || fail "template rename: deploy.sh succeeded"
+grep -qF "renames the template without importing" "$W/out" || fail "template rename: message"
+[ "$(applies)" -eq 0 ] || fail "template rename: applied"
+
 # --- a new cluster drops retained ids left in a stale pin file.
 printf '{"cp_initialized":true,"image_import_port_open":false,"retained_template_ids":["gone"]}\n' >"$PINS"
 run -- --yes
