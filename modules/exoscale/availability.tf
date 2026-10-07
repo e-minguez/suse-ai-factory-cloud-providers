@@ -28,7 +28,8 @@ locals {
 
 # Signed reads: the instance types the organization may use (the signed list
 # omits the others), quotas, and what this cluster already holds, so a re-plan
-# only counts what the next apply adds. See docs/providers/exoscale.md#quota-and-availability.
+# only counts what the next apply adds. See docs/providers/exoscale.md#quota-and-availability
+# and docs/workarounds.md.
 data "external" "api_check" {
   program = ["bash", "${path.module}/scripts/exoscale-api.sh"]
 
