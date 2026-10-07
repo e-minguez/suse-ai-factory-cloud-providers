@@ -58,7 +58,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 ## Provider facts
 - user_data limits: EC2 16 KiB (gzip + comment strip + size preconditions), vultr 32 KiB, evroc 768 KiB, exoscale 32768 base64 characters (~24 KiB).
 - Passes: aws 1; vultr 2 (LB address in the image ↔ inline LB backends cycle; ADR 006); evroc 2 (a disk cannot be attached and detached in one apply) + optional 3rd to reclaim build disks. exoscale 2 (NLB targets instance pools only and a pool has one user_data: control plane pool bootstraps with one init member, then join config + scale-up; ADR 008).
-- Hostnames: sslip.io works for Rancher and the RKE2 API on vultr and evroc (confirmed by the user); exoscale uses sslip.io too (not yet confirmed end to end); aws uses NLB DNS names.
+- Hostnames: sslip.io works for Rancher and the RKE2 API on vultr, evroc and exoscale (confirmed by the user); aws uses NLB DNS names.
 - aws: AMI via S3 + `aws_ebs_snapshot_import`; single regional image.
 - vultr: snapshot via `vultr_snapshot_from_url` from an HTTP server on the jumphost; account-wide; single location, no zones.
 - evroc: image `dd`'d to a disk then `evroc_snapshot`, **one snapshot per zone**; VMs need the `compute-experimental-features-UEFI` label; no serial console, so build progress is relayed over HTTP; the platform sets MTU 8900 via DHCP (pod MTU = vpc_mtu − 50); egress without a public IP.
