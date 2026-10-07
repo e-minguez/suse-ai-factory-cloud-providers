@@ -155,8 +155,8 @@ rebuild reopens it for the import and closes it again.
 - Each family has its own quota, 0 by default; Exoscale support raises it.
   Whether the limit counts GPUs or instances is not documented; the plan-time
   check counts GPUs, which is the stricter reading.
-- GPU and large types also need activation for the organization: the signed
-  instance type list omits types the organization may not use.
+- The signed instance type list omits types the organization may not use. GPU
+  access is requested from Exoscale with a support ticket (family and zone).
 
 ## Quota and availability
 
@@ -179,8 +179,7 @@ Quota usage drops with a delay after instances are deleted (observed
 2026-10: several minutes after a destroy of 7 instances, the `instance` and
 `gpu3` usage still counted most of them). Deploying again right after a destroy
 can fail the quota check for resources that no longer exist; wait until the
-usage is back down and plan again. Quotas are per organization, so other
-users' instances count too.
+usage is back down and plan again.
 
 ## Security
 

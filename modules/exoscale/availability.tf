@@ -48,7 +48,7 @@ locals {
   api_existing = jsondecode(data.external.api_check.result.existing)
 
   type_unavailable = sort([
-    for who, t in local.requested_types : "${who} = ${t}${local.api_types[t].listed ? " (not offered in ${local.zone})" : " (not available to this organization; GPU and large types need activation by Exoscale support)"}"
+    for who, t in local.requested_types : "${who} = ${t}${local.api_types[t].listed ? " (not offered in ${local.zone})" : " (not available to this organization; for GPU types, request access from Exoscale support)"}"
     if !local.api_types[t].in_zone
   ])
 

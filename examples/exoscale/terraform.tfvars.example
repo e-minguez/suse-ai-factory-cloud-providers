@@ -40,8 +40,9 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 
 # --- GPU workers ----------------------------------------------------------
 # gpu_pools defaults to {}: a control-plane-only cluster. Types are
-# "family.size"; GPU quotas are 0 until Exoscale support raises them, and the
-# plan fails while the quota has no room. public_ip defaults to true here and
+# "family.size"; request GPU access from Exoscale with a
+# support ticket: GPU quotas are 0 by default and the plan fails while the
+# quota has no room. public_ip defaults to true here and
 # false fails the plan: every Exoscale node has a public IPv4 (egress, metadata
 # service), with no inbound rules on worker and GPU nodes
 # (docs/providers/exoscale.md#limitations).
