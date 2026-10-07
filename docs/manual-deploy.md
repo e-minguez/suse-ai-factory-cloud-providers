@@ -231,11 +231,16 @@ Rerun pass 1 as it is when it fails: the pin stays `false` until it finishes.
 `terraform state list` and the pin is not `false`, and applies once with
 `cp_initialized = true`. Before applying, check the plan:
 
-- it must not create or replace `exoscale_instance_pool.control_plane`: the
-  new members would have no cluster to join;
+- it must not create or replace `exoscale_instance_pool.control_plane`
+  without a new image (see below): the new members would have no cluster to
+  join;
 - it must not change the pool `size` from more than 1 to 1: that removes
   members and brings back the init configuration (`cp_initialized` is wrong);
-- when it creates an `exoscale_template` (a rebuild), set
+- when it replaces the pool together with `random_id.serve_path` (a new image,
+  for example a rebuild), every node is replaced: run the two passes of
+  [New cluster](#new-cluster) instead (pins `false`/`true`, then
+  `true`/`false`);
+- when it creates an `exoscale_template` without replacing the pool, set
   `image_import_port_open` to `true`, plan and apply, then set it back to
   `false` and apply again to close tcp/80.
 

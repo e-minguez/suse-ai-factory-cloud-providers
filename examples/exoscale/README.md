@@ -98,10 +98,13 @@ plan, list replacements and destroys, confirm, apply the saved plan. Logs:
   `image_import_port_open = false` to `pass2.auto.tfvars.json`; the pool
   switches to the join configuration, scales to `control_plane_count` and the
   jumphost's tcp/80 rule goes away.
-- Later runs see the pool in state and apply once with the pins. A new template
-  (`--rebuild`) reopens tcp/80 for the import and closes it in a second pass.
+- Later runs see the pool in state and apply once with the pins.
+- A new image (`--rebuild`) replaces every node, as on the other providers:
+  tcp/80 reopens for the import, the control plane pool is replaced and
+  bootstrapped again with one member, then a "Scale control plane" pass
+  follows and closes tcp/80.
 - `deploy.sh` aborts if a plan would create or replace the control plane pool
-  of an initialized cluster.
+  of an initialized cluster for any other reason.
 
 ## After the deploy
 

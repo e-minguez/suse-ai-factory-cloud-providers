@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Fake terraform for deploy tests. Env: FAKE_TF_DIR (fixtures), FAKE_TF_STATE (scratch dir),
-# FAKE_TF_PLAN (plan fixture name), FAKE_TF_PLAN_FAIL, FAKE_TF_VERSION,
+# FAKE_TF_PLAN (plan fixture name), FAKE_TF_PLAN_SEQ ("a.json b.json" consumed one per `show`,
+# the last repeats), FAKE_TF_PLAN_FAIL, FAKE_TF_VERSION,
 # FAKE_TF_PLAN_WARN, FAKE_TF_IMAGE (JSON answered for `output -json image`), FAKE_TF_APPLY_SEQ ("fixture:rc ..." consumed one per apply call), FAKE_TF_NEXT_STEPS,
 # FAKE_TF_STATE_LIST (lines answered for `state list`), FAKE_TF_STATE_LIST_FILE (same, from a file,
 # written line by line, so an early-exiting reader gets SIGPIPE as with real terraform).
@@ -30,7 +31,14 @@ case "$cmd" in
     ;;
   show)
     [ "${1:-}" = -json ] || exit 1
-    cat "$FAKE_TF_DIR/${FAKE_TF_PLAN:-plan.json}"
+    plan=${FAKE_TF_PLAN:-plan.json}
+    if [ -n "${FAKE_TF_PLAN_SEQ:-}" ]; then
+      s=$(($(cat "$FAKE_TF_STATE/show_n" 2>/dev/null || echo 0) + 1))
+      echo "$s" >"$FAKE_TF_STATE/show_n"
+      read -ra pseq <<<"$FAKE_TF_PLAN_SEQ"
+      plan=${pseq[$((s - 1))]:-${pseq[$((${#pseq[@]} - 1))]}}
+    fi
+    cat "$FAKE_TF_DIR/$plan"
     ;;
   apply)
     json=0

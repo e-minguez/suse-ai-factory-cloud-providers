@@ -43,17 +43,25 @@ exo_bootstrapped() {
   grep -qxF "${POOL}[0]" <<<"$list" && [ "$(exo_pinned cp_initialized)" != false ]
 }
 
-# Plan hook. Aborts when an initialized pool would be created or replaced (a
-# pool with the join configuration and no member to join), or when a plan
-# would shrink the pool to one member (members removed, init configuration
-# back); reopens port 80 and has the plan redone when the plan registers a
-# new template.
+# Plan hook. A new image replaces an initialized pool: with EXO_REBOOTSTRAP_OK
+# it switches to the init configuration and has the plan redone. Aborts when
+# the pool would be replaced for any other reason (no member to join), when a
+# plan would shrink it to one member in place, or rename the template; reopens
+# port 80 and has the plan redone when the plan registers a new template.
 exo_plan_hook() {
   if [ "$(exo_pinned cp_initialized)" = true ] &&
     jq -e --arg a "${POOL}[0]" '[.resource_changes[]? | select(.address == $a and (.change.actions | index("create")))] | length > 0' "$1" >/dev/null; then
-    deploy_die "the plan creates or replaces the control plane pool of an initialized cluster; its members would have no cluster to join. Check the change (for example the zone), or destroy and deploy again."
+    # A new build replaces the pool (replace_triggered_by): every control plane
+    # is replaced, as on the other providers, so the new pool bootstraps again.
+    if [ "${EXO_REBOOTSTRAP_OK:-0}" = 1 ] &&
+      jq -e '[.resource_changes[]? | select(.address == "module.ai_factory.random_id.serve_path" and (.change.actions | index("create")))] | length > 0' "$1" >/dev/null; then
+      echo "    a new image replaces the control plane pool: bootstrapping it again with one member; re-planning..."
+      exo_pin false true
+      return 1
+    fi
+    deploy_die "the plan creates or replaces the control plane pool of an initialized cluster without a new image; its members would have no cluster to join. Check the change (for example the zone), or destroy and deploy again."
   fi
-  if jq -e --arg a "${POOL}[0]" '[.resource_changes[]? | select(.address == $a
+  if jq -e --arg a "${POOL}[0]" '[.resource_changes[]? | select(.address == $a and .change.actions == ["update"]
       and ((.change.before.size // 0) > 1) and (.change.after.size == 1))] | length > 0' "$1" >/dev/null; then
     deploy_die "the plan shrinks the control plane pool to one member, which removes members and brings back the init configuration. Nothing was applied. Check $PASS2_FILE (cp_initialized must be true on a running cluster) and report this."
   fi
@@ -76,7 +84,15 @@ deploy_passes() {
     exo_pin true "$([ "$(exo_pinned image_import_port_open)" = true ] && echo true || echo false)"
     # shellcheck disable=SC2034 # read by tf_pass
     DEPLOY_PASS_TOTAL=1
-    TF_PLAN_HOOK=exo_plan_hook tf_pass "Apply"
+    EXO_REBOOTSTRAP_OK=1 TF_PLAN_HOOK=exo_plan_hook tf_pass "Apply"
+    if [ "$(exo_pinned cp_initialized)" = false ]; then
+      # The hook switched to the init configuration for a new image.
+      exo_pin true false
+      # shellcheck disable=SC2034 # read by tf_pass
+      DEPLOY_PASS_TOTAL=2
+      TF_PLAN_HOOK=exo_plan_hook tf_pass "Scale control plane"
+      return 0
+    fi
     if [ "$(exo_pinned image_import_port_open)" = true ]; then
       exo_pin true false
       # shellcheck disable=SC2034 # read by tf_pass

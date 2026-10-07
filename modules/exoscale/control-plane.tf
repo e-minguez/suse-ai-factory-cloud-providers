@@ -35,6 +35,13 @@ resource "exoscale_instance_pool" "control_plane" {
   # Raw Ignition JSON (ignition.platform.id=exoscale). A change updates the
   # pool in place and reaches new members only: Ignition runs on first boot.
   user_data = module.config.node_runtime_ignition[local.control_plane_prefix]
+
+  # A template change alone updates the pool in place and keeps its members on
+  # the old image. A new build replaces the pool, so a rebuild replaces every
+  # node as on the other providers; deploy.sh then bootstraps it again.
+  lifecycle {
+    replace_triggered_by = [random_id.serve_path]
+  }
 }
 
 # Pass 1 ends once the first member answers through the NLB, so deploy.sh only

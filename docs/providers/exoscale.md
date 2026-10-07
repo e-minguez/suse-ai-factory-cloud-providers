@@ -63,8 +63,11 @@ only, so the first member is not affected.
 
 `deploy.sh` takes `cp_initialized` from state (the pool exists), not from its
 pin file, and aborts when a plan would create or replace the pool of an
-initialized cluster. Pass 2 also closes the jumphost's tcp/80 rule; a later
-rebuild reopens it for the import and closes it again.
+initialized cluster, unless a new image replaces it (`--rebuild`, or any other
+build input): then the apply pass switches back to the init configuration and a
+"Scale control plane" pass follows, as for a new cluster. Pass 2 also closes
+the jumphost's tcp/80 rule; a later rebuild reopens it for the import and
+closes it again.
 
 ## Images
 
@@ -224,8 +227,13 @@ In addition to [Limitations](#limitations):
   refresh the `nodes` output.
 - Scaling the control plane down removes the oldest member first and leaves
   its etcd member behind (`docs/scaling.md`).
-- A rebuild updates the pool's template in place: existing control plane
-  members keep the old image until they are replaced one at a time.
+- A rebuild replaces every node, as on the other providers. A template change
+  alone would update the pool in place and keep its members on the old image,
+  and Exoscale refuses to delete a template while instances from it run
+  (`403 Forbidden`; portal: "Templates with deployed instances cannot be
+  deleted"). The new build therefore replaces the pool too
+  (`replace_triggered_by`), and the old template goes after the pool and the
+  agents.
 - At most 8 control planes (one anti-affinity group); `cluster_name` at most
   27 characters (pool `instance_prefix` limit of 30).
 

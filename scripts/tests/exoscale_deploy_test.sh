@@ -30,7 +30,7 @@ run() {
   while [ "$1" != -- ]; do envs+=("$1"); shift; done
   shift
   : >"$W/state/calls.log"
-  rm -rf "$W/state/n" "$EX/.deploy" "$EX/rebuild.auto.tfvars.json"
+  rm -rf "$W/state/n" "$W/state/show_n" "$EX/.deploy" "$EX/rebuild.auto.tfvars.json"
   RC=0
   (cd "$EX" && env ${envs[@]+"${envs[@]}"} bash ./deploy.sh "$@") >"$W/out" 2>&1 </dev/null || RC=$?
 }
@@ -68,6 +68,23 @@ grep -qF "opening port 80 on the jumphost" "$W/out" || fail "rebuild: port not r
 grep -qF "==> [2/2] Close image import port" "$W/out" || fail "rebuild: no close pass"
 [ "$(applies)" -eq 2 ] || fail "rebuild: expected 2 applies"
 [ "$(pins)" = '[true,false]' ] || fail "rebuild: pins $(pins)"
+
+# --- rebuild with a new image: the pool is replaced (as every node on the
+# other providers), so the apply pass switches to the init configuration and a
+# scale pass follows; port 80 ends closed.
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN_SEQ="plan-exoscale-rebuild.json plan-exoscale-rebuild.json plan-vultr-update.json" -- --yes
+[ "$RC" -eq 0 ] || fail "rebuild pool: rc $RC"
+grep -qF "a new image replaces the control plane pool" "$W/out" || fail "rebuild pool: message"
+grep -qF "==> [2/2] Scale control plane" "$W/out" || fail "rebuild pool: no scale pass"
+[ "$(applies)" -eq 2 ] || fail "rebuild pool: expected 2 applies"
+[ "$(pins)" = '[true,false]' ] || fail "rebuild pool: pins $(pins)"
+
+# --- the scale pass never replaces the pool again.
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-rebuild.json -- --yes
+[ "$RC" -ne 0 ] || fail "rebuild loop: deploy.sh succeeded"
+grep -qF "without a new image" "$W/out" || fail "rebuild loop: message"
+[ "$(applies)" -eq 1 ] || fail "rebuild loop: expected only the first apply"
+printf '{"cp_initialized":true,"image_import_port_open":false}\n' >"$PINS"
 
 # --- a plan that renames the template in place (apply stopped mid-rebuild)
 # aborts and asks for --rebuild.

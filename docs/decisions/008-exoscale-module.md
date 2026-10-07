@@ -85,6 +85,11 @@ unless marked as documented:
   smaller and serves it over HTTP;
   `exoscale_template` reads the MD5 at apply time through a deferred
   `data.http`. The jumphost is replaced on every new build.
+- **Rebuild replaces the pool.** A new build replaces the control plane pool
+  (`replace_triggered_by`), so `--rebuild` replaces every node as on the other
+  providers, and `deploy.sh` runs the bootstrap and scale passes again. A
+  template change alone updates the pool in place and keeps the members on the
+  old image, whose template Exoscale then refuses to delete.
 - **Plan-time checks** through a signing script (bash, `openssl`, `jq`) behind
   `data "external"`, with preconditions for instance type availability and
   quota headroom.
