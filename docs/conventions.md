@@ -59,7 +59,14 @@ of `[a-z0-9-]`, not `cp`; a `gpu_pools` key cannot be `worker` and a
 the keys differ between the two maps. Hostnames are `<cluster_name>-<pool>-NN`
 (at most 63 characters). A provider rejects with a precondition the fields it
 cannot honour: aws `public_ip = true`, `placement` and `kind = "bare_metal"`;
-vultr `zone`, `disk_size_gb` and `placement`; evroc `kind = "bare_metal"`.
+vultr `zone`, `disk_size_gb` and `placement`; evroc `kind = "bare_metal"`;
+exoscale `zone`, `placement`, `kind = "bare_metal"` and `public_ip = false`
+(every node has a public IPv4, so `public_ip` and `control_plane_public_ip`
+must be `true` there; [ADR 008](decisions/008-exoscale-module.md)).
+
+Exception: exoscale control planes are one instance pool, whose members
+Exoscale names `<cluster_name>-cp-<5 characters of the pool ID>-<random>`
+instead of `<cluster_name>-cp-NN` ([ADR 008](decisions/008-exoscale-module.md)).
 
 ## Labels
 
@@ -87,7 +94,9 @@ also builds the image); `builder` (dedicated build VMs); `image` (image,
 snapshots, image-target disks, raw-image bucket); `lb` (load balancers, their
 listeners, target groups and VIPs); `network` (VPC, subnets, NAT, routes);
 `iam`. Security groups take the role of what they protect. No other keys, apart
-from the aws `Name` tag, a platform convention.
+from the aws `Name` tag, a platform convention. Some Exoscale types carry no
+labels at all (security groups, anti-affinity groups, templates); they are
+named `<cluster_name>-<suffix>` and found by name.
 
 ## Outputs
 
@@ -98,7 +107,7 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 
 | Output | Type | Notes |
 |---|---|---|
-| `provider` | string | `aws`, `evroc` or `vultr`; tools dispatch on it |
+| `provider` | string | `aws`, `evroc`, `exoscale` or `vultr`; tools dispatch on it |
 | `cluster_name`, `region` | string | |
 | `kubernetes_api_endpoint` | string | `https://<api_host>:6443` |
 | `api_host` | string | DNS name of the API for kubectl |

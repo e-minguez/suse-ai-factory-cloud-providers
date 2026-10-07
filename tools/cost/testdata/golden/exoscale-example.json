@@ -1,0 +1,222 @@
+{
+  "disclaimer": "ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.",
+  "provider": "exoscale",
+  "region": "de-fra-1",
+  "cluster_name": "suse-ai-factory",
+  "currency": "EUR",
+  "catalog": {
+    "source": "file"
+  },
+  "durations": [
+    "1h",
+    "8h",
+    "24h",
+    "7d",
+    "30d"
+  ],
+  "resources": [
+    {
+      "resource": "jumphost",
+      "kind": "compute",
+      "role": "jumphost",
+      "rate_id": "standard.large",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.09333,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.09333,
+        "24h": 2.23992,
+        "30d": 67.1976,
+        "7d": 15.67944,
+        "8h": 0.74664
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "jumphost disk",
+      "kind": "storage",
+      "role": "jumphost",
+      "rate_id": "storage:disk",
+      "qty": 1,
+      "size_gb": 50,
+      "rate_found": true,
+      "hourly": 0.00014,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.007,
+        "24h": 0.168,
+        "30d": 5.04,
+        "7d": 1.176,
+        "8h": 0.056
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "control plane",
+      "kind": "compute",
+      "role": "control_plane",
+      "pool": "cp",
+      "rate_id": "standard.extra-large",
+      "qty": 3,
+      "rate_found": true,
+      "hourly": 0.18667,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.56001,
+        "24h": 13.44024,
+        "30d": 403.2072,
+        "7d": 94.08168,
+        "8h": 4.48008
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "control plane disk",
+      "kind": "storage",
+      "role": "control_plane",
+      "pool": "cp",
+      "rate_id": "storage:disk",
+      "qty": 3,
+      "size_gb": 100,
+      "rate_found": true,
+      "hourly": 0.00014,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.042,
+        "24h": 1.008,
+        "30d": 30.24,
+        "7d": 7.056,
+        "8h": 0.336
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "network load balancer",
+      "kind": "fixed",
+      "role": "lb",
+      "rate_id": "lb",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.03472,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.03472,
+        "24h": 0.83328,
+        "30d": 24.9984,
+        "7d": 5.83296,
+        "8h": 0.27776
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "image template",
+      "kind": "storage",
+      "role": "image",
+      "rate_id": "storage:template",
+      "qty": 1,
+      "size_gb": 10,
+      "rate_found": true,
+      "hourly": 0.00028,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.0028,
+        "24h": 0.0672,
+        "30d": 2.016,
+        "7d": 0.4704,
+        "8h": 0.0224
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "public ipv4, private network, security groups",
+      "kind": "free",
+      "role": "network",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0,
+        "24h": 0,
+        "30d": 0,
+        "7d": 0,
+        "8h": 0
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    }
+  ],
+  "totals": {
+    "1h": 0.73986,
+    "24h": 17.75664,
+    "30d": 532.6992,
+    "7d": 124.29648,
+    "8h": 5.91888
+  },
+  "build_only_totals": {
+    "1h": 0,
+    "24h": 0,
+    "30d": 0,
+    "7d": 0,
+    "8h": 0
+  },
+  "recurring_after_destroy_per_month": 0,
+  "excluded": [
+    {
+      "resource": "outbound traffic",
+      "reason": "traffic-dependent, billed per GB"
+    }
+  ],
+  "incomplete": false,
+  "warnings": [],
+  "notes": []
+}

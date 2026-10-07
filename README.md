@@ -57,17 +57,20 @@ flowchart LR
 |---|:---:|---|---|---|
 | **aws** | 1 | Raw image uploaded to S3, imported as an EBS snapshot and AMI | NLB DNS names | [aws.md](docs/providers/aws.md) |
 | **evroc** | 2 (+1 optional) | Raw image written to a disk, one snapshot per zone | sslip.io | [evroc.md](docs/providers/evroc.md) |
+| **exoscale** | 2 | Raw image converted to qcow2, served over HTTP, template per zone | sslip.io | [exoscale.md](docs/providers/exoscale.md); every node has a public IPv4, single zone ([limitations](docs/providers/exoscale.md#limitations)) |
 | **vultr** | 2 | Raw image served over HTTP, account-wide snapshot from the URL | sslip.io | [vultr.md](docs/providers/vultr.md) |
 
 Each provider has an example root with its own README:
 [examples/aws](examples/aws/README.md),
 [examples/evroc](examples/evroc/README.md),
+[examples/exoscale](examples/exoscale/README.md),
 [examples/vultr](examples/vultr/README.md).
 
 ## Quickstart
 
 **Requirements:** Terraform 1.16.4 or later ([why](docs/workarounds.md)), `jq`, `ssh`
-and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login.
+and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
+exoscale `curl` and `openssl` (signed API checks).
 
 **1. Shared values.** Copy `common-all.tfvars.example` to `common-all.tfvars` at
 the repo root and fill in what every cluster shares: admin CIDRs, SSH keys,
@@ -81,7 +84,7 @@ cp terraform.tfvars.example terraform.tfvars
 $EDITOR terraform.tfvars
 ```
 
-**3. Optional: estimate the cost** (from the repo root).
+**3. Optional: estimate the cost** (from the repo root; aws, evroc and vultr).
 
 ```bash
 make cost PROVIDER=<provider> TFVARS="common-all.tfvars examples/<provider>/terraform.tfvars"
@@ -141,6 +144,10 @@ depends on the platform:
 - **evroc, 2 passes plus an optional third.** A disk cannot be attached and
   detached in one apply. Pass 1 builds the image, pass 2 snapshots it and
   creates the nodes, and the optional pass 3 reclaims the build disks.
+- **exoscale, 2 passes.** The load balancer targets an instance pool, whose
+  members share one configuration. Pass 1 starts the control plane pool with
+  one member that initializes the cluster; pass 2 switches it to the join
+  configuration and scales it up.
 
 Diagrams of each pass, the image pipeline and the network:
 [docs/architecture.md](docs/architecture.md).
@@ -184,7 +191,7 @@ Details: [tools/multicluster/README.md](tools/multicluster/README.md).
 
 ### Hostnames
 
-aws uses the NLB DNS names; evroc and vultr use sslip.io names on the load
+aws uses the NLB DNS names; evroc, exoscale and vultr use sslip.io names on the load
 balancer IP. For production set `rancher_hostname` and `api_host` to your own DNS
 names that resolve to the load balancer. `api_host` goes into the RKE2 API
 certificate (`network.apiHost`); aws also adds both load balancer names and the
@@ -235,7 +242,7 @@ deployment itself does not need them. Each pair is set together or not at all.
 |---|---|
 | `tools/multicluster` | Several clusters from one checkout, imported into a management Rancher ([above](#multi-cluster)). |
 | `make cost PROVIDER=<p> TFVARS="..."` | Cost estimate from tfvars before a deploy; an estimate, not a quote ([tools/cost](tools/cost/README.md)). |
-| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
+| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
 | `tools/orphans/evroc [--adopt]` | Run in `examples/evroc`: lists evroc objects missing from the state and writes `import` blocks for them. `deploy.sh` prints it after a Terraform crash, or runs it when `EVROC_ADOPT_ON_CRASH=1` ([workarounds](docs/workarounds.md)). |
 | `tools/vultr/passthrough-stock.sh [region ...]` | Vultr GPU passthrough plans in stock per region. Needs `VULTR_API_KEY`, `curl` and `jq`. |
 
@@ -257,7 +264,7 @@ Details in [docs/security.md](docs/security.md).
 | Document | Contents |
 |---|---|
 | [Architecture](docs/architecture.md) | Diagrams: deploy flow, image pipeline, passes and network per provider |
-| [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [evroc](docs/providers/evroc.md), [vultr](docs/providers/vultr.md) |
+| [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [evroc](docs/providers/evroc.md), [exoscale](docs/providers/exoscale.md), [vultr](docs/providers/vultr.md) |
 | [Conventions](docs/conventions.md) | Variable names, labels, the output set, checklist for a new provider |
 | [Scaling](docs/scaling.md) | Adding nodes and pools, storage changes |
 | [Manual deploy](docs/manual-deploy.md) | The `deploy.sh` passes as plain `terraform` commands |

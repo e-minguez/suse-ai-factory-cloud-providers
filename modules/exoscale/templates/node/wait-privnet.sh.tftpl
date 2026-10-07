@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Waits until a NIC holds an IPv4 inside ${vpc_cidr}. Instance pools attach the
+# private network NIC after boot, sometimes after network-online; without the
+# wait write-node-ip.sh sees one NIC and RKE2 would pick the public address.
+set -euo pipefail
+
+VPC_CIDR="${vpc_cidr}"
+TIMEOUT=${timeout_seconds}
+
+log() { echo "[wait-privnet] $*"; }
+
+ip_to_int() {
+  local IFS=. a b c d
+  read -r a b c d <<<"$1"
+  echo $(( (a << 24) | (b << 16) | (c << 8) | d ))
+}
+
+bits=$${VPC_CIDR#*/}
+mask=$(( bits == 0 ? 0 : (0xFFFFFFFF << (32 - bits)) & 0xFFFFFFFF ))
+net=$(( $(ip_to_int "$${VPC_CIDR%/*}") & mask ))
+
+start=$(date +%s)
+while :; do
+  while read -r line; do
+    rest=$${line#*inet }
+    [ "$rest" = "$line" ] && continue
+    addr=$${rest%% *}
+    addr=$${addr%%/*}
+    if [ $(( $(ip_to_int "$addr") & mask )) -eq "$net" ]; then
+      log "privnet address $addr after $(( $(date +%s) - start ))s"
+      exit 0
+    fi
+  done < <(ip -4 -o addr show scope global 2>/dev/null)
+  if [ $(( $(date +%s) - start )) -ge "$TIMEOUT" ]; then
+    log "ERROR: no IPv4 address inside $VPC_CIDR after $${TIMEOUT}s"
+    exit 1
+  fi
+  sleep 2
+done

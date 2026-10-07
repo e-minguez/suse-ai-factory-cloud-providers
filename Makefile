@@ -68,14 +68,17 @@ test-scripts: ## Script tests (fake terraform and ssh) and poll.sh self-test
 	bash scripts/tests/deploy_test.sh
 	bash scripts/tests/vultr_deploy_test.sh
 	bash scripts/tests/evroc_deploy_test.sh
+	bash scripts/tests/exoscale_deploy_test.sh
+	bash scripts/tests/exoscale_api_test.sh
 	bash scripts/tests/build_access_test.sh
 	bash scripts/tests/multicluster_test.sh
 	bash scripts/tests/check_and_reserve_test.sh
 	bash scripts/tests/leftovers_aws_test.sh
 	bash scripts/tests/leftovers_evroc_test.sh
+	bash scripts/tests/leftovers_exoscale_test.sh
 	bash scripts/tests/leftovers_vultr_test.sh
 	@if [ -x /bin/bash ]; then \
-		for t in aws evroc vultr; do /bin/bash scripts/tests/leftovers_$${t}_test.sh || exit 1; done; \
+		for t in aws evroc exoscale vultr; do /bin/bash scripts/tests/leftovers_$${t}_test.sh || exit 1; done; \
 	fi
 	bash scripts/lib/poll_test.sh
 	[ ! -x /bin/bash ] || /bin/bash scripts/lib/poll_test.sh
@@ -87,8 +90,8 @@ test-go: ## gofmt, go vet and go test in tools/cost (skipped if go is not instal
 	if [ -n "$$unformatted" ]; then echo "gofmt needed:" >&2; echo "$$unformatted" >&2; exit 1; fi && \
 	go vet ./... && go test ./...
 
-cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|vultr> TFVARS="common-all.tfvars terraform.tfvars"
-	@[ -n "$(PROVIDER)" ] || { echo "cost: set PROVIDER=aws|evroc|vultr (and TFVARS=\"f1 f2\", later wins)" >&2; exit 1; }
+cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|vultr> TFVARS="common-all.tfvars terraform.tfvars"
+	@[ -n "$(PROVIDER)" ] || { echo "cost: set PROVIDER=aws|evroc|exoscale|vultr (and TFVARS=\"f1 f2\", later wins)" >&2; exit 1; }
 	cd tools/cost && go run . --provider $(PROVIDER) $(foreach f,$(TFVARS),--var-file $(abspath $(f)))
 
 cost-fixtures: ## Run the live-tagged cost tests (network, optional credentials)

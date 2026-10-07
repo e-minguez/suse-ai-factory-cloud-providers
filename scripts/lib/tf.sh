@@ -28,7 +28,7 @@ def cat:
   elif test("(^|_)(lb|elb|alb|nlb|load_?balancer|target_group|listener|l4|backend)(_|$)") then "load balancers"
   elif test("vpc|subnet|route|gateway|nat_|eip|network|vnet|dhcp") then "network"
   elif test("(instance|server|bare_metal|virtual_machine|vm)(_|$)") then "compute"
-  elif test("s3|bucket|snapshot|ami|image|disk|volume|storage") then "images and storage"
+  elif test("s3|bucket|snapshot|ami|image|template|disk|volume|storage") then "images and storage"
   elif test("^(random|tls|null|time|local|terraform_data|http)") then "helpers"
   else "other" end;
 def fmt: floor as $s | "\($s / 60 | floor):\(($s % 60) | tostring | if length < 2 then "0" + . else . end)";

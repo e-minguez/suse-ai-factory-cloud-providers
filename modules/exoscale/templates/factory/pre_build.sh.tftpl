@@ -1,0 +1,17 @@
+SERVER_PID=""
+FIREWALLD_OPENED=false
+SERVE_DIR="/srv/img/${serve_path}"
+# qemu-img ships in qemu-tools; extra_packages needs package name == command.
+zypper -n install qemu-tools || log "zypper install qemu-tools reported a non-zero exit, continuing"
+if ! command -v qemu-img >/dev/null; then
+  log "ERROR: qemu-img is not installed after zypper install qemu-tools"
+  exit 1
+fi
+# Two firewalls front port 80: the security group rule (image.tf) and
+# firewalld. Runtime-only change; on_exit undoes it.
+if command -v firewall-cmd >/dev/null && systemctl is-active --quiet firewalld; then
+  firewall-cmd --zone=public --add-port=80/tcp
+  FIREWALLD_OPENED=true
+else
+  log "firewalld not present/active, nothing to open there"
+fi

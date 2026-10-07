@@ -14,7 +14,7 @@ R="$W/repo"
 mkdir -p "$R/tools/multicluster/register" "$R/tools/cost" "$R/scripts/lib" "$R/modules" "$W/bin" "$W/out"
 cp "$REPO/tools/multicluster/cluster.sh" "$R/tools/multicluster/"
 cp "$REPO/scripts/lib/ssh.sh" "$R/scripts/lib/"
-for p in aws vultr evroc; do
+for p in aws vultr evroc exoscale; do
   mkdir -p "$R/examples/$p"
   for f in main.tf variables.tf outputs.tf versions.tf; do echo "# $p" >"$R/examples/$p/$f"; done
   printf 'secret_key = "REPLACE"\n' >"$R/examples/$p/terraform.tfvars.example"
@@ -85,7 +85,7 @@ has "$out" "is missing"
 [ ! -e "$R/clusters/x2" ] || fail "partial cluster left behind"
 expect_fail new aws
 
-run new vultr gpu-a && run new evroc gpu-b && run new vultr gpu-c
+run new vultr gpu-a && run new evroc gpu-b && run new vultr gpu-c && run new exoscale gpu-d
 [ "$rc" -eq 0 ] || fail "new failed: $out"
 
 # --- deploy / destroy

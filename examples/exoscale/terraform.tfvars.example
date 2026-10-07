@@ -1,0 +1,89 @@
+# Per-cluster values. Loaded last, so it wins over ../../common-all.tfvars and
+# ../common-exoscale.tfvars (deploy.sh layers them, later wins). Values every
+# provider declares (admin_cidrs, password hashes, ssh_authorized_keys,
+# registry credentials, aif_release) can live in common-all.tfvars instead;
+# exoscale_api_key, exoscale_api_secret and region fit common-exoscale.tfvars.
+
+# Exoscale zone. de-fra-1 offers gpu3 (A40) and gpurtx6000pro.
+region = "de-fra-1"
+
+# API key bound to an IAM role with the Compute service. Used by the exoscale
+# provider and the signed plan-time checks.
+exoscale_api_key    = "REPLACE_WITH_YOUR_EXOSCALE_API_KEY"
+exoscale_api_secret = "REPLACE_WITH_YOUR_EXOSCALE_API_SECRET"
+
+# CIDRs allowed to SSH into the jumphost, the only SSH entry: your admin IP(s)
+# or VPN range.
+admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
+
+# Generate both with `openssl passwd -6`. They must differ.
+root_password_hash      = "REPLACE_WITH_OUTPUT_OF_openssl_passwd_-6"
+node_user_password_hash = "REPLACE_WITH_A_DIFFERENT_OUTPUT_OF_openssl_passwd_-6"
+
+# At least one public key, installed for node_username and on the jumphost.
+ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
+
+# Login on the nodes; escalate with `su -` (no sudo in the image).
+# node_username = "suse"
+
+# --- Registry credentials -------------------------------------------------
+
+# Application Collection is required with local-path-provisioner (in the
+# default components) or suse-storage; the SUSE registry and NVIDIA NGC ones
+# are optional. With aif-operator, set all of them so AI Factory can pull its
+# workloads right after deployment; plan warns about any that are missing.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# --- GPU workers ----------------------------------------------------------
+# gpu_pools defaults to {}: a control-plane-only cluster. Types are
+# "family.size"; request GPU access from Exoscale with a
+# support ticket: GPU quotas are 0 by default and the plan fails while the
+# quota has no room. public_ip defaults to true here and
+# false fails the plan: every Exoscale node has a public IPv4 (egress, metadata
+# service), with no inbound rules on worker and GPU nodes
+# (docs/providers/exoscale.md#limitations).
+# zone and placement must stay null.
+# Per zone (2026-10): gpu3 (A40) de-fra-1; gpurtx6000pro ch-dk-2, de-fra-1,
+# hr-zag-1; gpua30 and gpub300 ch-gva-2; gpua5000 and gpu3080ti at-vie-2;
+# gpu2 (V100) at-vie-1.
+#
+# Pool names become hostnames "<cluster_name>-<pool>-NN"; "cp" is reserved.
+#
+# gpu_pools = {
+#   gpu = { instance_type = "gpu3.small", count = 2 }
+# }
+#
+# --- Worker pools (no GPU) -------------------------------------------------
+# worker_pools defaults to {}. Same fields and public_ip rule as gpu_pools;
+# the type must have no GPUs.
+#
+# worker_pools = {
+#   wrk = { instance_type = "standard.large", count = 2 }
+# }
+
+# --- Optional -------------------------------------------------------------
+
+# AI Factory: a version X.Y.Z (tag aif-operator-<version>, 2.1.0 or newer) or
+# a manifest URL (branch, fork or mirror).
+# aif_release = "2.2.0"
+
+# Changing components rebuilds the image and replaces every node.
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+# suse_storage_nodes = ["control_plane"]  # roles (control_plane, worker, gpu) and/or pool keys; 3+ nodes
+
+# rancher_hostname           = null  # defaults to "rancher-<load balancer IP>.sslip.io"
+# rancher_bootstrap_password = null  # defaults to a generated password
+# api_cidrs                  = ["0.0.0.0/0"]  # who may reach the Kubernetes API on 6443; deploy.sh's machine must be in it
+# ingress_cidrs              = ["0.0.0.0/0"]  # who may reach the ingress on 80/443
+
+# cluster_name                = "suse-ai-factory"  # at most 27 characters on this provider
+# control_plane_count         = 3  # 1, or odd and at least 3; at most 8
+# control_plane_instance_type = "standard.extra-large"
+# jumphost_instance_type      = "standard.large"
+# tags replaces (not merges with) any tags map in common-*.tfvars.
+# tags                        = { env = "test" }
+# image_id                    = "..."  # boot an existing template instead of building

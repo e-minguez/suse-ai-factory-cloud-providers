@@ -1,0 +1,9 @@
+{
+  "format_version": "1.0",
+  "values": {"root_module": {"child_modules": [{"address": "module.ai_factory", "resources": [
+    {"address": "module.ai_factory.terraform_data.build_access[0]", "mode": "managed", "type": "terraform_data", "name": "build_access", "index": 0,
+     "values": {"input": {"build_id": "exo123",
+       "jumphost": {"public_ip": "203.0.113.80", "private_ip": "10.20.0.5", "ssh_user": "suse"},
+       "build_status": {"method": "http", "url_or_key": "http://203.0.113.80/abcd/c-exo123.qcow2", "hosts": ["10.20.0.5"]}}}}
+  ]}]}}
+}

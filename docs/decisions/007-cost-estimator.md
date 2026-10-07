@@ -27,6 +27,9 @@ Price sources:
   rates are not published and are listed as not included.
 - vultr: public plans API, cached. Load balancer, NAT gateway and snapshot
   rates are fixed values in the catalog.
+- exoscale (added with the provider): public price list JSON, cached like
+  vultr, EUR section. Instance prices exclude the local disk, priced as a
+  separate row.
 
 Amounts stay in the provider's native currency; there is no conversion, so
 there is no exchange-rate source to maintain. Resources that exist only while

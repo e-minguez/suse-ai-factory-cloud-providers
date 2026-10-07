@@ -28,7 +28,7 @@ Terraform also loads every `*.auto.tfvars.json` in the directory on its own.
 | File | Written by | Content |
 |---|---|---|
 | `rebuild.auto.tfvars.json` | every run | `{"image_rebuild": N}`, the image rebuild counter |
-| `pass2.auto.tfvars.json` | vultr, evroc | the values later passes pin (see each provider) |
+| `pass2.auto.tfvars.json` | vultr, evroc, exoscale | the values later passes pin (see each provider) |
 
 Both are state, not configuration: keep them next to the state and do not
 edit them unless a step below says so. Never set `image_rebuild` in a
@@ -197,3 +197,62 @@ destroys the snapshots.
   `imports.tf` directly) and retries the pass once.
 
 `deploy.sh` also requires `~/.evroc/config.yaml` (`evroc login`).
+
+## exoscale: 2 passes
+
+**Why:** the load balancer targets one instance pool, and every member of a
+pool gets the same `user_data`, so the control plane pool starts with one
+member that initializes the cluster and then switches to the join
+configuration. Details:
+[providers/exoscale.md](providers/exoscale.md#passes-2-and-why).
+
+`pass2.auto.tfvars.json` pins `cp_initialized` and `image_import_port_open`.
+
+### New cluster
+
+```bash
+# Pass 1, bootstrap control plane: pool of size 1 with the init configuration,
+# workers, jumphost, image build and template. Ends when the API answers.
+printf '%s\n' '{"cp_initialized":false,"image_import_port_open":true}' > pass2.auto.tfvars.json
+terraform plan -input=false "${VF[@]}" -out=tfplan && terraform apply tfplan
+
+# Pass 2, scale control plane: join configuration, pool scaled to
+# control_plane_count, jumphost tcp/80 closed.
+printf '%s\n' '{"cp_initialized":true,"image_import_port_open":false}' > pass2.auto.tfvars.json
+terraform plan -input=false "${VF[@]}" -out=tfplan && terraform apply tfplan
+```
+
+Rerun pass 1 as it is when it fails: the pin stays `false` until it finishes.
+
+### Pool already in state
+
+`deploy.sh` treats the cluster as bootstrapped when
+`module.ai_factory.exoscale_instance_pool.control_plane[0]` is in
+`terraform state list` and the pin is not `false`, and applies once with
+`cp_initialized = true`. Before applying, check the plan:
+
+- it must not create or replace `exoscale_instance_pool.control_plane`
+  without a new image (see below): the new members would have no cluster to
+  join;
+- it must not change the pool `size` from more than 1 to 1: that removes
+  members and brings back the init configuration (`cp_initialized` is wrong);
+- when it replaces the pool together with `random_id.serve_path` (a new image,
+  for example a rebuild), every node is replaced: run the two passes of
+  [New cluster](#new-cluster) instead (pins `false`/`true`, then
+  `true`/`false`);
+- when it creates an `exoscale_template` without replacing the pool, set
+  `image_import_port_open` to `true`, plan and apply, then set it back to
+  `false` and apply again to close tcp/80.
+
+```bash
+printf '%s\n' '{"cp_initialized":true,"image_import_port_open":false}' > pass2.auto.tfvars.json
+terraform plan -input=false "${VF[@]}" -out=tfplan
+terraform show -json tfplan | jq '[.resource_changes[] | select(.type == "exoscale_template" and (.change.actions | index("create")))] | length'
+terraform apply tfplan
+```
+
+Never set `cp_initialized = false` on a running cluster.
+
+The API key and secret come from `exoscale_api_key` and `exoscale_api_secret`
+(var files or `TF_VAR_*`). `deploy.sh --destroy` deletes
+`pass2.auto.tfvars.json` after the destroy.
