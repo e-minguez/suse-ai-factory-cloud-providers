@@ -15,7 +15,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 - `modules/elemental-config`, `modules/image-factory`, `modules/rke2-ports`: shared.
 - `modules/common/variables-common.tf`: common variable declarations, **symlinked** into each provider module (Terraform cannot import variables). Edit the original, never the link.
 - `modules/<provider>`: provider modules. `examples/<provider>`: single-cluster roots with `deploy.sh`.
-- `tools/multicluster` (uses the `rancher2` provider), `tools/leftovers/<provider>.sh` (on `scripts/lib/leftovers.sh`, suggested, never run, by `deploy.sh --destroy`), `tools/orphans/evroc`, `tools/vultr/passthrough-stock.sh`; `tools/cost` (Go): pre-deploy cost estimate from tfvars for aws, evroc and vultr (`make cost`, `cluster.sh cost`; ADR 007). Estimate only; per-provider defaults are locked to `locals.tf` by `TestDefaultsMatchLocals`.
+- `tools/multicluster` (uses the `rancher2` provider), `tools/leftovers/<provider>.sh` (on `scripts/lib/leftovers.sh`, suggested, never run, by `deploy.sh --destroy`), `tools/orphans/evroc`, `tools/vultr/passthrough-stock.sh`; `tools/cost` (Go): pre-deploy cost estimate from tfvars for aws, evroc, exoscale and vultr (`make cost`, `cluster.sh cost`; ADR 007). Estimate only; per-provider defaults are locked to `locals.tf` by `TestDefaultsMatchLocals`.
 - `scripts/lib/{tf.sh,poll.sh,deploy-common.sh,ssh.sh,leftovers.sh}`, `scripts/{kubeconfig,ssh,build-logs}.sh`.
 - `docs/decisions/NNN-*.md` (ADRs), `docs/workarounds.md`, `docs/providers/<p>.md`, `docs/conventions.md` (naming, labels, outputs), `docs/architecture.md` (Mermaid diagrams: flow, image pipeline, passes, network; update when a pass, role or traffic path changes).
 

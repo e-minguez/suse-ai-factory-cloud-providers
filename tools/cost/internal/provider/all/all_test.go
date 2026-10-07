@@ -8,7 +8,7 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	if got := provider.Names(); !slices.Equal(got, []string{"aws", "evroc", "vultr"}) {
+	if got := provider.Names(); !slices.Equal(got, []string{"aws", "evroc", "exoscale", "vultr"}) {
 		t.Errorf("Names() = %v", got)
 	}
 	for _, n := range provider.Names() {

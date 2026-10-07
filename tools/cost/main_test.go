@@ -186,7 +186,7 @@ func TestRedactionLayeredTFVars(t *testing.T) {
 // TestRedactionAcrossProviders: a provider that fails (stub, or one that does
 // not declare the variables) must not echo the credentials either.
 func TestRedactionAcrossProviders(t *testing.T) {
-	for _, p := range []string{"aws", "evroc", "vultr"} {
+	for _, p := range []string{"aws", "evroc", "exoscale", "vultr"} {
 		args := append([]string{"--provider", p, "--region", "x", "--no-network"}, redactLayers...)
 		_, out, errOut := exec(args...)
 		assertNoSecrets(t, p+" stdout", []byte(out))

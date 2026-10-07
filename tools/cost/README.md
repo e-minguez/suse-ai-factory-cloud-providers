@@ -7,10 +7,10 @@ and ends with this statement, and the JSON report carries it in a top-level
 `disclaimer` field.
 
 `cost` reads the same tfvars files as `deploy.sh`, applies the module
-defaults, prices the resources the module would create (aws, evroc or vultr),
-and prints a per-resource table for 1h, 8h, 24h, 7d and 30d. It reads no plan,
-no state and no live resources, so it works before anything exists. Credentials
-in the tfvars files are never read.
+defaults, prices the resources the module would create (aws, evroc, exoscale
+or vultr), and prints a per-resource table for 1h, 8h, 24h, 7d and 30d. It
+reads no plan, no state and no live resources, so it works before anything
+exists. Credentials in the tfvars files are never read.
 
 This is a separate Go module (`tools/cost/go.mod`); the repo root stays free
 of Go files.
@@ -18,7 +18,7 @@ of Go files.
 ## Usage
 
 ```
-make cost PROVIDER=<aws|evroc|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
+make cost PROVIDER=<aws|evroc|exoscale|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
 tools/multicluster/cluster.sh cost <name> [cost args]
 cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 ```
@@ -28,9 +28,9 @@ cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--provider NAME` | required | `aws`, `evroc` or `vultr` |
+| `--provider NAME` | required | `aws`, `evroc`, `exoscale` or `vultr` |
 | `--var-file F` | none | tfvars file; repeatable, later wins |
-| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; evroc prices do not depend on it and a null region shows as `(evroc CLI context)`) |
+| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; evroc and exoscale prices do not depend on it, and a null evroc region shows as `(evroc CLI context)`) |
 | `--json` | off | print a JSON report instead of a table |
 | `--catalog FILE` | none | use this provider catalog file instead of the network or cache |
 | `--no-network` | off | never call the network; use `--catalog` or a warm cache |
@@ -69,8 +69,9 @@ column per duration. `ROLE` and `POOL` use the label vocabulary in
   with `count = 0`, disabled public IPs); a footer note says when node rows
   went.
 - `*` marks a row capped at the monthly rate (vultr monthly-invoiced plans).
-- Amounts are in the provider's native currency (aws and vultr USD, evroc EUR).
-  There is no conversion.
+- Amounts are in the provider's native currency (aws and vultr USD, evroc EUR;
+  exoscale EUR, one of the three currencies it publishes). There is no
+  conversion.
 - `Not included` lists resources that exist but are not priced, each with the
   reason.
 
@@ -116,6 +117,27 @@ Not included: the load balancer and snapshots (no published rate), outbound
 transfer (traffic-dependent; the first 100 GB are free, then billed per GB).
 
 `--catalog FILE` takes a rate card in the same JSON format.
+
+### exoscale
+
+Prices come from the public price list
+(<https://portal.exoscale.com/api/pricing/opencompute>, also behind
+<https://www.exoscale.com/pricing/>). No API key is needed and nothing from
+your account is read. The list has no zone dimension; the report uses its EUR
+section (it also has CHF and USD). Cache and fallback work as for vultr: the
+list is cached under the user cache directory and used when the URL is
+unreachable or with `--no-network`; `--catalog FILE` takes a saved copy of the
+list.
+
+Instance types map to price keys by family and size (`standard.extra-large` →
+`running_extra_large`, `gpu3.small` → `running_gpu3_small`). Instance prices
+exclude the local disk, which is priced per GiB-hour (`volume`;
+`volume_data` for the `storage` family). The template is priced per GiB-hour
+on its virtual size (`image_disk_size`, at least 10 GiB) in the one zone. The
+network load balancer is priced per hour. The public IPv4 of each instance,
+the private network and security groups have no charge.
+
+Not included: outbound traffic.
 
 ### vultr
 

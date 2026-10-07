@@ -1,7 +1,7 @@
 // Package provider defines what a cloud provider contributes to the cost
 // estimator and a registry to look providers up by name.
 //
-// Each provider lives in its own subpackage (aws, evroc, vultr), imports this
+// Each provider lives in its own subpackage (aws, evroc, exoscale, vultr), imports this
 // package and calls Register from init. internal/provider/all blank-imports
 // them, so a binary only needs `import _ ".../internal/provider/all"`.
 // Registration happens in the subpackages (not here) to avoid an import cycle.

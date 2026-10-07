@@ -30,7 +30,6 @@ Read these before choosing this provider:
   zone-scoped.
 - **Control plane names** are `<cluster_name>-cp-<pool id>-<random>`, set by
   the instance pool, not `-cp-NN`.
-- No cost estimate (`tools/cost`) yet.
 
 To revisit when the Exoscale VPC is generally available and the Terraform
 provider can attach instances to VPC subnets ([ADR 008](../decisions/008-exoscale-module.md)).
@@ -207,9 +206,13 @@ usage is back down and plan again.
 
 ## Cost estimate
 
-Not covered by `tools/cost` yet. Exoscale publishes prices as JSON at
-`https://portal.exoscale.com/api/pricing/opencompute` (hourly, CHF/EUR/USD, no
-zone dimension).
+`make cost PROVIDER=exoscale TFVARS=...` estimates the cost from tfvars
+([tools/cost](../../tools/cost/README.md)). Rates come from the public price
+list at `https://portal.exoscale.com/api/pricing/opencompute` (no key, cached;
+hourly, no zone dimension; the EUR section). It prices the instances, their
+local disks (billed separately per GiB-hour), the network load balancer and
+the template. Outbound traffic is not included. The result is an estimate, not
+a quote.
 
 ## Leftover check
 

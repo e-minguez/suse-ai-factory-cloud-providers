@@ -1,0 +1,18 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: exoscale   Region: de-fra-1   Cluster: suse-ai-factory   Catalog: file
+
+  RESOURCE                                       ROLE           POOL  QTY  TYPE                       EUR/hr     1h    8h    24h      7d     30d
+  jumphost                                       jumphost               1  standard.large             0.0933   0.09  0.75   2.24   15.68   67.20
+  jumphost disk (50 GB)                          jumphost               1  storage:disk          0.000140/GB   0.01  0.06   0.17    1.18    5.04
+  control plane                                  control_plane  cp      3  standard.extra-large       0.1867   0.56  4.48  13.44   94.08  403.21
+  control plane disk (100 GB)                    control_plane  cp      3  storage:disk          0.000140/GB   0.04  0.34   1.01    7.06   30.24
+  network load balancer                          lb                     1  lb                         0.0347   0.03  0.28   0.83    5.83   25.00
+  image template (10 GB)                         image                  1  storage:template      0.000280/GB  <0.01  0.02   0.07    0.47    2.02
+  public ipv4, private network, security groups  network                   -- free --                     --     --    --     --      --      --
+                                                                                                       TOTAL   0.74  5.92  17.76  124.30  532.70
+
+  All amounts in EUR.
+  Not included:
+    - outbound traffic: traffic-dependent, billed per GB
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.

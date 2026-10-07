@@ -90,8 +90,8 @@ test-go: ## gofmt, go vet and go test in tools/cost (skipped if go is not instal
 	if [ -n "$$unformatted" ]; then echo "gofmt needed:" >&2; echo "$$unformatted" >&2; exit 1; fi && \
 	go vet ./... && go test ./...
 
-cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|vultr> TFVARS="common-all.tfvars terraform.tfvars"
-	@[ -n "$(PROVIDER)" ] || { echo "cost: set PROVIDER=aws|evroc|vultr (and TFVARS=\"f1 f2\", later wins)" >&2; exit 1; }
+cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|vultr> TFVARS="common-all.tfvars terraform.tfvars"
+	@[ -n "$(PROVIDER)" ] || { echo "cost: set PROVIDER=aws|evroc|exoscale|vultr (and TFVARS=\"f1 f2\", later wins)" >&2; exit 1; }
 	cd tools/cost && go run . --provider $(PROVIDER) $(foreach f,$(TFVARS),--var-file $(abspath $(f)))
 
 cost-fixtures: ## Run the live-tagged cost tests (network, optional credentials)
