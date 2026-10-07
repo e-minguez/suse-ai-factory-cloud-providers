@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # build-logs.sh and ssh.sh read terraform_data.build_access from state during the
-# apply, per provider (vultr, evroc), with a fake terraform and ssh on PATH.
+# apply, per provider (vultr, evroc, exoscale), with a fake terraform and ssh on PATH.
 # Usage: scripts/tests/build_access_test.sh
 set -euo pipefail
 
@@ -84,5 +84,6 @@ check() {
 
 check vultr vul123 203.0.113.60 http ""
 check evroc evr123 203.0.113.70 relay 10.30.1.71
+check exoscale exo123 203.0.113.80 http ""
 
 echo "build_access_test: ok"

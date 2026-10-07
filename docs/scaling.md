@@ -4,7 +4,7 @@ A cluster has three node kinds, all joining through the API load balancer:
 
 | Kind | Variable | RKE2 role | `nodes[*].role` | Hostname |
 |---|---|---|---|---|
-| Control plane | `control_plane_count` | server | `control_plane` | `<cluster_name>-cp-NN` |
+| Control plane | `control_plane_count` | server | `control_plane` | `<cluster_name>-cp-NN` (exoscale: `<cluster_name>-cp-<pool id>-<random>`) |
 | Worker | `worker_pools` | agent | `worker` | `<cluster_name>-<pool>-NN` |
 | GPU worker | `gpu_pools` | agent | `gpu` | `<cluster_name>-<pool>-NN` |
 
@@ -22,6 +22,9 @@ Set `control_plane_count` to the next odd number (1 → 3 → 5) and re-run
 
 - Even counts fail at plan (etcd quorum).
 - Shrinking is not supported: it removes etcd members without draining them.
+- exoscale: the control planes are one instance pool, so a count change
+  scales the pool. On a shrink the pool removes the oldest member first and
+  its etcd member stays behind (`kubectl delete node <name>` removes it).
 
 ## Worker and GPU pools
 
@@ -45,7 +48,8 @@ gpu_pools = {
   other pools.
 - **Availability:** each provider checks at plan that the instance types exist
   and can be served (aws: offered in the zone; evroc: flavor offered, compute
-  and public IP quota; vultr: plan in stock). A failing check stops the plan
+  and public IP quota; vultr: plan in stock; exoscale: type offered and
+  available to the organization, instance, load balancer and GPU quota). A failing check stops the plan
   before anything is created. Account quotas the provider does not expose are
   not checked; see `docs/providers/<provider>.md`.
 - **Shrink a pool or remove it:** Terraform destroys the highest-numbered
