@@ -60,9 +60,11 @@ locals {
       })
     },
     local.component_values_files,
+    # -priority: elemental applies these before its HelmCharts; other manifests
+    # wait for every chart job (docs/decisions/001-elemental-config-rationale.md).
     local.component_pull_secret_manifests,
     var.ingress_controller != "traefik" ? {} : {
-      "kubernetes/manifests/traefik.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/manifests/traefik.yaml.tftpl", {
+      "kubernetes/manifests/traefik-priority.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/manifests/traefik.yaml.tftpl", {
         vpc_cidr = var.vpc_cidr
       })
     },

@@ -23,6 +23,14 @@ link here.
   HelmChartConfig never takes effect (SUSE/elemental#570). Writing the file
   before `rke2-server` starts avoids this. Editing it reaches new nodes only
   (node resources ignore user_data changes) and does not rebuild the image.
+- **Image manifests are `*-priority.yaml`.** Elemental's
+  `k8s-resource-installer` applies `*-priority.yaml` from `kubernetes/manifests/`
+  right after RKE2's core charts, then creates each HelmChart and waits up to
+  900 s for its install job, and applies the other manifests last, only when
+  every chart job completed. A chart that fails or hangs therefore also drops
+  the Traefik HelmChartConfig (the NLB checks on 8080 fail) and the AppCo pull
+  secrets (local-path stays in `ImagePullBackOff`). As priority manifests they
+  do not depend on any chart. A test keeps every image manifest a priority one.
 - **Scripts run through `bash`, live in `/var/lib/elemental`.** The image root
   is read-only while Ignition runs, and a failed write there ends in the
   initrd emergency shell. Files written to `/var/lib/elemental` are labelled

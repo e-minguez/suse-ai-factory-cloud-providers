@@ -349,6 +349,7 @@ variable "fips" {
   description = "Set cryptoPolicy: fips in install.yaml. Every node must be FIPS-ready."
 }
 
+# The 2.2.0 default can install before Rancher is ready; see docs/workarounds.md.
 variable "aif_release" {
   type        = string
   default     = "2.2.0"
