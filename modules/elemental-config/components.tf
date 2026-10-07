@@ -107,7 +107,7 @@ locals {
 
   component_pull_secret_manifests = {
     for c in local.enabled_specs :
-    "kubernetes/manifests/${c.name}.yaml" => templatefile(
+    "kubernetes/manifests/${c.name}-pull-secret-priority.yaml" => templatefile(
       "${path.module}/templates/elemental/kubernetes/manifests/appco-pull-secret.yaml.tftpl",
       { namespace = c.pull_secret_ns, dockerconfigjson_b64 = local.dockerconfigjson_b64 }
     ) if c.pull_secret_ns != null

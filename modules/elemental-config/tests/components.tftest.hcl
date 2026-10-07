@@ -59,11 +59,16 @@ run "default_components_in_canonical_order" {
         "kubernetes/helm/values/gpu-operator.yaml",
         "kubernetes/helm/values/local-path-provisioner.yaml",
         "kubernetes/helm/values/aif-operator.yaml",
-        "kubernetes/manifests/local-path-provisioner.yaml",
-        "kubernetes/manifests/traefik.yaml",
+        "kubernetes/manifests/local-path-provisioner-pull-secret-priority.yaml",
+        "kubernetes/manifests/traefik-priority.yaml",
       ] : contains(output.elemental_file_names, p)
     ])
     error_message = "The default set must render its values files and manifests."
+  }
+
+  assert {
+    condition     = alltrue([for p in output.elemental_file_names : endswith(p, "-priority.yaml") if startswith(p, "kubernetes/manifests/")])
+    error_message = "Image manifests must be *-priority.yaml: elemental applies the others only after every HelmChart job completes."
   }
 
   assert {
@@ -108,7 +113,7 @@ run "storage_chart_pulls_in_its_sysext" {
   }
 
   assert {
-    condition     = !contains(output.elemental_file_names, "kubernetes/manifests/local-path-provisioner.yaml")
+    condition     = !contains(output.elemental_file_names, "kubernetes/manifests/local-path-provisioner-pull-secret-priority.yaml")
     error_message = "No local-path pull secret without local-path-provisioner."
   }
 
@@ -122,7 +127,7 @@ run "ingress_none_drops_traefik_config" {
   }
 
   assert {
-    condition     = !contains(output.elemental_file_names, "kubernetes/manifests/traefik.yaml")
+    condition     = !contains(output.elemental_file_names, "kubernetes/manifests/traefik-priority.yaml")
     error_message = "Only ingress_controller = traefik renders the Traefik HelmChartConfig."
   }
 }

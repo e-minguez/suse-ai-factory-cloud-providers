@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The Traefik HelmChartConfig and the Application Collection pull secrets are
+  Elemental priority manifests, applied before any chart. Before, a chart
+  install that failed or hung (for example aif-operator 2.2.0 installed before
+  Rancher was ready) kept them from being applied: the load balancer health
+  checks for 80/443 failed and local-path-provisioner could not pull its
+  image. The image changes, so the next deploy rebuilds it.
+
 ## [0.1.0] - 2026-10-02
 
 First release. Deploys SUSE AI Factory (RKE2, Rancher, AI Factory operator and
