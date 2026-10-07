@@ -66,7 +66,7 @@ resource "terraform_data" "cp_init_ready" {
 
 # Current members with their privnet lease: Terraform exposes neither the
 # lease nor, right after a scale call, the new members. depends_on defers the
-# read to the apply that changes the pool.
+# read to the apply that changes the pool. See docs/workarounds.md.
 data "external" "cp_members" {
   count = var.deploy_nodes ? 1 : 0
 

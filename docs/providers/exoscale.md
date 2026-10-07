@@ -118,7 +118,8 @@ closes it again.
 - Terraform exposes no private address for pool members. The module reads the
   private network's `leases` and the pool's current members through the API
   (`data.external.cp_members`); Terraform's own `instances` attribute lists
-  fewer members right after a scale call until the next refresh.
+  fewer members right after a scale call until the next refresh. Tracked in
+  [docs/workarounds.md](../workarounds.md).
 - The jumphost has a static lease (`vpc_cidr` host 5) below the DHCP range;
   everything else gets a dynamic lease.
 - No managed NAT gateway exists, and the VPC product is beta and cannot be
@@ -169,7 +170,8 @@ closes it again.
 `data.external.api_check` runs `modules/exoscale/scripts/exoscale-api.sh`, which
 signs requests (EXO2-HMAC-SHA256 with `openssl`) because no Terraform data
 source covers instance types or quotas, and the unsigned type list reports
-GPU types as unavailable for everyone. `terraform_data.api_check` fails the plan
+GPU types as unavailable for everyone (tracked in
+[docs/workarounds.md](../workarounds.md)). `terraform_data.api_check` fails the plan
 on:
 
 - a type not offered in the zone or not available to the organization;
