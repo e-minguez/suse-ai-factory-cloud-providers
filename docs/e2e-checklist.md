@@ -18,14 +18,13 @@ Run these from the cluster directory (`examples/<provider>` or
 
 ## exoscale
 
-A first deploy (de-fra-1, 3 control planes, 1 worker), destroy and leftover
-check passed. Not run yet:
+Passed in de-fra-1 (2026-10-07): a deploy in one run with 3 control planes,
+workers and a `gpu3.small` GPU pool (Rancher through the load balancer,
+local-path volumes, aif-operator, GPU operator, `nvidia-smi` and a CUDA
+workload); `deploy.sh --rebuild` (every node replaced, the pool bootstrapped
+again, port 80 closed); a second run without changes; destroy and leftover
+check. Not run yet:
 
-- [ ] `deploy.sh --rebuild` on a running cluster: port 80 opens for the import
-      and closes again, the pool template updates in place, workers are
-      replaced and rejoin.
-- [ ] GPU pool: GPU operator ready, node advertises `nvidia.com/gpu`,
-      `nvidia-smi` works in the driver pod. Not run: GPU quota 0.
 - [ ] Grow the control plane (`control_plane_count` 1 → 3) and a worker pool on
       a running cluster; nothing is replaced.
 - [ ] `image_id` set to an existing template: no jumphost build, nodes boot.

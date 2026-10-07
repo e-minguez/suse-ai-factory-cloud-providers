@@ -55,7 +55,7 @@ exo_plan_hook() {
     # is replaced, as on the other providers, so the new pool bootstraps again.
     if [ "${EXO_REBOOTSTRAP_OK:-0}" = 1 ] &&
       jq -e '[.resource_changes[]? | select(.address == "module.ai_factory.random_id.serve_path" and (.change.actions | index("create")))] | length > 0' "$1" >/dev/null; then
-      echo "    a new image replaces the control plane pool: bootstrapping it again with one member; re-planning..."
+      echo "    a new image replaces the control plane pool: bootstrapping it again with one member, then a scale pass; re-planning..."
       exo_pin false true
       return 1
     fi
@@ -82,8 +82,14 @@ deploy_passes() {
   if exo_bootstrapped; then
     # Keeps an open import port from an interrupted run; closes it below.
     exo_pin true "$([ "$(exo_pinned image_import_port_open)" = true ] && echo true || echo false)"
+    # --rebuild (scale pass) and an open import port (close pass) always add a
+    # second pass; a new image without --rebuild is announced by the hook.
     # shellcheck disable=SC2034 # read by tf_pass
     DEPLOY_PASS_TOTAL=1
+    if [ "$DEPLOY_REBUILD" = 1 ] || [ "$(exo_pinned image_import_port_open)" = true ]; then
+      # shellcheck disable=SC2034 # read by tf_pass
+      DEPLOY_PASS_TOTAL=2
+    fi
     EXO_REBOOTSTRAP_OK=1 TF_PLAN_HOOK=exo_plan_hook tf_pass "Apply"
     if [ "$(exo_pinned cp_initialized)" = false ]; then
       # The hook switched to the init configuration for a new image.

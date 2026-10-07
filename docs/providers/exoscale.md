@@ -160,6 +160,10 @@ closes it again.
   check counts GPUs, which is the stricter reading.
 - The signed instance type list omits types the organization may not use. GPU
   access is requested from Exoscale with a support ticket (family and zone).
+- Tested 2026-10 with `gpu3.small` (one A40, passthrough) in de-fra-1: the
+  precompiled driver (`gpu_driver_version` 615) loads, the node advertises
+  `nvidia.com/gpu: 1`, and a CUDA workload runs. One `gpu3.small` used 1 of a
+  `gpu3` limit of 1.
 
 ## Quota and availability
 
@@ -179,8 +183,8 @@ on:
 Capacity can still run out between plan and apply.
 
 Quota usage drops with a delay after instances are deleted (observed
-2026-10: several minutes after a destroy of 7 instances, the `instance` and
-`gpu3` usage still counted most of them). Deploying again right after a destroy
+2026-10: after a destroy, the `instance` and `gpu3` usage stayed unchanged for
+about 10 minutes, then dropped to 0 at once). Deploying again right after a destroy
 can fail the quota check for resources that no longer exist; wait until the
 usage is back down and plan again.
 

@@ -79,6 +79,12 @@ grep -qF "==> [2/2] Scale control plane" "$W/out" || fail "rebuild pool: no scal
 [ "$(applies)" -eq 2 ] || fail "rebuild pool: expected 2 applies"
 [ "$(pins)" = '[true,false]' ] || fail "rebuild pool: pins $(pins)"
 
+# --- with --rebuild the second pass is announced from the start.
+run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN_SEQ="plan-exoscale-rebuild.json plan-exoscale-rebuild.json plan-vultr-update.json" -- --rebuild --yes
+[ "$RC" -eq 0 ] || fail "rebuild numbering: rc $RC"
+grep -qF "==> [1/2] Apply" "$W/out" || fail "rebuild numbering: first pass not [1/2]"
+grep -qF "==> [2/2] Scale control plane" "$W/out" || fail "rebuild numbering: no [2/2]"
+
 # --- the scale pass never replaces the pool again.
 run FAKE_TF_STATE_LIST="$POOL" FAKE_TF_PLAN=plan-exoscale-rebuild.json -- --yes
 [ "$RC" -ne 0 ] || fail "rebuild loop: deploy.sh succeeded"
