@@ -85,6 +85,13 @@ cp terraform.tfvars.example terraform.tfvars                 # edit REPLACE_WITH
 Var files, later wins: `../../common-all.tfvars`, `../common-all.tfvars`,
 `../common-exoscale.tfvars`, `terraform.tfvars`.
 
+Cost estimate before deploying, from the public price list (an estimate, not
+a quote; [tools/cost](../../tools/cost/README.md)):
+
+```bash
+make -C ../.. cost PROVIDER=exoscale TFVARS="common-all.tfvars examples/exoscale/terraform.tfvars"
+```
+
 `deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform args>]`:
 plan, list replacements and destroys, confirm, apply the saved plan. Logs:
 `.deploy/logs/<ts>/`.
