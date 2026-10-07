@@ -1,0 +1,23 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write # tags, releases, CHANGELOG.md on the release branch
+  pull-requests: write # release PR
+  issues: write # release labels (googleapis/release-please-action#1105)
+
+jobs:
+  release-please:
+    runs-on: ubuntu-26.04
+    steps:
+      # PRs opened with GITHUB_TOKEN do not trigger CI, so the required checks
+      # never run on the release PR. RELEASE_PLEASE_TOKEN (PAT or app token)
+      # avoids that; without it, close and reopen the release PR.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

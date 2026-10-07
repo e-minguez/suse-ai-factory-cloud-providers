@@ -6,9 +6,9 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 
 ## Status
 - `v0.1.0` is the first release. End-to-end checks not yet run: `docs/e2e-checklist.md`; everything else passed on all three providers.
-- From `v0.1.0` on, user-facing changes (variables, outputs, `deploy.sh` interface) need a `CHANGELOG.md` entry under `[Unreleased]`.
+- Releases: release-please (`release-please-config.json`, `.release-please-manifest.json`, `version.txt`) opens a release PR from Conventional Commits on `main`; merging it tags `vX.Y.Z` and writes `CHANGELOG.md`. Never edit `CHANGELOG.md` or the version by hand. PR titles (squash) and every commit (rebase) must be Conventional Commits (`pr-title` workflow); user-facing changes (variables, outputs, `deploy.sh` interface) are `feat`/`fix`, breaking ones `!`. Pre-1.0: `feat` and `!` bump minor, `fix` bumps patch.
 - `main` is protected (ruleset `protect-main`): no direct pushes, force pushes or history rewrites. Every change goes through a PR from a branch, merged by squash or rebase (linear history) once the 11 CI jobs pass. Renaming a CI job means updating the ruleset's required checks.
-- Actions in `.github/workflows/ci.yml` are pinned to commit SHAs (version in a trailing comment); dependabot bumps them and the `tools/cost` Go modules weekly.
+- Actions in `.github/workflows/*.yml` are pinned to commit SHAs (version in a trailing comment); dependabot bumps them and the `tools/cost` Go modules weekly.
 - The user runs all end-to-end deploys. Only provide commands and checks.
 
 ## Layout
