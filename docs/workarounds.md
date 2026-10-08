@@ -1,4 +1,3 @@
-| aif-operator up to 2.2.0 can install before Rancher creates `cattle-ui-plugin-system`: its operator Role there fails, the install fails, helm-controller's `reinstall` runs `helm uninstall`, and the delete hook hangs on the `aif-ui` finalizer, which lacks the same permissions. No code workaround; recovery on an affected cluster: `kubectl patch installaiextension aif-ui --type=merge -p '{"metadata":{"finalizers":[]}}'` | `aif_release` default in `modules/common/variables-common.tf` | [SUSE/aif#277](https://github.com/SUSE/aif/pull/277), [SUSE/aif#289](https://github.com/SUSE/aif/pull/289) (fixed in 2.3.0) | aif-operator 2.3.0 is released: set the `aif_release` default to `2.3.0` and delete this entry |
 # Temporary workarounds
 
 Every workaround tied to an upstream defect or an unreleased fix is listed here,

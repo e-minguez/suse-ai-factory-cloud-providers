@@ -231,12 +231,12 @@ variable "extra_build_inputs" {
 
 variable "aif_release" {
   type        = string
-  default     = "2.2.0"
+  default     = "2.3.0"
   description = "AI Factory release: a manifest URL (http:// or https://), or a version X.Y.Z[-pre] resolved to the SUSE/aif tag aif-operator-<version>."
 
   validation {
     condition     = can(regex("^https?://", var.aif_release)) || can(regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?$", var.aif_release))
-    error_message = "aif_release must be a manifest URL (http:// or https://) or a full X.Y.Z version with an optional pre-release suffix, for example \"2.2.0\" or \"2.3.0-dev.2\"."
+    error_message = "aif_release must be a manifest URL (http:// or https://) or a full X.Y.Z version with an optional pre-release suffix, for example \"2.3.0\" or \"2.3.0-dev.2\"."
   }
 
   validation {
