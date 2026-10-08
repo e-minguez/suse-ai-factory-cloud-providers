@@ -236,10 +236,25 @@ With `aif-operator`, set all of them so AI Factory can pull its workloads right
 after the deployment. Plan prints a warning that names any missing ones; the
 deployment itself does not need them. Each pair is set together or not at all.
 
+## Web UI
+
+**Alpha** (`alpha-0.0.1`). A local web interface creates, deploys and destroys clusters from forms, with
+no Terraform on your machine. It runs in a container and uses the same
+`deploy.sh` flow, including the plan review before every apply. Open the URL
+with the token from `docker logs aif`.
+
+```sh
+docker run -d --init --name aif -p 127.0.0.1:8080:8080 --read-only --tmpfs /tmp --stop-timeout 600 -v ~/aif-clusters:/opt/aif/clusters ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.1
+```
+
+The folder holds credentials and state: back it up and keep it on an encrypted
+disk. See [docs/webui.md](docs/webui.md).
+
 ## Tools
 
 | Tool | What it does |
 |---|---|
+| `tools/webui` | Local web UI in a container ([above](#web-ui)). |
 | `tools/multicluster` | Several clusters from one checkout, imported into a management Rancher ([above](#multi-cluster)). |
 | `make cost PROVIDER=<p> TFVARS="..."` | Cost estimate from tfvars before a deploy; an estimate, not a quote ([tools/cost](tools/cost/README.md)). |
 | `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
@@ -263,6 +278,7 @@ Details in [docs/security.md](docs/security.md).
 
 | Document | Contents |
 |---|---|
+| [Web UI](docs/webui.md) | The localhost runner: run, profiles, forms, deploy, backups |
 | [Architecture](docs/architecture.md) | Diagrams: deploy flow, image pipeline, passes and network per provider |
 | [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [evroc](docs/providers/evroc.md), [exoscale](docs/providers/exoscale.md), [vultr](docs/providers/vultr.md) |
 | [Conventions](docs/conventions.md) | Variable names, labels, the output set, checklist for a new provider |
@@ -278,7 +294,7 @@ Details in [docs/security.md](docs/security.md).
 modules/      shared modules (elemental-config, image-factory, rke2-ports) and one module per provider
 examples/     single-cluster root per provider, each with a deploy.sh
 scripts/      deploy.sh library, kubeconfig, ssh and build-log helpers
-tools/        multicluster, leftovers, orphans, cost, vultr GPU stock
+tools/        webui, multicluster, leftovers, orphans, cost, vultr GPU stock
 docs/         architecture, conventions, ADRs, workarounds, security, scaling, provider notes
 ```
 

@@ -5,7 +5,7 @@ management cluster. Any provider can be the management cluster or a downstream
 cluster, because every provider exposes the same outputs.
 
 ```
-cluster.sh new <provider> <name>
+cluster.sh new [--empty] <provider> <name>
 cluster.sh deploy <name> [deploy.sh args]
 cluster.sh destroy <name> [deploy.sh args]
 cluster.sh register [--bootstrap] [--skip-cidr-check] [--yes] <mgmt> <downstream...>
@@ -31,7 +31,8 @@ clusters/
 ```
 
 `new` refuses to overwrite an existing cluster and copies the example's
-`terraform.tfvars.example` to the cluster's `terraform.tfvars`. The linked helper
+`terraform.tfvars.example` to the cluster's `terraform.tfvars`; with `--empty` the
+file is created empty (mode 600) instead. The linked helper
 scripts default `-C` to the cluster directory, so `clusters/<name>/ssh.sh <host>`
 works from anywhere. The cluster directory sits at the same depth as
 `examples/<provider>`, so the relative module sources resolve. `deploy` and

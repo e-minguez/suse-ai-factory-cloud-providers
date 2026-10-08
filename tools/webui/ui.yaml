@@ -1,0 +1,124 @@
+# Form layout for the web UI. Read at runtime from <repo>/tools/webui/ui.yaml.
+# `common` applies to every provider; a provider section adds to it (same
+# basic name overrides label/widget/options, groups merge by title).
+# Names a provider does not declare are skipped for that provider.
+# Widgets: text, password, password_hash, cidr_list, sshkeys, gpu_pool,
+# select, json, bool, number, list. Empty = inferred from the type.
+# A text widget with options offers them as suggestions only.
+# examples: name -> sample value shown under json fields (provider wins).
+common:
+  examples:
+    tags: |
+      {"team": "ai", "cost-center": "1234"}
+  basic:
+    - {name: cluster_name, label: Cluster name}
+    - {name: region, label: Region}
+    - {name: admin_cidrs, label: Admin CIDRs, widget: cidr_list}
+    - {name: ssh_authorized_keys, label: SSH keys, widget: sshkeys}
+    - {name: root_password_hash, label: Root password, widget: password_hash}
+    - {name: node_user_password_hash, label: Node user password, widget: password_hash}
+    - {name: appco_username, label: Application Collection username, widget: password}
+    - {name: appco_password, label: Application Collection password, widget: password}
+    - {name: gpu_pools, label: GPU pool, widget: gpu_pool}
+    - {name: suse_registry_username, label: SUSE registry username, widget: password, collapsed: true}
+    - {name: suse_registry_password, label: SUSE registry password, widget: password, collapsed: true}
+    - {name: nvidia_api_key, label: NVIDIA NGC API key, widget: password, collapsed: true}
+  groups:
+    Network:
+      - {name: api_cidrs, widget: cidr_list}
+      - {name: ingress_cidrs, widget: cidr_list}
+      - api_host
+      - rancher_hostname
+    Nodes:
+      - control_plane_count
+      - control_plane_instance_type
+      - control_plane_disk_size_gb
+      - control_plane_public_ip
+      - jumphost_instance_type
+      - jumphost_disk_size_gb
+      - worker_pools
+      - zones
+    AI Factory:
+      - aif_release
+      - components
+      - suse_storage_nodes
+      - appco_registry
+      - nvidia_username
+      - gpu_driver_repository
+      - gpu_driver_version
+    Access:
+      - node_username
+      - permit_root_ssh
+      - rancher_bootstrap_password
+    Image and build:
+      - deploy_nodes
+      - image_id
+      - keep_build_artifacts
+      - image_target_disk_gb
+    Tags:
+      - tags
+  managed:
+    - image_rebuild
+    - cp_initialized
+    - image_import_port_open
+    - image_ready
+    - image_ids
+    - lb_backend_instance_ids
+
+aws:
+  examples:
+    worker_pools: |
+      {"cpu": {"instance_type": "m7i.xlarge", "count": 2}}
+  basic:
+    - name: region
+      label: AWS region
+      widget: text
+      options: [us-east-1, us-east-2, us-west-1, us-west-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, eu-west-3, eu-north-1, eu-south-1, eu-south-2, eu-central-2, ap-northeast-1, ap-northeast-2, ap-southeast-1, ap-southeast-2, ap-south-1, sa-east-1]
+  groups:
+    Provider:
+      - vmimport_role_name
+      - jumphost_instance_profile_name
+
+evroc:
+  examples:
+    worker_pools: |
+      {"general": {"instance_type": "c1a.m", "count": 2, "zone": "b"}}
+  basic:
+    - {name: region, label: evroc region (empty = CLI context), widget: text}
+  groups:
+    Provider:
+      - project
+
+exoscale:
+  examples:
+    worker_pools: |
+      {"wrk": {"instance_type": "standard.large", "count": 2}}
+  basic:
+    - name: region
+      label: Exoscale zone
+      widget: select
+      options: [de-fra-1, de-muc-1, ch-gva-2, ch-dk-2, at-vie-1, at-vie-2, bg-sof-1]
+  managed:
+    - exoscale_api_key
+    - exoscale_api_secret
+
+vultr:
+  examples:
+    worker_pools: |
+      {
+        "wrk": {"instance_type": "vc2-6c-16gb", "count": 2},
+        "bm": {"instance_type": "vbm-6c-32gb-amd", "kind": "bare_metal"}
+      }
+  basic:
+    - name: region
+      label: Vultr region
+      widget: text
+      options: [ams, atl, blr, bom, cdg, del, dfw, ewr, fra, hnl, icn, itm, jnb, lax, lhr, mad, mel, mex, mia, nrt, ord, sao, scl, sea, sgp, sjc, sto, syd, tlv, waw, yto]
+  groups:
+    Provider:
+      - {name: mdisk_mode, widget: select, options: [none, raid1, jbod]}
+      - ssh_key_ids
+      - {name: lb_supervisor_extra_cidrs, widget: cidr_list}
+      - {name: agent_cloud_extra_cidrs, widget: cidr_list}
+  managed:
+    - vultr_api_key

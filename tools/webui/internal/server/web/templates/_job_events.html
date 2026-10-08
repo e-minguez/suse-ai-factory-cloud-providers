@@ -1,0 +1,68 @@
+{{define "job_lines"}}{{range .}}<div class="l{{if .Class}} {{.Class}}{{end}}">{{.Text}}</div>
+{{end}}{{end}}
+
+{{define "job_passes"}}<ol class="passes">
+{{range .}}<li class="pass {{.Status}}">
+  <span class="status {{.Status}}">{{.Status}}</span>
+  <strong>{{if .Title}}{{.Title}}{{else}}Pass {{.Index}}{{end}}</strong>
+  {{if .Duration}}<span class="muted">{{.Duration}}</span>{{end}}
+  {{if .HasPlan}}<span class="muted">{{if .NoChanges}}no changes{{else}}{{.Create}} to create, {{.Update}} to update, {{.Replace}} to replace, {{.Destroy}} to destroy{{end}}</span>{{end}}
+  {{range .Errors}}<div class="diag-error">{{.}}</div>{{end}}
+</li>
+{{end}}</ol>
+{{end}}
+
+{{define "job_plan"}}{{if .Plan}}<h2>Plan{{if .Title}}: {{.Title}}{{end}}</h2>
+{{if .Plan.NoChanges}}<p class="muted">No changes.</p>{{else}}
+<p>{{.Plan.Create}} to create, {{.Plan.Update}} to update, {{len .Plan.Replace}} to replace, {{len .Plan.Destroy}} to destroy.</p>
+{{if .Plan.Replace}}<h3 class="replace">Replaced</h3><ul class="resources replace">{{range .Plan.Replace}}<li><code>{{.}}</code></li>{{end}}</ul>{{end}}
+{{if .Plan.Destroy}}<h3 class="destroy">Destroyed</h3><ul class="resources destroy">{{range .Plan.Destroy}}<li><code>{{.}}</code></li>{{end}}</ul>{{end}}
+{{end}}{{else}}<div></div>{{end}}
+{{end}}
+
+{{define "job_resources"}}<p class="muted">{{.Completed}} resources done{{if .Errored}}, <span class="diag-error">{{.Errored}} failed</span>{{end}}{{if .Active}}, in progress:{{end}}</p>
+{{if .Active}}<ul class="resources">{{range .Active}}<li><code>{{.Addr}}</code> {{.Action}}{{if .Elapsed}} <span class="muted">{{.Elapsed}}s</span>{{end}}</li>{{end}}</ul>{{end}}
+{{end}}
+
+{{define "job_confirm"}}{{if .Pending}}<section class="confirm">
+  <h2>Review the plan{{if .Title}}: {{.Title}}{{end}}</h2>
+  {{if .Plan}}
+    <p>{{.Plan.Create}} to create, {{.Plan.Update}} to update,
+      <strong class="{{if .Plan.Replace}}replace{{end}}">{{len .Plan.Replace}} to replace</strong>,
+      <strong class="{{if .Plan.Destroy}}destroy{{end}}">{{len .Plan.Destroy}} to destroy</strong>.
+      Details are in the plan section below.</p>
+  {{end}}
+  <form method="post" action="/jobs/{{.Job}}/confirm" hx-post="/jobs/{{.Job}}/confirm" hx-swap="none" class="inline">
+    <input type="hidden" name="index" value="{{.Index}}">
+    <button type="submit" name="answer" value="yes">Apply</button>
+    <button type="submit" name="answer" value="no" class="danger">Abort</button>
+  </form>
+</section>{{else}}<div></div>{{end}}
+{{end}}
+
+{{define "job_done"}}{{if .}}<section class="result {{.Status}}">
+  <h2>{{if eq .Status "ok"}}Finished{{else if eq .Status "aborted"}}Aborted{{else}}Failed{{end}}</h2>
+  {{if eq .Action "leftovers"}}
+    <p>{{if eq .ExitCode 0}}Nothing live found.{{else if eq .ExitCode 1}}The check found live resources (see the log).{{else}}The check was inconclusive or failed (exit code {{.ExitCode}}, see the log).{{end}}</p>
+  {{else}}
+    <p>Exit code {{.ExitCode}}.</p>
+  {{end}}
+  <p>
+    <a class="button" href="/clusters/{{.Cluster}}">Cluster overview</a>
+    <a href="/clusters/{{.Cluster}}/logs">Logs</a>
+  </p>
+  {{if .Destroyed}}
+    {{if .Leftovers.OK}}
+  <form method="post" action="/clusters/{{.Cluster}}/leftovers">
+    <p>Check for leftover cloud resources (read-only):</p>
+    <button type="submit">Run leftovers check</button>
+  </form>
+    {{else}}
+  <p>Check for leftover cloud resources (read-only). Needs the {{.Leftovers.Missing}} CLI, which is not in PATH; run this on a machine that has it:</p>
+  <pre><code>{{.Leftovers.Command}}</code></pre>
+    {{end}}
+  {{end}}
+</section>
+<div id="cancel" hx-swap-oob="true"></div>
+<span id="jobstatus" class="status {{.Status}}" hx-swap-oob="true">{{.Status}}</span>{{else}}<div></div>{{end}}
+{{end}}

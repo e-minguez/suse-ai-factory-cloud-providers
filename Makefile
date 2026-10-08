@@ -13,7 +13,7 @@ EXAMPLES ?= $(wildcard examples/*/)
 # Other Terraform roots to validate; CI runs them in their own job.
 TOOL_ROOTS ?= tools/multicluster/register
 
-.PHONY: help docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-scripts test-go cost cost-fixtures check-consistency ci clean
+.PHONY: help docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-scripts test-go test-webui webui image cost cost-fixtures check-consistency ci clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
@@ -61,7 +61,7 @@ lint-sh: ## shellcheck (skipped if not installed) on every tracked *.sh
 	if [ -z "$$files" ]; then echo "lint-sh: no shell scripts"; exit 0; fi; \
 	shellcheck $$files
 
-test: test-tf test-scripts test-go ## Run terraform, script and Go tests
+test: test-tf test-scripts test-go test-webui ## Run terraform, script and Go tests
 
 test-scripts: ## Script tests (fake terraform and ssh) and poll.sh self-test
 	bash scripts/tests/scripts_test.sh
@@ -89,6 +89,23 @@ test-go: ## gofmt, go vet and go test in tools/cost (skipped if go is not instal
 	unformatted=$$(gofmt -l .) && \
 	if [ -n "$$unformatted" ]; then echo "gofmt needed:" >&2; echo "$$unformatted" >&2; exit 1; fi && \
 	go vet ./... && go test ./...
+
+test-webui: ## gofmt, go vet and go test in tools/webui (skipped if go is not installed)
+	@if ! command -v go >/dev/null 2>&1; then echo "test-webui: go not installed, skipping"; exit 0; fi; \
+	[ -f tools/webui/go.mod ] || { echo "test-webui: tools/webui has no go.mod yet, skipping"; exit 0; }; \
+	cd tools/webui && \
+	unformatted=$$(gofmt -l .) && \
+	if [ -n "$$unformatted" ]; then echo "gofmt needed:" >&2; echo "$$unformatted" >&2; exit 1; fi && \
+	go vet ./... && go test ./...
+
+webui: ## Build the web UI binary to tools/webui/webui (CGO disabled)
+	cd tools/webui && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o webui .
+
+WEBUI_VERSION := $(shell cat tools/webui/VERSION)
+
+image: ## Build the web UI container image (suse-ai-factory-cloud-providers:<tools/webui/VERSION> and :dev)
+	docker buildx build --load -f tools/webui/Dockerfile --build-arg VERSION=$(WEBUI_VERSION) \
+		-t suse-ai-factory-cloud-providers:$(WEBUI_VERSION) -t suse-ai-factory-cloud-providers:dev .
 
 cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|vultr> TFVARS="common-all.tfvars terraform.tfvars"
 	@[ -n "$(PROVIDER)" ] || { echo "cost: set PROVIDER=aws|evroc|exoscale|vultr (and TFVARS=\"f1 f2\", later wins)" >&2; exit 1; }

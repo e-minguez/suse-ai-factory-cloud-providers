@@ -10,6 +10,8 @@
 # Reads (all optional): DEPLOY_YES, DEPLOY_VERBOSITY (quiet|normal|verbose), DEPLOY_TTY (0|1),
 # DEPLOY_VAR_FILES, DEPLOY_TF_ARGS, DEPLOY_PASS_TOTAL, DEPLOY_LOG_DIR, TF_STATE_DIR (default .deploy),
 # TF_RETRY_SLEEP.
+# Opt-in machine interface (WEBUI_SPEC.md, "Event protocol"): DEPLOY_EVENTS_FD=<n> receives JSON-lines
+# events; DEPLOY_CONFIRM_FD=<n> answers the confirmation (one line, yes|no), also without a terminal.
 # Needs bash >= 3.2, jq, terraform. Callers run with `set -euo pipefail`.
 
 TF_STATE_DIR="${TF_STATE_DIR:-.deploy}"
@@ -18,6 +20,11 @@ TF_RETRY_RE=()
 TF_RETRY_MAX=()
 TF_RETRY_NOTE=()
 TF_CRASH_RETRIED=0
+TF__FIFO_DIR=""
+TF_PASS_OPEN=0
+TF_PASS_T0=0
+TF_ABORTED=0
+TF_DONE_EMITTED=0
 
 # Group a resource type into a display category (shared by plan totals and the apply renderer).
 # shellcheck disable=SC2016 # jq program, not shell
@@ -81,6 +88,65 @@ foreach (inputs | ((fromjson? | select(type == "object")) // {type: "raw", "@mes
    .out[])
 '
 
+# tf__event <type> <jq object expr> [jq args...]: one JSON line on DEPLOY_EVENTS_FD (no-op when unset).
+tf__event() {
+  [ -n "${DEPLOY_EVENTS_FD:-}" ] || return 0
+  local type=$1 body=$2
+  shift 2
+  jq -nc --arg type "$type" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$@" \
+    '{type: $type, ts: $ts} + ('"$body"')' 2>/dev/null 1>&"$DEPLOY_EVENTS_FD" || true
+}
+
+# tf__event_plan <index> <plan show json> <no_changes true|false>
+tf__event_plan() {
+  [ -n "${DEPLOY_EVENTS_FD:-}" ] || return 0
+  # shellcheck disable=SC2016 # jq program, not shell
+  tf__event plan_summary '$p[0] as $s
+    | [$s.resource_changes[]? | {a: .address, x: .change.actions}
+        | select(.x != ["no-op"] and .x != ["read"] and .x != ["forget"])] as $ch
+    | {index: $i, create: ($ch | map(select(.x == ["create"])) | length),
+       update: ($ch | map(select(.x == ["update"])) | length),
+       replace: ($ch | map(select((.x | length) == 2) | .a)),
+       destroy: ($ch | map(select(.x == ["delete"]) | .a)), no_changes: $nc}' \
+    --argjson i "$1" --slurpfile p "$2" --argjson nc "$3"
+}
+
+# Closes the open pass (as failed) and emits `done`; called once from the EXIT trap with its status.
+tf__events_finish() {
+  local rc=$1 status=failed
+  [ -n "${DEPLOY_EVENTS_FD:-}" ] || return 0
+  [ "$TF_DONE_EMITTED" = 0 ] || return 0
+  TF_DONE_EMITTED=1
+  if [ "$TF_PASS_OPEN" = 1 ]; then
+    # shellcheck disable=SC2016 # jq program, not shell
+    tf__event pass_done '{index: $i, status: "failed", duration_s: $d}' \
+      --argjson i "$TF_PASS_INDEX" --argjson d "$(($(date +%s) - TF_PASS_T0))"
+    TF_PASS_OPEN=0
+  fi
+  if [ "$rc" -eq 0 ]; then
+    status=ok
+  elif [ "$TF_ABORTED" = 1 ] || [ "$rc" -eq 130 ] || [ "$rc" -eq 143 ]; then
+    status=aborted
+  fi
+  # shellcheck disable=SC2016 # jq program, not shell
+  tf__event "done" '{status: $s, exit_code: $rc, log_dir: $l}' \
+    --arg s "$status" --argjson rc "$rc" --arg l "${DEPLOY_LOG_DIR:-}"
+}
+
+# jq filter: raw `apply -json` lines to resource and diagnostic events (stdout), for one pass index.
+# shellcheck disable=SC2016 # jq program, not shell
+TF_JQ_EVENTS='
+(fromjson? | select(type == "object")) as $e
+| ({type: "x", ts: (now | floor | strftime("%Y-%m-%dT%H:%M:%SZ"))}) as $b
+| if ($e.type | IN("apply_start", "apply_progress", "apply_complete", "apply_errored")) then
+    $b + {type: "resource", index: $i, address: ($e.hook.resource.addr // ""), action: ($e.hook.action // ""),
+          status: ({apply_start: "start", apply_progress: "progress", apply_complete: "complete", apply_errored: "errored"}[$e.type]),
+          elapsed_s: (($e.hook.elapsed_seconds // 0) | floor)}
+  elif $e.type == "diagnostic" then
+    $b + {type: "diagnostic", index: $i, severity: ($e.diagnostic.severity // "error"),
+          summary: ($e.diagnostic.summary // ""), detail: ($e.diagnostic.detail // "")}
+  else empty end'
+
 tf__say() { [ "${DEPLOY_VERBOSITY:-normal}" = quiet ] || printf '%s\n' "$*"; }
 
 tf__logdir() {
@@ -97,6 +163,7 @@ tf__logdir() {
 
 tf__cleanup() {
   rm -f "$TF_STATE_DIR"/*.tfplan "$TF_STATE_DIR"/.plan-show.* 2>/dev/null || true
+  [ -z "${TF__FIFO_DIR:-}" ] || rm -rf "$TF__FIFO_DIR"
 }
 
 tf__slug() {
@@ -181,6 +248,18 @@ tf__plan_totals() {
 tf__confirm() {
   local ans=""
   [ "${DEPLOY_YES:-0}" = 1 ] && return 0
+  if [ -n "${DEPLOY_CONFIRM_FD:-}" ]; then
+    # shellcheck disable=SC2016 # jq program, not shell
+    tf__event confirm_request '{index: $i}' --argjson i "$TF_PASS_INDEX"
+    read -r ans <&"$DEPLOY_CONFIRM_FD" || ans=""
+    case "$ans" in y | Y | yes | YES | Yes) ans=yes ;; *) ans=no ;; esac
+    # shellcheck disable=SC2016 # jq program, not shell
+    tf__event confirm_response '{index: $i, answer: $a}' --argjson i "$TF_PASS_INDEX" --arg a "$ans"
+    [ "$ans" = yes ] && return 0
+    echo
+    echo "    Aborted, nothing applied."
+    return 1
+  fi
   printf '    Apply this plan? [y/N] '
   read -r ans || ans=""
   case "$ans" in y | Y | yes | YES) return 0 ;; esac
@@ -243,6 +322,11 @@ tf__retry_match() {
   return 1
 }
 
+# Pass count for events: DEPLOY_PASS_TOTAL when numeric, else 1 (destroy, single passes).
+tf__pass_total() {
+  case "${DEPLOY_PASS_TOTAL:-}" in "" | *[!0-9]*) echo 1 ;; *) echo "$DEPLOY_PASS_TOTAL" ;; esac
+}
+
 tf__plan_args() {
   TF__PLAN_ARGS=()
   local a
@@ -255,7 +339,7 @@ tf__plan_args() {
 tf_pass() {
   local name=$1
   shift
-  local slug plan planlog showjson mode attempt=1 t0 rc totals tty quiet jsonl applylog suffix
+  local slug plan planlog showjson mode attempt=1 t0 rc totals tty quiet jsonl applylog suffix fifo evpid
   slug=$(tf__slug "$name")
   mode=${DEPLOY_VERBOSITY:-normal}
   tty=${DEPLOY_TTY:-0}
@@ -268,6 +352,8 @@ tf_pass() {
   tf__logdir
   plan="$TF_STATE_DIR/$slug.tfplan"
   t0=$(date +%s)
+  TF_PASS_T0=$t0
+  TF_PASS_OPEN=1
   echo
   if [ -n "${DEPLOY_PASS_TOTAL:-}" ]; then
     echo "==> [$TF_PASS_INDEX/$DEPLOY_PASS_TOTAL] $name"
@@ -275,6 +361,9 @@ tf_pass() {
     echo "==> $name"
   fi
   tf__plan_args "$@"
+  # shellcheck disable=SC2016 # jq program, not shell
+  tf__event pass_start '{index: $i, total: $t, title: $n}' --argjson i "$TF_PASS_INDEX" \
+    --argjson t "$(tf__pass_total)" --arg n "$name"
 
   while :; do
     suffix=""
@@ -306,10 +395,16 @@ tf_pass() {
     fi
     if [ "$(tf__plan_total "$showjson")" -eq 0 ]; then
       tf__say "    plan: no changes"
+      tf__event_plan "$TF_PASS_INDEX" "$showjson" true
+      # shellcheck disable=SC2016 # jq program, not shell
+      tf__event pass_done '{index: $i, status: "no_changes", duration_s: $d}' \
+        --argjson i "$TF_PASS_INDEX" --argjson d "$(($(date +%s) - t0))"
+      TF_PASS_OPEN=0
       rm -f "$showjson" "$plan"
       return 0
     fi
     totals=$(tf__plan_totals "$showjson")
+    tf__event_plan "$TF_PASS_INDEX" "$showjson" false
 
     # Retries re-plan and ask again only when the new plan replaces or destroys something.
     if [ "$quiet" -eq 0 ] || [ "${DEPLOY_YES:-0}" != 1 ]; then
@@ -319,6 +414,7 @@ tf_pass() {
       if ! tf__confirm; then
         rm -f "$showjson" "$plan"
         tf__cleanup
+        TF_ABORTED=1
         exit 1
       fi
     fi
@@ -329,6 +425,25 @@ tf_pass() {
     trap 'TF_INT=1' INT
     if [ "$mode" = verbose ]; then
       terraform apply -input=false -no-color "$plan" 2>&1 | tee -i "$applylog" || rc=$?
+    elif [ -n "${DEPLOY_EVENTS_FD:-}" ]; then
+      # A second reader gets a copy of the stream through a fifo; its events go to the fd.
+      # In TMPDIR: some bind mounts (Docker Desktop on macOS) do not support fifos.
+      TF__FIFO_DIR=$(mktemp -d "${TMPDIR:-/tmp}/tf-events.XXXXXX")
+      fifo="$TF__FIFO_DIR/events.fifo"
+      mkfifo "$fifo"
+      # If the reader exits early (bad fd, jq failure), cat drains the fifo so tee never gets SIGPIPE.
+      (trap '' INT; jq -R -c --unbuffered --argjson i "$TF_PASS_INDEX" "$TF_JQ_EVENTS" \
+        2>/dev/null 1>&"$DEPLOY_EVENTS_FD" || true
+       cat >/dev/null) <"$fifo" &
+      evpid=$!
+      terraform apply -json -input=false "$plan" 2>&1 | tee -i "$jsonl" | tee -i "$fifo" |
+        (trap '' INT; exec jq -R -n -j --unbuffered --argjson tty "$tty" --argjson quiet "$quiet" \
+          --argjson totals "$totals" "$TF_JQ_DEFS$TF_JQ_RENDER") || rc=$?
+      wait "$evpid" || true
+      rm -rf "$TF__FIFO_DIR"
+      TF__FIFO_DIR=""
+      [ "$tty" = 1 ] && printf '\r\033[K'
+      tf__humanize "$jsonl" >"$applylog"
     else
       terraform apply -json -input=false "$plan" 2>&1 | tee -i "$jsonl" |
         (trap '' INT; exec jq -R -n -j --unbuffered --argjson tty "$tty" --argjson quiet "$quiet" \
@@ -341,9 +456,13 @@ tf_pass() {
 
     if [ "$rc" -eq 0 ]; then
       tf__say "    done in $(($(date +%s) - t0))s"
+      # shellcheck disable=SC2016 # jq program, not shell
+      tf__event pass_done '{index: $i, status: "ok", duration_s: $d}' \
+        --argjson i "$TF_PASS_INDEX" --argjson d "$(($(date +%s) - t0))"
+      TF_PASS_OPEN=0
       return 0
     fi
-    [ -z "${TF_INT:-}" ] || tf__fail "$name: interrupted" "$rc" "$applylog"
+    [ -z "${TF_INT:-}" ] || { TF_ABORTED=1; tf__fail "$name: interrupted" "$rc" "$applylog"; }
     if tf__crash "$name" "$applylog"; then
       attempt=$((attempt + 1))
       continue

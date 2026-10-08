@@ -1,0 +1,56 @@
+{{/*
+Template "field": one variable of the cluster form.
+Data: server.fieldView (see handlers_forms.go). Inputs are named f_<name>.
+*/}}
+{{define "field"}}<div class="field{{if .Error}} has-error{{end}}{{if .Own}} own{{end}}" id="field-{{.Name}}">
+  {{if eq .Widget "sshkeys"}}
+    <div class="field-label">{{.Label}}{{if .Required}} <span class="req" title="required">*</span>{{end}}</div>
+    {{template "sshkeys" .SSH}}
+  {{else if eq .Widget "cidr_list"}}
+    <div class="field-label">{{.Label}}{{if .Required}} <span class="req" title="required">*</span>{{end}}</div>
+    {{template "cidr_list" .CIDR}}
+  {{else if eq .Widget "gpu_pool"}}
+    <div class="field-label">{{.Label}}</div>
+    <div class="widget-row">
+      <label>Instance type <input type="text" name="f_{{.Name}}.type" value="{{.GPUType}}" autocomplete="off" spellcheck="false" placeholder="none"></label>
+      <label>Count <input type="number" name="f_{{.Name}}.count" value="{{.GPUCount}}" min="1" step="1" placeholder="1"></label>
+    </div>
+    {{if gt .GPUOthers 0}}<small class="muted">{{.GPUOthers}} other pool(s) in the settings are kept as they are.</small>{{end}}
+  {{else}}
+  <label for="in-{{.Name}}"><span class="field-label">{{.Label}}{{if .Required}} <span class="req" title="required">*</span>{{end}}
+    {{if or (eq .Widget "password") (eq .Widget "password_hash")}}{{if .Set}}<span class="badge set">set</span>{{else}}<span class="badge unset">not set</span>{{end}}{{end}}
+    {{if and .Own (not .Basic)}}<span class="badge changed">changed</span>{{end}}</span></label>
+  {{if eq .Widget "bool"}}
+    <input type="hidden" name="f_{{.Name}}" value="0">
+    <label class="check"><input id="in-{{.Name}}" type="checkbox" name="f_{{.Name}}" value="1"{{if .Checked}} checked{{end}}> {{if .Checked}}enabled{{else}}disabled{{end}}</label>
+  {{else if eq .Widget "number"}}
+    <input id="in-{{.Name}}" type="number" step="any" name="f_{{.Name}}" value="{{.Input}}" placeholder="{{.Placeholder}}">
+  {{else if eq .Widget "select"}}
+    <select id="in-{{.Name}}" name="f_{{.Name}}"{{if and .Required (not .HasDefault)}} required{{end}}>
+      {{if not .HasDefault}}<option value="">Select...</option>{{end}}
+      {{range .Choices}}<option value="{{.}}"{{if eq . $.Input}} selected{{else if and (not $.Input) (eq . $.Placeholder)}} selected{{end}}>{{.}}</option>{{end}}
+    </select>
+  {{else if eq .Widget "list"}}
+    <textarea id="in-{{.Name}}" name="f_{{.Name}}" rows="3" spellcheck="false" placeholder="{{.Placeholder}}">{{.Input}}</textarea>
+    <small class="muted">One entry per line, not comma-separated.</small>
+  {{else if eq .Widget "json"}}
+    <textarea id="in-{{.Name}}" class="mono" name="f_{{.Name}}" rows="6" spellcheck="false" placeholder="{{if and .Example (or (eq .Placeholder "") (eq .Placeholder "{}"))}}{{.Example}}{{else}}{{.Placeholder}}{{end}}">{{.Input}}</textarea>
+    <small class="muted">JSON. Empty keeps the default.</small>
+    {{if .Example}}<div class="example"><small class="muted">Example:</small><pre><code>{{.Example}}</code></pre></div>{{end}}
+    <details class="type"><summary><small>Type</small></summary><pre><code>{{.Type}}</code></pre></details>
+  {{else if eq .Widget "password"}}
+    <input id="in-{{.Name}}" type="password" name="f_{{.Name}}" autocomplete="new-password" spellcheck="false" placeholder="{{if .Set}}set, leave empty to keep{{else}}not set{{end}}">
+    {{if .Own}}<label class="check"><input type="checkbox" name="f_{{.Name}}.clear" value="1"> Clear the stored value</label>{{end}}
+  {{else if eq .Widget "password_hash"}}
+    <input id="in-{{.Name}}" type="password" name="f_{{.Name}}" autocomplete="new-password" spellcheck="false" placeholder="{{if .Set}}set, type a new password to change it{{else}}password{{end}}">
+    <input type="password" name="f_{{.Name}}.confirm" autocomplete="new-password" spellcheck="false" placeholder="confirm password" aria-label="Confirm {{.Label}}">
+    <small class="muted">Stored as a SHA-512 crypt hash (<code>openssl passwd -6</code>); the password itself is not kept. Used with <code>su -</code> and on the console; SSH uses keys.</small>
+  {{else}}
+    <input id="in-{{.Name}}" type="text" name="f_{{.Name}}" value="{{.Input}}" placeholder="{{.Placeholder}}" autocomplete="off" spellcheck="false"{{if .Options}} list="dl-{{.Name}}"{{end}}>
+    {{if .Options}}<datalist id="dl-{{.Name}}">{{range .Options}}<option value="{{.}}">{{end}}</datalist>{{end}}
+  {{end}}
+  {{end}}
+  {{if .Error}}<small class="err" role="alert">{{.Error}}</small>{{end}}
+  {{if .Help}}<small class="muted help">{{.Help}}</small>{{end}}
+  {{if .FromProfile}}<small class="muted">Default comes from the account profile.</small>{{end}}
+</div>{{end}}

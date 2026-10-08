@@ -6,6 +6,7 @@ set -euo pipefail
 T="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB="$(dirname "$T")/lib"
 W=$(mktemp -d "${TMPDIR:-/tmp}/deploy-test.XXXXXX")
+mkdir -p "$W/tmp" && export TMPDIR="$W/tmp"
 trap 'rm -rf "$W"' EXIT
 
 EX="$W/repo/examples/p"
@@ -305,5 +306,113 @@ rm -rf "$d/.deploy" "$d/.terraform" "$d/rebuild.auto.tfvars.json"
   fail "aws: -var cluster_name run failed"
 has "$(cat "$W/state/aws.log")" "iam create-role --role-name c-two-jumphost"
 rm -f "$W/bin/aws" "$d/terraform.tfvars"
+
+# --- event protocol (DEPLOY_EVENTS_FD / DEPLOY_CONFIRM_FD)
+# run_events [--answer TEXT] args...: events in $W/events, rc in RC.
+run_events() {
+  local answer=""
+  if [ "${1:-}" = --answer ]; then
+    answer=$2
+    shift 2
+  fi
+  printf '%s' "$answer" >"$W/answer"
+  : >"$W/events"
+  RC=0
+  if [ -n "$answer" ]; then
+    (cd "$EX" && DEPLOY_EVENTS_FD=3 DEPLOY_CONFIRM_FD=4 bash ./deploy.sh "$@" </dev/null 3>"$W/events" 4<"$W/answer") >"$W/out" 2>&1 || RC=$?
+  else
+    (cd "$EX" && DEPLOY_EVENTS_FD=3 bash ./deploy.sh "$@" </dev/null 3>"$W/events") >"$W/out" 2>&1 || RC=$?
+  fi
+  OUT=$(cat "$W/out")
+}
+ev_types() { jq -r .type "$W/events" | paste -sd, -; }
+ev_count() { jq -r "select($1) | 1" "$W/events" | wc -l | tr -d ' '; }
+
+reset
+run_events --yes
+[ "$RC" -eq 0 ] || fail "events: rc=$RC"
+jq -e . "$W/events" >/dev/null || fail "events: invalid JSON"
+[ "$(jq -s 'all(.[]; has("type") and (.ts | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$")))' "$W/events")" = true ] || fail "events: type/ts"
+t=$(ev_types)
+case "$t" in start,pass_start,plan_summary,*pass_done,pass_start,plan_summary,*pass_done,done) ;; *) fail "events: order: $t" ;; esac
+[ "$(ev_count '.type == "start" and .provider == "p" and .action == "deploy" and .pass_total == 2')" -eq 1 ] || fail "events: start"
+[ "$(ev_count '.type == "pass_start" and .total == 2 and .title == "Build image" and .index == 1')" -eq 1 ] || fail "events: pass_start"
+[ "$(ev_count '.type == "resource" and .address == "aws_vpc.main" and .status == "complete"')" -ge 1 ] || fail "events: resource"
+[ "$(ev_count '.type == "plan_summary" and .no_changes == false and (.replace | type) == "array"')" -eq 2 ] || fail "events: plan_summary"
+[ "$(ev_count '.type == "pass_done" and .status == "ok"')" -eq 2 ] || fail "events: pass_done"
+[ "$(ev_count '.type == "confirm_request"')" -eq 0 ] || fail "events: --yes must not ask"
+[ "$(ev_count '.type == "diagnostic" and .severity == "warning" and .summary == "Deprecated argument"')" -ge 1 ] || fail "events: diagnostic"
+[ "$(jq -r 'select(.type == "done") | "\(.status) \(.exit_code)"' "$W/events")" = "ok 0" ] || fail "events: done"
+ls "$TMPDIR"/tf-events.* >/dev/null 2>&1 && fail "events: fifo left behind"
+# rendered output is the same with and without events
+run_deploy --yes
+plain=$OUT
+reset
+run_events --yes
+[ "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' <<<"$plain")" = "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' <<<"$OUT")" ] ||
+  fail "events: rendering differs"
+
+# confirmation via the fd, no TTY
+reset
+run_events --answer $'yes\nyes\n'
+[ "$RC" -eq 0 ] || fail "confirm yes: rc=$RC"
+[ "$(ev_count '.type == "confirm_request"')" -eq 2 ] || fail "confirm yes: request"
+[ "$(ev_count '.type == "confirm_response" and .answer == "yes" and .index == 1')" -eq 1 ] || fail "confirm yes: response"
+[ "$(calls apply)" -eq 2 ] || fail "confirm yes: applies"
+reset
+run_events --answer $'no\n'
+[ "$RC" -eq 1 ] || fail "confirm no: rc=$RC"
+[ "$(calls apply)" -eq 0 ] || fail "confirm no: applied"
+[ "$(ev_count '.type == "confirm_response" and .answer == "no"')" -eq 1 ] || fail "confirm no: response"
+t=$(ev_types)
+case "$t" in *confirm_response,pass_done,done) ;; *) fail "confirm no: tail: $t" ;; esac
+[ "$(jq -r 'select(.type == "done") | "\(.status) \(.exit_code)"' "$W/events")" = "aborted 1" ] || fail "confirm no: done"
+[ "$(jq -r 'select(.type == "pass_done") | .status' "$W/events")" = failed ] || fail "confirm no: pass_done"
+
+# done on failure (apply error): diagnostic, failed pass, done failed
+reset
+export FAKE_TF_APPLY_SEQ="apply-fail.jsonl:1"
+run_events --yes
+[ "$RC" -ne 0 ] || fail "events fail: rc=0"
+[ "$(ev_count '.type == "resource" and .status == "errored" and .address == "aws_lb.api"')" -eq 1 ] || fail "events fail: errored"
+[ "$(ev_count '.type == "diagnostic" and .severity == "error" and .detail == "quota exceeded"')" -eq 1 ] || fail "events fail: diagnostic"
+[ "$(jq -r 'select(.type == "pass_done") | .status' "$W/events")" = failed ] || fail "events fail: pass_done"
+[ "$(ev_types | sed 's/.*,//')" = "done" ] || fail "events fail: done last"
+[ "$(jq -r 'select(.type == "done") | .status' "$W/events")" = failed ] || fail "events fail: done status"
+# done on plan failure
+reset
+export FAKE_TF_PLAN_FAIL=1
+run_events --yes
+[ "$RC" -ne 0 ] || fail "events plan fail: rc=0"
+[ "$(jq -r 'select(.type == "done") | .status' "$W/events")" = failed ] || fail "events plan fail: done"
+[ "$(ev_count '.type == "done"')" -eq 1 ] || fail "events plan fail: done count"
+# no changes
+reset
+export FAKE_TF_PLAN=plan-noop.json
+run_events --yes
+[ "$RC" -eq 0 ] || fail "events noop: rc=$RC"
+[ "$(ev_count '.type == "plan_summary" and .no_changes == true and .create == 0')" -eq 2 ] || fail "events noop: plan_summary"
+[ "$(ev_count '.type == "pass_done" and .status == "no_changes"')" -eq 2 ] || fail "events noop: pass_done"
+# destroy
+reset
+run_events --yes --destroy
+[ "$RC" -eq 0 ] || fail "events destroy: rc=$RC"
+[ "$(ev_count '.type == "start" and .action == "destroy" and .pass_total == 1')" -eq 1 ] || fail "events destroy: start"
+[ "$(ev_count '.type == "pass_start" and .title == "Destroy"')" -eq 1 ] || fail "events destroy: pass_start"
+[ "$(ev_types | sed 's/.*,//')" = "done" ] || fail "events destroy: done"
+# events reader failing early (fd not open) must not break the apply
+reset
+RC=0
+(cd "$EX" && DEPLOY_EVENTS_FD=9 bash ./deploy.sh --yes </dev/null) >"$W/out" 2>&1 || RC=$?
+[ "$RC" -eq 0 ] || fail "bad events fd: rc=$RC"
+[ "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' <<<"$plain")" = "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' "$W/out")" ] ||
+  fail "bad events fd: rendering differs"
+ls "$TMPDIR"/tf-events.* >/dev/null 2>&1 && fail "bad events fd: fifo left behind"
+# CONFIRM_FD without events, no TTY
+reset
+RC=0
+(cd "$EX" && DEPLOY_CONFIRM_FD=4 bash ./deploy.sh </dev/null 4<<<$'yes\nyes') >"$W/out" 2>&1 || RC=$?
+[ "$RC" -eq 0 ] || fail "confirm fd only: rc=$RC"
+reset
 
 echo ok

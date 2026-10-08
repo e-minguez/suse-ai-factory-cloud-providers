@@ -1,0 +1,16 @@
+{{define "content"}}
+<h1>Profile: {{.Data.Provider}}</h1>
+<p class="muted">Stored values are never shown. Leave a field empty to keep the stored value.</p>
+<form method="post" action="/profiles/{{.Data.Provider}}" class="stack" autocomplete="off">
+  {{range .Data.Fields}}
+  <label>
+    <span>{{.Label}} {{if index $.Data.Status .Name}}<span class="badge set">set</span>{{else}}<span class="badge unset">not set</span>{{end}}</span>
+    {{if eq .Widget "text"}}<textarea name="{{.Name}}" rows="10" spellcheck="false" autocomplete="off"></textarea>
+    {{else}}<input type="password" name="{{.Name}}" autocomplete="new-password" spellcheck="false">{{end}}
+    <small>{{.Help}}</small>
+  </label>
+  {{end}}
+  <button type="submit">Save</button>
+</form>
+<p><a href="/profiles">All profiles</a></p>
+{{end}}

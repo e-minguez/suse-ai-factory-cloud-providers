@@ -1,0 +1,46 @@
+{{define "cluster_outputs"}}
+{{if .Err}}<p class="diag-error">Cannot read outputs: {{.Err}}</p>
+{{else if not .Has}}<p class="muted">No outputs yet: deploy the cluster first.</p>
+{{else}}
+<table class="kv">
+  {{if .Provider}}<tr><th>Provider</th><td>{{.Provider}}{{if .Region}} / {{.Region}}{{end}}</td></tr>{{end}}
+  {{if .RancherURL}}<tr><th>Rancher</th><td><a href="{{.RancherURL}}" target="_blank" rel="noopener noreferrer">{{.RancherURL}}</a></td></tr>{{end}}
+  {{if .APIEndpoint}}<tr><th>Kubernetes API</th><td><code>{{.APIEndpoint}}</code></td></tr>{{end}}
+  {{if .Ingress}}<tr><th>Ingress</th><td><code>{{.Ingress}}</code></td></tr>{{end}}
+  {{if .Jumphost}}<tr><th>Jumphost</th><td><code>{{.Jumphost}}</code></td></tr>{{end}}
+</table>
+{{if .Nodes}}
+<h3>Nodes</h3>
+<table>
+  <thead><tr><th>Name</th><th>Role</th><th>Pool</th><th>Type</th><th>Public IP</th><th>Private IP</th></tr></thead>
+  <tbody>{{range .Nodes}}<tr><td>{{.Name}}</td><td>{{.Role}}</td><td>{{.Pool}}</td><td>{{.Type}}</td><td>{{.PublicIP}}</td><td>{{.PrivateIP}}</td></tr>{{end}}</tbody>
+</table>
+{{end}}
+{{if .NoSSHKey}}<div class="flash warn" role="status">Download kubeconfig and SSH log in with a private key that matches the cluster's SSH keys, and this container has none. Either store one under <a href="/profiles">Profiles</a> (SSH private key for the container), or start the container with your SSH agent (see docs/webui.md, "Kubeconfig and SSH"). Node passwords work on the console only, not over SSH through the jumphost.</div>{{end}}
+<form method="post" action="/clusters/{{.Cluster}}/kubeconfig">
+  <p><button type="submit">Download kubeconfig</button>
+  <span class="muted">Fetched from the init node on demand, never stored. It is an admin credential.</span></p>
+</form>
+{{if .SSHHint}}<p>SSH: <code>{{.SSHHint}}</code></p>{{end}}
+<div id="rancher-pw"><button type="button" class="secondary" hx-post="/clusters/{{.Cluster}}/rancher-password" hx-target="#rancher-pw" hx-swap="innerHTML">Show Rancher bootstrap password</button>
+<span class="muted">Sensitive output, read from the state on request. Change it in Rancher after the first login.</span></div>
+{{end}}
+{{end}}
+
+{{define "cluster_jobs"}}
+{{if .Jobs}}
+<table>
+  <thead><tr><th>Job</th><th>Action</th><th>Status</th><th>Started</th><th>Duration</th></tr></thead>
+  <tbody>{{range .Jobs}}<tr><td><a href="/jobs/{{.ID}}">{{.ID}}</a></td><td>{{.Action}}</td>
+    <td><span class="status {{.Status}}">{{.Status}}</span></td><td>{{.Started}}</td><td>{{.Duration}}</td></tr>{{end}}</tbody>
+</table>
+{{else}}<p class="muted">No jobs in this session.{{if .Last}} Last result on disk: {{.Last}}.{{end}}</p>{{end}}
+{{end}}
+
+{{define "cluster_leftovers"}}{{if .OK}}<form method="post" action="/clusters/{{.Cluster}}/leftovers" class="inline">
+  <button type="submit">Check for leftovers</button>
+  <span class="muted">Read-only check of the cloud account.</span>
+</form>{{else}}<p>Check for leftovers (read-only): needs the {{.Missing}} CLI, which is not in PATH. Run this on a machine that has it:</p>
+<pre><code>{{.Command}}</code></pre>{{end}}{{end}}
+
+{{define "rancher_password"}}{{if .Err}}<span class="err">{{.Err}}</span>{{else}}Rancher bootstrap password: <code class="secret">{{.Password}}</code> <span class="muted">(user admin)</span>{{end}}{{end}}

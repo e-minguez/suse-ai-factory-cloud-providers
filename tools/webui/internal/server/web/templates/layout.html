@@ -1,0 +1,32 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false}'>
+<title>{{.Title}} - {{.Product}}</title>
+<link rel="stylesheet" href="{{asset "app.css"}}">
+<script src="{{asset "htmx.min.js"}}" defer></script>
+<script src="{{asset "sse.js"}}" defer></script>
+<script src="{{asset "app.js"}}" defer></script>
+{{block "head" .}}{{end}}
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">{{.Product}} <span class="tag alpha">alpha</span> <span class="tag">community</span></a>
+  <nav>
+    <a href="/"{{if eq .Nav "clusters"}} class="active"{{end}}>Clusters</a>
+    <a href="/clusters/new"{{if eq .Nav "new"}} class="active"{{end}}>New cluster</a>
+    <a href="/profiles"{{if eq .Nav "profiles"}} class="active"{{end}}>Profiles</a>
+    {{block "nav" .}}{{end}}
+  </nav>
+</header>
+<div class="alpha-banner" role="note"><strong>Alpha ({{.Version}}).</strong> Expect bugs and breaking changes between releases. Use test accounts and review every plan before applying it.</div>
+<main>
+{{if .Flash}}<div class="flash ok" role="status">{{.Flash}}</div>{{end}}
+{{if .Err}}<div class="flash err" role="alert">{{.Err}}</div>{{end}}
+{{block "content" .}}{{end}}
+</main>
+<footer>{{.Product}} {{.Version}} (alpha). {{.Footer}}</footer>
+</body>
+</html>{{end}}

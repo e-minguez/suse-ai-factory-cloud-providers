@@ -1,0 +1,24 @@
+{{define "content"}}
+<h1>Clusters</h1>
+{{if .Data.Clusters}}
+<table>
+  <thead><tr><th>Name</th><th>Provider</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {{range .Data.Clusters}}
+    <tr>
+      <td><a href="/clusters/{{.Name}}">{{.Name}}</a></td>
+      <td>{{.Provider}}</td>
+      <td><span class="status {{.Status}}">{{.Status}}</span></td>
+      <td class="actions">
+        <a href="/clusters/{{.Name}}/edit">Edit</a>
+        <a href="/clusters/{{.Name}}">Overview</a>
+      </td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p>No clusters yet.</p>
+{{end}}
+<p><a class="button" href="/clusters/new">New cluster</a></p>
+{{end}}
