@@ -1,7 +1,7 @@
 # Architecture
 
 Diagrams of the deploy flow, the image pipeline, the passes per provider and the
-network per provider. They show roles (see [conventions](conventions.md#labels))
+network per provider and the web UI runner. They show roles (see [conventions](conventions.md#labels))
 and the main resource types; exact resource names, conditions and the reasons
 behind each step are in the [provider notes](providers/aws.md) and the
 [decision records](decisions/README.md).
@@ -340,4 +340,35 @@ flowchart LR
     cp -- "public IP" --> inet
     ag -- "public IP" --> inet
     tpl -- "fetch over HTTP :80 (pass 1)" --> jh
+```
+
+## Web UI runner
+
+The runner container serves the UI on the host's loopback address and starts
+the same scripts as the command line. Events and answers use the descriptors
+described in [ADR 009](decisions/009-webui-runner.md). The mounted volume holds
+tfvars, credentials, state and logs.
+
+```mermaid
+flowchart LR
+    browser(["Browser<br/>127.0.0.1:8080"])
+
+    subgraph ctr ["Runner container (non-root, read-only root, --init)"]
+        webui["webui<br/>token, cookie, Host and Origin checks"]
+        cluster["cluster.sh"]
+        deploy["deploy.sh"]
+        tf["terraform + provider plugins"]
+        cost["cost"]
+    end
+    vol[("Volume /opt/aif/clusters<br/>tfvars, credentials, state, logs, .home (HOME)")]
+    cloud(["Cloud provider API, jumphost SSH"])
+
+    browser -- "HTTP, SSE" --> webui
+    webui -- "start job" --> cluster --> deploy --> tf
+    deploy -- "JSON events (DEPLOY_EVENTS_FD)" --> webui
+    webui -- "yes / no (DEPLOY_CONFIRM_FD)" --> deploy
+    webui -- "estimate" --> cost
+    webui -- "read, write tfvars" --> vol
+    tf -- "state, logs" --> vol
+    tf --> cloud
 ```

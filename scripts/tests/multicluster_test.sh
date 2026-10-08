@@ -85,6 +85,18 @@ has "$out" "is missing"
 [ ! -e "$R/clusters/x2" ] || fail "partial cluster left behind"
 expect_fail new aws
 
+# --empty: empty tfvars, mode 600, same links
+run new --empty vultr empty-a
+[ "$rc" -eq 0 ] || fail "new --empty failed: $out"
+[ -f "$R/clusters/empty-a/terraform.tfvars" ] && [ ! -s "$R/clusters/empty-a/terraform.tfvars" ] || fail "--empty: tfvars not empty"
+[ -n "$(find "$R/clusters/empty-a/terraform.tfvars" -perm 600)" ] || fail "--empty: tfvars mode"
+[ "$(readlink "$R/clusters/empty-a/main.tf")" = "../../examples/vultr/main.tf" ] || fail "--empty: links"
+[ "$(cat "$R/clusters/empty-a/.provider")" = vultr ] || fail "--empty: .provider"
+expect_fail new --empty vultr empty-a
+has "$out" "refusing to overwrite"
+expect_fail new --empty vultr
+rm -rf "$R/clusters/empty-a"
+
 run new vultr gpu-a && run new evroc gpu-b && run new vultr gpu-c && run new exoscale gpu-d
 [ "$rc" -eq 0 ] || fail "new failed: $out"
 

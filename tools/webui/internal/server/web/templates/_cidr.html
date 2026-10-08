@@ -1,0 +1,15 @@
+{{/*
+Template "cidr_list": one CIDR per line textarea + "Detect my IP".
+Data: server.CIDRWidget{Name string; Values []string}. The textarea posts
+as form field <Name>; split on newlines in the handler.
+*/}}
+{{define "cidr_list"}}<div class="cidr-list">
+  <textarea id="cidr-{{.Name}}" name="{{.Name}}" rows="3" spellcheck="false" placeholder="203.0.113.10/32&#10;198.51.100.0/24">{{.Text}}</textarea>
+  <small class="muted">One CIDR per line (commas also work; a bare IP becomes /32).</small>
+  <div class="widget-row">
+    <button type="button" class="secondary" hx-post="/helpers/myip" hx-vals='{"target":"cidr-{{.Name}}"}' hx-target="next .myip" hx-swap="innerHTML">Detect my IP</button>
+    <span class="myip muted" aria-live="polite"></span>
+  </div>
+</div>{{end}}
+
+{{define "myip_result"}}{{if .Error}}<span class="err">{{.Error}}</span>{{else}}<code>{{.CIDR}}</code> <button type="button" class="secondary" data-add-line="{{.CIDR}}" data-target="{{.Target}}">Add</button>{{end}}{{end}}

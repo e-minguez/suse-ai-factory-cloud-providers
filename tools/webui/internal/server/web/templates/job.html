@@ -1,0 +1,33 @@
+{{define "content"}}
+<h1>{{.Data.Job.Action}} <a href="/clusters/{{.Data.Job.Cluster}}">{{.Data.Job.Cluster}}</a>
+  <span id="jobstatus" class="status {{.Data.Job.Status}}">{{.Data.Job.Status}}</span></h1>
+<p class="muted">Job {{.Data.Job.ID}}, started {{.Data.Job.Started.Format "2006-01-02 15:04:05"}}.</p>
+
+<div hx-ext="sse" sse-connect="/jobs/{{.Data.Job.ID}}/events" sse-close="done">
+  <div id="cancel">
+  {{if eq .Data.Job.Status "running"}}
+    <form method="post" action="/jobs/{{.Data.Job.ID}}/cancel" hx-post="/jobs/{{.Data.Job.ID}}/cancel" hx-swap="none">
+      <button class="danger" type="submit">Cancel job</button>
+      <span class="muted">Sends an interrupt; a second click terminates.</span>
+    </form>
+  {{end}}
+  </div>
+
+  <div id="confirm" sse-swap="confirm"></div>
+
+  <section>
+    <h2>Progress</h2>
+    <div id="passes" sse-swap="pass"><p class="muted">Waiting for output.</p></div>
+    <div id="resources" sse-swap="resource"></div>
+  </section>
+
+  <div id="result" sse-swap="done"></div>
+
+  <section id="plan" sse-swap="plan"></section>
+
+  <details>
+    <summary>Raw log</summary>
+    <div id="rawlog" class="log" sse-swap="line" hx-swap="beforeend"></div>
+  </details>
+</div>
+{{end}}

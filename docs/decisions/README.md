@@ -23,3 +23,4 @@ with `# see docs/decisions/NNN-title.md`.
 - [006](006-vultr-two-passes.md) vultr deploys in two passes
 - [007](007-cost-estimator.md) cost estimator
 - [008](008-exoscale-module.md) exoscale module design
+- [009](009-webui-runner.md) web UI runner

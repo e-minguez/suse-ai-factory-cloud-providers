@@ -10,6 +10,8 @@
 #   deploy_on_crash / tf_retry_on  optional workarounds, see tf.sh
 #   deploy_main "$@"
 #
+# Optional env (see tf.sh): DEPLOY_EVENTS_FD, DEPLOY_CONFIRM_FD.
+#
 # Sets: DEPLOY_REBUILD, DEPLOY_YES, DEPLOY_DESTROY, DEPLOY_VERBOSITY, DEPLOY_TF_ARGS,
 # DEPLOY_VAR_FILES, DEPLOY_TTY, DEPLOY_CI.
 
@@ -241,13 +243,28 @@ deploy_print_next_steps() {
   fi
 }
 
+# EXIT trap: remove plan files, then emit the final `done` event (when DEPLOY_EVENTS_FD is set).
+deploy__exit() {
+  local rc=$?
+  tf__cleanup
+  tf__events_finish "$rc"
+  return "$rc"
+}
+
 deploy_main() {
   [ -n "${DEPLOY_PROVIDER:-}" ] || deploy_die "DEPLOY_PROVIDER is not set"
   deploy_parse_args "$@"
   deploy_detect_tty
   deploy_check_deps
   deploy_var_files
-  trap tf__cleanup EXIT
+  trap deploy__exit EXIT
+  # shellcheck disable=SC2016 # jq program, not shell
+  if [ "$DEPLOY_DESTROY" = 1 ]; then
+    tf__event start '{provider: $p, action: "destroy", pass_total: 1}' --arg p "$DEPLOY_PROVIDER"
+  else
+    tf__event start '{provider: $p, action: "deploy", pass_total: $t}' --arg p "$DEPLOY_PROVIDER" \
+      --argjson t "$(tf__pass_total)"
+  fi
 
   if [ "$DEPLOY_VERBOSITY" != quiet ]; then
     tf__version_note

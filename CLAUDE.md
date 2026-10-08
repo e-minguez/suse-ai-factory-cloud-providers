@@ -7,7 +7,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 ## Status
 - `v0.1.0` is the first release. End-to-end checks not yet run: `docs/e2e-checklist.md`; everything else passed on all three providers.
 - Releases: release-please (`release-please-config.json`, `.release-please-manifest.json`, `version.txt`) opens a release PR from Conventional Commits on `main`; merging it tags `vX.Y.Z` and writes `CHANGELOG.md`. Never edit `CHANGELOG.md` or the version by hand. PR titles must be Conventional Commits (`pr-title` workflow, required check); user-facing changes (variables, outputs, `deploy.sh` interface) are `feat`/`fix`, breaking ones `!`. Pre-1.0: `feat` and `!` bump minor, `fix` bumps patch.
-- `main` is protected (ruleset `protect-main`): no direct pushes, force pushes or history rewrites. Every change goes through a PR from a branch, squash-merged only (the PR title becomes the commit) once the 13 required checks pass (12 CI jobs + `conventional-title`). Renaming or adding a CI job (a new provider adds `validate (<provider>)`) means updating the ruleset's required checks.
+- `main` is protected (ruleset `protect-main`): no direct pushes, force pushes or history rewrites. Every change goes through a PR from a branch, squash-merged only (the PR title becomes the commit) once the 15 required checks pass (14 CI checks, including `webui-test` and `image` (hadolint, build, smoke test), + `conventional-title`). Renaming or adding a CI job (a new provider adds `validate (<provider>)`) means updating the ruleset's required checks.
 - Actions in `.github/workflows/*.yml` are pinned to commit SHAs (version in a trailing comment); dependabot bumps them and the `tools/cost` Go modules weekly.
 - The user runs all end-to-end deploys. Only provide commands and checks.
 
@@ -16,6 +16,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 - `modules/common/variables-common.tf`: common variable declarations, **symlinked** into each provider module (Terraform cannot import variables). Edit the original, never the link.
 - `modules/<provider>`: provider modules. `examples/<provider>`: single-cluster roots with `deploy.sh`.
 - `tools/multicluster` (uses the `rancher2` provider), `tools/leftovers/<provider>.sh` (on `scripts/lib/leftovers.sh`, suggested, never run, by `deploy.sh --destroy`), `tools/orphans/evroc`, `tools/vultr/passthrough-stock.sh`; `tools/cost` (Go): pre-deploy cost estimate from tfvars for aws, evroc, exoscale and vultr (`make cost`, `cluster.sh cost`; ADR 007). Estimate only; per-provider defaults are locked to `locals.tf` by `TestDefaultsMatchLocals`.
+- `tools/webui` (Go, ADR 009, **alpha**, own version in `tools/webui/VERSION`; image tags `<that version>` + `vX.Y.Z`, no `latest`): localhost runner UI over `cluster.sh`/`deploy.sh`; `ui.yaml` drives basic/advanced forms with `variables.tf`; user guide `docs/webui.md`; image `tools/webui/Dockerfile` (BCI golang → scratch + bci-micro rootfs, pinned Terraform, providers mirrored after `terraform get`, aws CLI (pinned, GPG) + evroc CLI (`latest`, sha256), `.hadolint.yaml`); `HOME=/opt/aif/clusters/.home`; run with `--init --read-only --tmpfs /tmp`.
 - `scripts/lib/{tf.sh,poll.sh,deploy-common.sh,ssh.sh,leftovers.sh}`, `scripts/{kubeconfig,ssh,build-logs}.sh`.
 - `docs/decisions/NNN-*.md` (ADRs), `docs/workarounds.md`, `docs/providers/<p>.md`, `docs/conventions.md` (naming, labels, outputs), `docs/architecture.md` (Mermaid diagrams: flow, image pipeline, passes, network; update when a pass, role or traffic path changes).
 
@@ -67,4 +68,6 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 ## Tooling
 - Terraform 1.16.4 crashes (hashicorp/terraform#39283). 1.16.5 is **not released yet**; keep the crash handling in `scripts/lib/tf.sh` until it is, then set `required_version >= 1.16.5`.
 - `deploy.sh` flow: `plan -out` → show replacements/destroys → confirm (unless `--yes`) → `apply -json` of the saved plan rendered by `jq`. Full logs in `.deploy/logs/<ts>/` (gitignored).
+- Event protocol (opt-in, CLI unchanged when unset): `DEPLOY_EVENTS_FD=<n>` gets JSON lines from `tf.sh`/`deploy-common.sh`; `DEPLOY_CONFIRM_FD=<n>` supplies the confirm answer without TTY or `--yes`. Keep both in step with the webui parser.
+- webui: binds localhost, token → cookie, Host/Origin checks, strict CSP, secrets write-only and redacted; volume `/opt/aif/clusters` is the secret and shares `cluster.sh` layout. SSH keys are resolved once (feed `build_hash`). Stop with `docker stop -t 600`; run with `--init`.
 - CI: `fmt -check`, `validate`, `tflint`, `terraform test` (with `mock_provider`), `shellcheck`, symlink/output consistency checks; `go test` (tools/cost, via `make test-go`).

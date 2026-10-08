@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Manage several clusters from one checkout, and import them into a Rancher.
 #
-# Usage: cluster.sh new <provider> <name>
+# Usage: cluster.sh new [--empty] <provider> <name>
 #        cluster.sh deploy <name> [deploy.sh args]
 #        cluster.sh destroy <name> [deploy.sh args]
 #        cluster.sh register [--bootstrap] [--skip-cidr-check] [--yes] <mgmt> <downstream...>
@@ -44,7 +44,12 @@ cluster_dir() { # name -> path, dies if missing
 }
 
 cmd_new() {
-  [ $# -eq 2 ] || die "usage: cluster.sh new <provider> <name>"
+  local empty=0
+  if [ "${1:-}" = --empty ]; then
+    empty=1
+    shift
+  fi
+  [ $# -eq 2 ] || die "usage: cluster.sh new [--empty] <provider> <name>"
   local provider=$1 name=$2 ex f dir
   valid_name "$provider" || die "invalid provider '$provider'"
   valid_name "$name" || die "invalid cluster name '$name' (lowercase letters, digits, dashes; start with a letter)"
@@ -66,7 +71,10 @@ cmd_new() {
     ln -s "../../scripts/$f" "$dir/$f"
   done
   printf '%s\n' "$provider" >"$dir/.provider"
-  if [ -f "$ex/terraform.tfvars.example" ]; then
+  if [ "$empty" = 1 ]; then
+    (umask 077 && : >"$dir/terraform.tfvars")
+    chmod 600 "$dir/terraform.tfvars"
+  elif [ -f "$ex/terraform.tfvars.example" ]; then
     (umask 077 && cp "$ex/terraform.tfvars.example" "$dir/terraform.tfvars")
     chmod 600 "$dir/terraform.tfvars"
   fi

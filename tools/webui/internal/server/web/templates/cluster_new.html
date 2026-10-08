@@ -1,0 +1,15 @@
+{{define "content"}}
+<h1>New cluster</h1>
+<form method="post" action="/clusters/new" class="stack">
+  <label>Provider
+    <select name="provider" required>
+      {{range .Data.Providers}}<option value="{{.}}"{{if eq . $.Data.Provider}} selected{{end}}>{{.}}</option>{{end}}
+    </select>
+  </label>
+  <label>Name
+    <input name="name" value="{{.Data.Name}}" required maxlength="63" pattern="[a-z][a-z0-9\-]*" autocomplete="off">
+    <small>Lowercase letters, digits and dashes; starts with a letter.</small>
+  </label>
+  <button type="submit">Create</button>
+</form>
+{{end}}

@@ -1,0 +1,4 @@
+ignored:
+  # zypper packages are not pinned: BCI repositories drop old versions, so a
+  # pin breaks the build; base image tags are pinned instead.
+  - DL3037

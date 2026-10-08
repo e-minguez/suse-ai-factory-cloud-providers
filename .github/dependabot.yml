@@ -24,3 +24,25 @@ updates:
     groups:
       go:
         patterns: ["*"]
+
+  - package-ecosystem: gomod
+    directory: /tools/webui
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      go:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /tools/webui
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      images:
+        patterns: ["*"]

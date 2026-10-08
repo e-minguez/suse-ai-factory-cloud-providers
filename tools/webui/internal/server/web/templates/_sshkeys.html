@@ -1,0 +1,68 @@
+{{/*
+Template "sshkeys": SSH public key picker.
+Data: server.SSHKeysWidget{Name, Provider string; Keys []sshkeys.Key;
+Selected map[string]bool; Limit, Total int; Error, Notice string;
+Diff *SSHKeysDiff; DownloadID string}. Build it with
+server.NewSSHKeysWidget(name, provider, storedLines).
+Form field <Name> carries the selected key lines (multiple values);
+fields <Name>__listed and sshkeys_* are widget state and can be ignored.
+Place it inside the page form; it swaps itself via htmx.
+*/}}
+{{define "sshkeys"}}<div class="sshkeys" id="sshkeys-{{.Name}}"
+  hx-target="closest .sshkeys" hx-swap="outerHTML" hx-include="closest .sshkeys">
+  <input type="hidden" name="sshkeys_name" value="{{.Name}}">
+  <input type="hidden" name="sshkeys_provider" value="{{.Provider}}">
+  {{if .Error}}<div class="flash err" role="alert">{{.Error}}</div>{{end}}
+  {{if .Notice}}<div class="flash ok" role="status">{{.Notice}}</div>{{end}}
+  {{with .Diff}}<div class="flash {{if or .Added .Removed}}warn{{else}}ok{{end}}" role="status">
+    github.com/{{.User}}: {{len .Added}} added, {{len .Removed}} removed.
+    {{range .Added}}<div class="key-diff add">+ {{.Type}} {{.Fingerprint}}</div>{{end}}
+    {{range .Removed}}<div class="key-diff del">- {{.Type}} {{.Fingerprint}}</div>{{end}}
+    {{if or .Added .Removed}}<strong>Changing SSH keys rebuilds the image and replaces all nodes.</strong>{{end}}
+  </div>{{end}}
+  {{if .Keys}}
+  <table class="keys">
+    <thead><tr><th></th><th>Type</th><th>Bits</th><th>Fingerprint</th><th>Comment</th><th>Size</th><th>Source</th></tr></thead>
+    <tbody>
+    {{range .Keys}}<tr>
+      <td><input type="checkbox" name="{{$.Name}}" value="{{.Line}}"{{if $.IsSelected .}} checked{{end}} aria-label="Use key {{.Fingerprint}}" hx-post="/sshkeys/recalc" hx-trigger="change"><input type="hidden" name="{{$.Name}}__listed" value="{{$.Listed .}}"></td>
+      <td>{{.Type}}</td><td>{{if .Bits}}{{.Bits}}{{end}}</td>
+      <td><code>{{.Fingerprint}}</code></td><td>{{.Comment}}</td><td>{{.Size}} B</td><td>{{.Source}}</td>
+    </tr>{{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted">No SSH keys yet. Add one below.</p>{{end}}
+  <p class="key-total{{if .Over}} over{{else if .Near}} near{{end}}">
+    Selected keys: {{.Total}} of {{.Limit}} bytes of user_data ({{.Percent}}%).
+    {{if .Over}}<strong>Over the {{.Provider}} user_data limit: deselect keys.</strong>
+    {{else if .Near}}<strong>Keys use over half of the {{.Provider}} user_data limit.</strong>{{end}}
+  </p>
+  {{with .GitHubUsers}}<p class="widget-row">Refresh from GitHub:
+    {{range .}}<button type="button" class="secondary" hx-post="/sshkeys/github" hx-vals='{"refresh":"1","user":"{{.}}"}'>{{.}}</button>{{end}}
+  </p>{{end}}
+  {{if .DownloadID}}
+  <p><button type="submit" form="dl-{{.DownloadID}}">Download private key (once)</button></p>
+  <div hx-swap-oob="beforeend:body"><form id="dl-{{.DownloadID}}" method="post" action="/sshkeys/download?id={{.DownloadID}}"></form></div>
+  {{end}}
+  <details>
+    <summary>Paste public keys</summary>
+    <textarea name="sshkeys_paste" rows="3" spellcheck="false" placeholder="ssh-ed25519 AAAA... user@host"></textarea>
+    <button type="button" class="secondary" hx-post="/sshkeys/parse">Add pasted keys</button>
+  </details>
+  <details>
+    <summary>Import from GitHub user</summary>
+    <div class="widget-row">
+      <input type="text" name="sshkeys_user" maxlength="39" placeholder="GitHub user name" autocomplete="off" data-enter="sshkeys-gh-{{.Name}}">
+      <button type="button" class="secondary" id="sshkeys-gh-{{.Name}}" hx-post="/sshkeys/github">Fetch</button>
+    </div>
+  </details>
+  <details>
+    <summary>Generate a key pair</summary>
+    <div class="widget-row">
+      <input type="text" name="sshkeys_comment" maxlength="60" placeholder="Comment (optional)" autocomplete="off" data-enter="sshkeys-gen-{{.Name}}">
+      <button type="button" class="secondary" id="sshkeys-gen-{{.Name}}" hx-post="/sshkeys/generate">Generate ed25519</button>
+    </div>
+    <label><input type="checkbox" name="sshkeys_keep" value="1" checked> Keep a copy on the volume so kubeconfig download and SSH work from the container</label>
+    <small class="muted">The private key is offered once for download. A copy is stored only when the box is checked and no container key exists yet.</small>
+  </details>
+</div>{{end}}

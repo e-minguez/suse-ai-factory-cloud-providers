@@ -74,6 +74,9 @@ tools/**/.terraform.lock.hcl
 # tools/cost built binary (phase 3).
 tools/cost/cost
 
+# tools/webui built binary.
+tools/webui/webui
+
 # --------------------------------------------------------------------------
 # Editor, tooling and OS noise.
 # --------------------------------------------------------------------------

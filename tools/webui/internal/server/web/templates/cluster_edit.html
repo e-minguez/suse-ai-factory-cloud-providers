@@ -1,0 +1,36 @@
+{{define "content"}}
+{{with .Data}}
+<h1>Edit {{.Cluster.Name}} <span class="status {{.Cluster.Status}}">{{.Cluster.Status}}</span></h1>
+<p class="muted">Provider: <strong>{{.Provider}}</strong>. Provider credentials are on the <a href="/profiles/{{.Provider}}">account profile</a>.</p>
+{{if .Disabled}}<div class="flash warn" role="status">A job is running for this cluster; saving is disabled until it finishes.</div>{{end}}
+{{if .Errors}}<div class="flash err" role="alert"><strong>Fix these values:</strong><ul>{{range .Errors}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+{{if .Missing}}<div class="flash warn" role="status">Required before a deploy: {{range $i, $m := .Missing}}{{if $i}}, {{end}}{{$m}}{{end}}.</div>{{end}}
+<div class="edit-layout">
+<form method="post" action="/clusters/{{.Cluster.Name}}/edit" id="cluster-form" class="cluster-form" autocomplete="off">
+  <section class="basic">
+    {{range .Basic}}{{template "field" .}}{{end}}
+    {{if .Optional}}<details class="optional"{{if .OptionalOpen}} open{{end}}>
+      <summary>Optional registry and NVIDIA credentials</summary>
+      {{range .Optional}}{{template "field" .}}{{end}}
+    </details>{{end}}
+  </section>
+  <details class="advanced"{{if .AdvancedOpen}} open{{end}}>
+    <summary>Show advanced settings{{if .AdvancedChanged}} <span class="badge changed">advanced settings changed ({{.AdvancedChanged}})</span>{{end}}</summary>
+    {{range .Groups}}<fieldset>
+      <legend>{{.Title}}{{if .Changed}} <span class="badge changed">{{.Changed}} changed</span>{{end}}</legend>
+      {{range .Fields}}{{template "field" .}}{{end}}
+    </fieldset>{{end}}
+  </details>
+  <div class="form-actions">
+    <button type="submit"{{if .Disabled}} disabled{{end}}>Save</button>
+    <a class="button secondary" href="/clusters/{{.Cluster.Name}}">Back to the cluster</a>
+  </div>
+</form>
+<aside class="cost-side">
+  <div id="cost" hx-post="/clusters/{{.Cluster.Name}}/cost" hx-trigger="load, change from:#cluster-form delay:800ms" hx-include="#cluster-form" hx-swap="innerHTML">
+    <p class="muted">Loading the estimate...</p>
+  </div>
+</aside>
+</div>
+{{end}}
+{{end}}

@@ -1,0 +1,26 @@
+{{/* Template "cost": live estimate fragment. Data: {Report *costReport | Error string}. */}}
+{{define "cost"}}
+{{if .Error}}<p class="muted">{{.Error}}</p>{{end}}
+{{with .Report}}{{$r := .}}
+<h3>Estimate <small class="muted">{{.Provider}}{{if .Region}}, {{.Region}}{{end}}, {{.Currency}}</small></h3>
+<table class="cost">
+  <thead><tr><th></th>{{range .Durations}}<th class="num">{{.}}</th>{{end}}</tr></thead>
+  <tbody>
+    <tr class="total"><th>Running cluster</th>{{range $d := .Durations}}<td class="num">{{printf "%.2f" (index $r.Totals $d)}}</td>{{end}}</tr>
+    {{if .BuildOnlyTotals}}<tr><th>Image build only</th>{{range $d := .Durations}}<td class="num">{{printf "%.2f" (index $r.BuildOnlyTotals $d)}}</td>{{end}}</tr>{{end}}
+  </tbody>
+</table>
+{{if .Incomplete}}<p class="err">Some rates are missing: the total is incomplete.</p>{{end}}
+{{range .Warnings}}<p class="err">{{.}}</p>{{end}}
+{{if gt .Recurring 0.0}}<p class="muted">Recurring after destroy: {{printf "%.2f" .Recurring}} {{.Currency}} per month.</p>{{end}}
+<details>
+  <summary>Resources</summary>
+  <table class="cost">
+    <thead><tr><th>Resource</th><th>Qty</th><th>Type</th><th class="num">{{.Currency}}/h</th></tr></thead>
+    <tbody>{{range .Resources}}<tr><td>{{.Resource}}{{if .BuildOnly}} <span class="muted">(build only)</span>{{end}}</td><td>{{.Qty}}</td><td>{{.RateID}}</td><td class="num">{{printf "%.4f" .Hourly}}</td></tr>{{end}}</tbody>
+  </table>
+</details>
+{{if .Excluded}}<details><summary>Not included</summary><ul>{{range .Excluded}}<li>{{.Resource}}: {{.Reason}}</li>{{end}}</ul></details>{{end}}
+<p class="muted disclaimer">{{.Disclaimer}}</p>
+{{end}}
+{{end}}

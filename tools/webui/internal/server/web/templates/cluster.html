@@ -1,0 +1,38 @@
+{{define "content"}}
+<h1>{{.Data.Cluster.Name}} <span class="status {{.Data.Cluster.Status}}">{{.Data.Cluster.Status}}</span></h1>
+<p>Provider: <strong>{{.Data.Cluster.Provider}}</strong></p>
+<p><a class="button" href="/clusters/{{.Data.Cluster.Name}}/edit">Edit settings</a></p>
+
+<section id="outputs">
+  <h2>Outputs</h2>
+  <div hx-get="/clusters/{{.Data.Cluster.Name}}/outputs" hx-trigger="load" hx-swap="innerHTML">
+    <p class="muted">Loading.</p>
+  </div>
+</section>
+
+<section id="actions">
+  <h2>Actions</h2>
+  {{if eq .Data.Cluster.Status "running"}}
+    <p>A job is running for this cluster. <a href="/clusters/{{.Data.Cluster.Name}}#jobs">See jobs</a>.</p>
+  {{else}}
+  <form method="post" action="/clusters/{{.Data.Cluster.Name}}/deploy" class="inline">
+    <button type="submit">Deploy</button>
+    <label class="check"><input type="checkbox" name="rebuild"> Rebuild the image</label>
+  </form>
+  <form method="post" action="/clusters/{{.Data.Cluster.Name}}/destroy" class="inline">
+    <label>Type <code>{{.Data.Cluster.Name}}</code> to destroy
+      <input name="confirm" autocomplete="off" required pattern="{{.Data.Cluster.Name}}"></label>
+    <button type="submit" class="danger">Destroy</button>
+  </form>
+  <div hx-get="/clusters/{{.Data.Cluster.Name}}/leftovers" hx-trigger="load" hx-swap="innerHTML"></div>
+  {{end}}
+</section>
+
+<section id="jobs">
+  <h2>Jobs and logs</h2>
+  <div hx-get="/clusters/{{.Data.Cluster.Name}}/jobs" hx-trigger="load, every 10s" hx-swap="innerHTML">
+    <p class="muted">Loading.</p>
+  </div>
+  <p><a href="/clusters/{{.Data.Cluster.Name}}/logs">Deploy logs</a></p>
+</section>
+{{end}}
