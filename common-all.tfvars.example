@@ -54,4 +54,4 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 
 # AI Factory release: a version (X.Y.Z, resolved to the SUSE/aif tag
 # aif-operator-<version>) or a manifest URL (http:// or https://).
-# aif_release = "2.2.0"
+# aif_release = "2.3.0"

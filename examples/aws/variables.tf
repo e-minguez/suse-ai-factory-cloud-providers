@@ -126,7 +126,7 @@ variable "keep_build_artifacts" {
 
 variable "aif_release" {
   type        = string
-  default     = "2.2.0"
+  default     = "2.3.0"
   description = "AI Factory release: a manifest URL (http:// or https://), or a version X.Y.Z resolved to the tag aif-operator-<version>."
 }
 

@@ -194,7 +194,7 @@ control_plane_public_ip = false
 # manifest URL (http:// or https://) for a branch, fork or mirror. 2.1.0 is the
 # oldest version with a manifest. `git ls-remote --tags https://github.com/SUSE/aif`
 # lists them.
-# aif_release = "2.2.0"
+# aif_release = "2.3.0"
 
 # The build inputs elemental_image, core_platform_override,
 # sysext_image_overrides, image_disk_size and fips keep the module defaults.

@@ -59,7 +59,7 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 
 # AI Factory release: a full version X.Y.Z (tag aif-operator-<version>,
 # 2.1.0 or newer, pre-releases allowed) or a manifest URL.
-# aif_release = "2.2.0"
+# aif_release = "2.3.0"
 # aif_release = "https://raw.githubusercontent.com/SUSE/aif/refs/heads/main/uc-release-manifest/release_manifest.yaml"
 
 # Sizing. Null uses the module defaults shown.

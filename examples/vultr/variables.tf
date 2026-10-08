@@ -97,7 +97,7 @@ variable "image_id" {
 
 variable "aif_release" {
   type        = string
-  default     = "2.2.0"
+  default     = "2.3.0"
   description = "AI Factory version (X.Y.Z) or a release manifest URL."
 }
 
