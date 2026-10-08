@@ -144,8 +144,8 @@ run "bootstrap_pass" {
   }
 
   assert {
-    condition     = length(terraform_data.cp_init_ready) == 1
-    error_message = "Pass 1 must wait for the first member."
+    condition     = data.external.cp_members[0].query.count == "1"
+    error_message = "Pass 1 must wait for the init member before deploy.sh pins cp_initialized."
   }
 
   assert {
@@ -173,8 +173,8 @@ run "scale_pass" {
   }
 
   assert {
-    condition     = length(terraform_data.cp_init_ready) == 0 && length(exoscale_security_group_rule.image_import) == 0 && length(data.http.image_md5) == 0
-    error_message = "Pass 2 must close port 80 and skip the init wait and the MD5 read."
+    condition     = data.external.cp_members[0].query.count == "3" && length(exoscale_security_group_rule.image_import) == 0 && length(data.http.image_md5) == 0
+    error_message = "Pass 2 must wait for every member, close port 80 and skip the MD5 read."
   }
 }
 

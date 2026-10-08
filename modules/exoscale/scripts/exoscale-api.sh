@@ -6,7 +6,7 @@
 # Query keys: mode, zone, api_key, api_secret, and per mode:
 #   check    types (comma-separated family.size), cluster
 #            -> types, quotas, existing (JSON-encoded strings)
-#   members  pool_id, network_id
+#   members  pool_id, network_id; optional count, timeout_seconds (default 600)
 #            -> members (JSON-encoded list of {id, name, public_ip, private_ip,
 #               created_at}, oldest first)
 set -euo pipefail
@@ -75,9 +75,30 @@ case "$mode" in
   members)
     pool_id=$(q pool_id)
     network_id=$(q network_id)
-    pool=$(api_get "/v2/instance-pool/${pool_id}")
+    want=$(q count)
+    timeout=$(q timeout_seconds)
+    timeout=${timeout:-600}
+    # With count: waits until the pool lists that many running members. A
+    # listed member was created with the pool's user_data at that time.
+    # shellcheck disable=SC2329,SC2317,SC2034  # invoked by poll_until; sets its POLL_* vars
+    probe() {
+      local running
+      pool=$(api_get "/v2/instance-pool/${pool_id}")
+      instances=$(api_get /v2/instance)
+      [ -n "$want" ] || return 0
+      running=$(jq -n --argjson pool "$pool" --argjson in "$instances" '
+        ([($pool.instances // [])[].id]) as $ids
+        | [($in.instances // [])[] | select((.id as $i | $ids | index($i)) and .state == "running")] | length')
+      POLL_STATUS=starting
+      POLL_DETAIL="running=$running/$want"
+      [ "$running" -ge "$want" ]
+    }
+    # shellcheck source=../../../scripts/lib/poll.sh
+    source "$(dirname "${BASH_SOURCE[0]}")/../../../scripts/lib/poll.sh"
+    # stdout is the data source's JSON: progress goes to stderr.
+    poll_until "$timeout" 10 probe >&2 ||
+      die "the pool does not list $want running members after ${timeout}s; check it in the portal"
     net=$(api_get "/v2/private-network/${network_id}")
-    instances=$(api_get /v2/instance)
     jq -n -c --argjson pool "$pool" --argjson net "$net" --argjson in "$instances" '
       (($net.leases // []) | map({key: .["instance-id"], value: .ip}) | from_entries) as $lease
       | ([($pool.instances // [])[].id]) as $ids

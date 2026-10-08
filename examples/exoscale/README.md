@@ -25,8 +25,6 @@ metadata service and missing NAT gateway leave no alternative today:
 - Two different `openssl passwd -6` hashes: `root_password_hash` and
   `node_user_password_hash`.
 - `ssh_authorized_keys` (at least one) and `admin_cidrs` (your IP or VPN range).
-- The machine running `deploy.sh` inside `api_cidrs`: pass 1 waits for the
-  Kubernetes API through the load balancer.
 - Registry credentials: `appco_username`/`appco_password` with
   `local-path-provisioner` (default) or `suse-storage`; the others are optional.
   See [Registry credentials](../../README.md#registry-credentials).
@@ -98,9 +96,9 @@ plan, list replacements and destroys, confirm, apply the saved plan. Logs:
 
 - Pass 1 "Bootstrap control plane": network, security groups, load balancer,
   jumphost, image build, template, a control plane pool with one member that
-  initializes the cluster, and the worker and GPU nodes. It ends when the
-  Kubernetes API answers through the load balancer. Follow the build with
-  `../../scripts/build-logs.sh`.
+  initializes the cluster, and the worker and GPU nodes. It ends when that
+  member runs; the cluster finishes bootstrapping in the background. Follow
+  the build with `../../scripts/build-logs.sh`.
 - Pass 2 "Scale control plane": `deploy.sh` writes `cp_initialized = true` and
   `image_import_port_open = false` to `pass2.auto.tfvars.json`; the pool
   switches to the join configuration, scales to `control_plane_count` and the
@@ -133,7 +131,7 @@ Control plane names are `<cluster_name>-cp-<pool id>-<random>`; take them from
 |---|---|
 | Plan fails with "Instance types not usable in zone" | Type not offered there, or not available to the organization: for GPU types, request access from Exoscale with a support ticket. |
 | Plan fails with "Quota too low" | Ask Exoscale support for more with a ticket; GPU families start at 0. Right after a destroy, the usage can still count the deleted instances for a few minutes: wait and plan again ([quota notes](../../docs/providers/exoscale.md#quota-and-availability)). |
-| Pass 1 waits for the Kubernetes API and times out | This machine is not in `api_cidrs`, or the first member failed. Check it through the jumphost (its address is in the portal while outputs are not written yet): `journalctl -b -u node-hostname -u wait-privnet -u write-node-ip -u rke2-server`. |
+| The API never answers after pass 2 | The first member failed to bootstrap; the joining members wait for it. Check it through the jumphost: `journalctl -b -u node-hostname -u wait-privnet -u write-node-ip -u rke2-server`. |
 | Waiting for the image never ends | Follow `../../scripts/build-logs.sh`; on the jumphost, `grep qcow2 /var/log/elemental-factory.log` shows the fetcher's requests. |
 | Template registration fails "Invalid QCOW image" | The image is not qcow2 or its virtual size is outside 10-1000 GiB; check the `deliver` step in the build log. |
 | A node has no `private_ip` in `terraform output nodes` | The private network lists no lease for it; check the member in the portal. |

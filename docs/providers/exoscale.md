@@ -50,10 +50,10 @@ the first one.
 
 1. Bootstrap control plane: the pool with size 1 and the init configuration
    (`IS_INIT_NODE=true`), plus everything else. The pass ends when the
-   Kubernetes API answers through the NLB.
+   pool lists that member as running.
 2. Scale control plane: `cp_initialized = true` switches the pool to the join
    configuration and scales it to `control_plane_count`. Joining members reach
-   the first one through the NLB on 9345.
+   the first one through the NLB on 9345 and retry until it serves.
 
 A pool `user_data` and `size` change is one in-place update: the provider sends
 the update, then the scale call. Existing members keep being served their

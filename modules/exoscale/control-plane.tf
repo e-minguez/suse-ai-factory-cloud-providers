@@ -44,33 +44,14 @@ resource "exoscale_instance_pool" "control_plane" {
   }
 }
 
-# Pass 1 ends once the first member answers through the NLB, so deploy.sh only
-# pins cp_initialized = true on a working cluster. Polled from the operator
-# machine on 6443, which api_cidrs must admit.
-resource "terraform_data" "cp_init_ready" {
-  count = var.deploy_nodes && !var.cp_initialized ? 1 : 0
-
-  depends_on = [exoscale_nlb_service.api]
-
-  triggers_replace = [one(exoscale_instance_pool.control_plane[*].id)]
-
-  provisioner "local-exec" {
-    command = "${path.module}/scripts/wait-for-cp-init.sh"
-    environment = {
-      API_URL         = "https://${local.api_vip}:6443/readyz"
-      TIMEOUT_SECONDS = 1800
-      POLL_SECONDS    = 15
-    }
-  }
-}
-
-# Current members with their privnet lease: Terraform exposes neither the
-# lease nor, right after a scale call, the new members. depends_on defers the
-# read to the apply that changes the pool. See docs/workarounds.md.
+# Members with their privnet lease, once the pool lists its size in running
+# members: pass 2 never changes user_data before the init member exists.
+# depends_on defers the read to the apply that changes the pool. See
+# docs/workarounds.md.
 data "external" "cp_members" {
   count = var.deploy_nodes ? 1 : 0
 
-  depends_on = [exoscale_instance_pool.control_plane, terraform_data.cp_init_ready]
+  depends_on = [exoscale_instance_pool.control_plane]
 
   program = ["bash", "${path.module}/scripts/exoscale-api.sh"]
 
@@ -81,6 +62,7 @@ data "external" "cp_members" {
     api_secret = var.exoscale_api_secret
     pool_id    = one(exoscale_instance_pool.control_plane[*].id)
     network_id = exoscale_private_network.this.id
+    count      = tostring(local.control_plane_size)
   }
 }
 
