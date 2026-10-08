@@ -51,8 +51,8 @@ Creation order:
 2  jumphost                                 builds the image, serves it on :80
 3  template                                 terraform_data.image_served polls,
                                             data.http.image_md5, exoscale_template
-4  control plane pool (size 1, init)        + NLB services; cp_init_ready waits for
-   worker and GPU instances                   the API through the NLB
+4  control plane pool (size 1, init)        + NLB services; cp_members waits for
+   worker and GPU instances                   the member to run
 -- pass 2 (deploy.sh) ------------------------------------------------------
 5  pool user_data -> join, size -> control_plane_count, close tcp/80
 ```

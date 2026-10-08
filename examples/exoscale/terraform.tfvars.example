@@ -77,7 +77,7 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 
 # rancher_hostname           = null  # defaults to "rancher-<load balancer IP>.sslip.io"
 # rancher_bootstrap_password = null  # defaults to a generated password
-# api_cidrs                  = ["0.0.0.0/0"]  # who may reach the Kubernetes API on 6443; deploy.sh's machine must be in it
+# api_cidrs                  = ["0.0.0.0/0"]  # who may reach the Kubernetes API on 6443
 # ingress_cidrs              = ["0.0.0.0/0"]  # who may reach the ingress on 80/443
 
 # cluster_name                = "suse-ai-factory"  # at most 27 characters on this provider

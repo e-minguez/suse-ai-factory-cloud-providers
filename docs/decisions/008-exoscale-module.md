@@ -42,11 +42,13 @@ unless marked as documented:
   (6443, 9345) and ingress (80, 443) NLB services. Workers and GPU nodes stay
   standalone `exoscale_compute_instance` resources with per-node Ignition.
 - **Two passes for the control plane**: pass 1 creates the pool with size 1 and
-  the init configuration and waits until its supervisor answers; `deploy.sh`
-  then pins `cp_initialized = true`. Pass 2 switches the pool `user_data` to the
-  join configuration (`server: https://<nlb>:9345`) and scales to
-  `control_plane_count`. Only the init configuration can bootstrap a cluster,
-  and it is only rendered while the pool has one member. A plan check fails if
+  the init configuration and waits until the pool lists that member as
+  running (signed API read, no probe of the cluster); `deploy.sh` then pins
+  `cp_initialized = true`. Pass 2 switches the pool `user_data` to the join
+  configuration (`server: https://<nlb>:9345`) and scales to
+  `control_plane_count`; joiners retry through the NLB until the init member
+  serves 9345. Only the init configuration can bootstrap a cluster, and it is
+  only rendered while the pool has one member. A plan check fails if
   the control plane pool would be replaced after initialization.
 - **Hostname from metadata** for pool members: a oneshot before
   `rke2-server`/`rke2-agent` reads `local-hostname`, sets the hostname and

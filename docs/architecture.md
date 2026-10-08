@@ -194,7 +194,7 @@ flowchart TD
         img["image: exoscale_template"]
         pool["control_plane: exoscale_instance_pool, size 1,<br/>init configuration + exoscale_nlb_service"]
         ag["worker, gpu: exoscale_compute_instance"]
-        wait["cp_init_ready: API answers through the NLB"]
+        wait["cp_members: the init member is running"]
         net --> lb
         net --> jh
         lb -- "NLB address in the image config" --> jh
