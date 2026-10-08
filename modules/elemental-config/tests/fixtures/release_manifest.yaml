@@ -1,7 +1,7 @@
 metadata:
   name: suse-ai-factory
   # Comment lines are dropped when the manifest is rewritten.
-  version: 2.2.0
+  version: 2.3.0
 corePlatform:
   image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1
 components:

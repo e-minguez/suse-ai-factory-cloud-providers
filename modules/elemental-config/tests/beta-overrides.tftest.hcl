@@ -66,7 +66,7 @@ run "core_override_flattens_manifest" {
   }
 
   assert {
-    condition     = yamldecode(output.release_manifest).metadata.version == "2.2.0"
+    condition     = yamldecode(output.release_manifest).metadata.version == "2.3.0"
     error_message = "The flattened manifest must reuse the AIF manifest version."
   }
 
