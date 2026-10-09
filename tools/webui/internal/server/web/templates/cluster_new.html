@@ -1,15 +1,19 @@
 {{define "content"}}
-<h1>New cluster</h1>
-<form method="post" action="/clusters/new" class="stack">
-  <label>Provider
-    <select name="provider" required>
-      {{range .Data.Providers}}<option value="{{.}}"{{if eq . $.Data.Provider}} selected{{end}}>{{.}}</option>{{end}}
-    </select>
-  </label>
+<p class="crumbs"><a href="/">Clusters</a> / new</p>
+<div class="page-head"><h1>New cluster</h1></div>
+<form method="post" action="/clusters/new" class="stack" data-once>
+  <fieldset class="choices">
+    <legend>Provider</legend>
+    {{range .Data.Providers}}<label class="choice">
+      <input type="radio" name="provider" value="{{.Provider}}" required{{if eq .Provider $.Data.Provider}} checked{{end}}>
+      <span>{{template "provider" .Provider}}
+        <small class="{{if .Ready}}muted{{else}}err{{end}}">{{if .Ready}}Credentials set{{else if .Total}}Credentials not set{{else}}No profile{{end}}</small></span>
+    </label>{{end}}
+  </fieldset>
   <label>Name
-    <input name="name" value="{{.Data.Name}}" required maxlength="63" pattern="[a-z][a-z0-9\-]*" autocomplete="off">
-    <small>Lowercase letters, digits and dashes; starts with a letter.</small>
+    <input name="name" value="{{.Data.Name}}" required maxlength="63" pattern="[a-z][a-z0-9\-]*" autocomplete="off" spellcheck="false">
+    <small>Lowercase letters, digits and dashes; starts with a letter. It is also the <code>cluster_name</code>.</small>
   </label>
-  <button type="submit">Create</button>
+  <div class="actions"><button type="submit">Create</button> <a href="/">Cancel</a></div>
 </form>
 {{end}}

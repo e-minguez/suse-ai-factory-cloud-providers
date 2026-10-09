@@ -13,3 +13,13 @@ Both are BSD 0-clause / 2-clause licensed upstream (bigskysoftware). Update by r
   `fonts/suse-latin-ext.woff2` (sha256 b52bffe11d34ba7ea365236cb6ca61d332b1daded54be38fdd7dba1fb1aa7257):
   variable font (weights 100-800), Google Fonts `SUSE` v4, from https://github.com/SUSE/suse-font.
 - License: SIL Open Font License 1.1, `fonts/OFL.txt`. Self-hosted so the strict CSP and offline use work.
+
+## Provider marks
+
+`providers.svg` (sha256 5d683a74a6d3e8f02095d9abfa65b532f94c7f12ae12cda9bf9671061a808184): one `<symbol>` per provider,
+path coordinates rounded to 1 decimal and colours removed so CSS sets them.
+- evroc: https://evroc.com/favicon.svg
+- Exoscale, Vultr: Simple Icons 16.34.0 path data (CC0), `icons/exoscale.svg`, `icons/vultr.svg`.
+- AWS: Simple Icons 13.0.0 `icons/amazonwebservices.svg` (removed from later releases).
+
+The marks are trademarks of their owners, used only to identify the provider.

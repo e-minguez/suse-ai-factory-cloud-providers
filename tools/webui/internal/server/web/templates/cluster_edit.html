@@ -1,12 +1,17 @@
 {{define "content"}}
 {{with .Data}}
-<h1>Edit {{.Cluster.Name}} <span class="status {{.Cluster.Status}}">{{.Cluster.Status}}</span></h1>
-<p class="muted">Provider: <strong>{{.Provider}}</strong>. Provider credentials are on the <a href="/profiles/{{.Provider}}">account profile</a>.</p>
+<p class="crumbs"><a href="/">Clusters</a> / <a href="/clusters/{{.Cluster.Name}}">{{.Cluster.Name}}</a> / settings</p>
+<div class="page-head">
+  <div>
+    <h1>{{.Cluster.Name}} settings <span class="status {{.Cluster.Status}}">{{statusLabel .Cluster.Status}}</span></h1>
+    <p class="meta">{{template "provider" .Provider}}. Credentials are on the <a href="/profiles/{{.Provider}}">account profile</a>.</p>
+  </div>
+</div>
 {{if .Disabled}}<div class="flash warn" role="status">A job is running for this cluster; saving is disabled until it finishes.</div>{{end}}
 {{if .Errors}}<div class="flash err" role="alert"><strong>Fix these values:</strong><ul>{{range .Errors}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
 {{if .Missing}}<div class="flash warn" role="status">Required before a deploy: {{range $i, $m := .Missing}}{{if $i}}, {{end}}{{$m}}{{end}}.</div>{{end}}
 <div class="edit-layout">
-<form method="post" action="/clusters/{{.Cluster.Name}}/edit" id="cluster-form" class="cluster-form" autocomplete="off">
+<form method="post" action="/clusters/{{.Cluster.Name}}/edit" id="cluster-form" class="cluster-form" autocomplete="off" data-once>
   <section class="basic">
     {{range .Basic}}{{template "field" .}}{{end}}
     {{if .Optional}}<details class="optional"{{if .OptionalOpen}} open{{end}}>
@@ -15,20 +20,22 @@
     </details>{{end}}
   </section>
   <details class="advanced"{{if .AdvancedOpen}} open{{end}}>
-    <summary>Show advanced settings{{if .AdvancedChanged}} <span class="badge changed">advanced settings changed ({{.AdvancedChanged}})</span>{{end}}</summary>
-    {{range .Groups}}<fieldset>
-      <legend>{{.Title}}{{if .Changed}} <span class="badge changed">{{.Changed}} changed</span>{{end}}</legend>
+    <summary>Advanced settings{{if .AdvancedChanged}} <span class="badge changed">advanced settings changed ({{.AdvancedChanged}})</span>{{end}}</summary>
+    {{range .Groups}}{{$open := gt .Changed 0}}{{range .Fields}}{{if .Error}}{{$open = true}}{{end}}{{end}}
+    <details class="group"{{if $open}} open{{end}}>
+      <summary>{{.Title}} <span class="count">{{len .Fields}}</span>{{if .Changed}} <span class="badge changed">{{.Changed}} changed</span>{{end}}</summary>
       {{range .Fields}}{{template "field" .}}{{end}}
-    </fieldset>{{end}}
+    </details>{{end}}
   </details>
   <div class="form-actions">
     <button type="submit"{{if .Disabled}} disabled{{end}}>Save</button>
-    <a class="button secondary" href="/clusters/{{.Cluster.Name}}">Back to the cluster</a>
+    <a href="/clusters/{{.Cluster.Name}}">Back to the cluster</a>
   </div>
 </form>
-<aside class="cost-side">
+<aside class="cost-side panel" aria-label="Cost estimate">
   <div id="cost" hx-post="/clusters/{{.Cluster.Name}}/cost" hx-trigger="load, change from:#cluster-form delay:800ms" hx-include="#cluster-form" hx-swap="innerHTML">
-    <p class="muted">Loading the estimate...</p>
+    <h3>Estimate</h3>
+    <div class="skeleton" aria-busy="true"><span></span><span></span><span></span><span class="visually-hidden">Loading the estimate</span></div>
   </div>
 </aside>
 </div>

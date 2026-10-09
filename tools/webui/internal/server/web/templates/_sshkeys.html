@@ -34,8 +34,8 @@ Place it inside the page form; it swaps itself via htmx.
   {{else}}<p class="muted">No SSH keys yet. Add one below.</p>{{end}}
   <p class="key-total{{if .Over}} over{{else if .Near}} near{{end}}">
     Selected keys: {{.Total}} of {{.Limit}} bytes of user_data ({{.Percent}}%).
-    {{if .Over}}<strong>Over the {{.Provider}} user_data limit: deselect keys.</strong>
-    {{else if .Near}}<strong>Keys use over half of the {{.Provider}} user_data limit.</strong>{{end}}
+    {{if .Over}}<strong>Over the {{providerName .Provider}} user_data limit: deselect keys.</strong>
+    {{else if .Near}}<strong>Keys use over half of the {{providerName .Provider}} user_data limit.</strong>{{end}}
   </p>
   {{with .GitHubUsers}}<p class="widget-row">Refresh from GitHub:
     {{range .}}<button type="button" class="secondary" hx-post="/sshkeys/github" hx-vals='{"refresh":"1","user":"{{.}}"}'>{{.}}</button>{{end}}

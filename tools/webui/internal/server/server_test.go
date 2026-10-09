@@ -222,3 +222,31 @@ func TestAlphaBanner(t *testing.T) {
 		t.Fatal("alpha banner or tag missing")
 	}
 }
+
+func TestStatusLabel(t *testing.T) {
+	for in, want := range map[string]string{
+		"no-state": "not deployed", "ok": "finished", "no_changes": "no changes",
+		"deployed": "deployed", "awaiting confirmation": "awaiting confirmation", "some_new-state": "some new state",
+	} {
+		if got := statusLabel(in); got != want {
+			t.Errorf("statusLabel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestProviderName(t *testing.T) {
+	for in, want := range map[string]string{"aws": "AWS", "evroc": "evroc", "exoscale": "Exoscale", "vultr": "Vultr", "other": "other"} {
+		if got := providerName(in); got != want {
+			t.Errorf("providerName(%q) = %q, want %q", in, got, want)
+		}
+	}
+	sprite, err := webFS.ReadFile("web/static/providers.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for p := range providerLogos {
+		if !strings.Contains(string(sprite), `<symbol id="`+p+`"`) {
+			t.Errorf("providers.svg has no symbol for %s", p)
+		}
+	}
+}

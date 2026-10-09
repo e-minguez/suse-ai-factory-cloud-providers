@@ -1,8 +1,15 @@
 {{define "content"}}
-<h1>Logs: <a href="/clusters/{{.Data.Cluster}}">{{.Data.Cluster}}</a></h1>
-<p class="muted">Known secret values are redacted in this view; the files on disk are not.</p>
+<p class="crumbs"><a href="/">Clusters</a> / <a href="/clusters/{{.Data.Cluster}}">{{.Data.Cluster}}</a> / logs</p>
+<div class="page-head">
+  <div>
+    <h1>Deploy logs</h1>
+    <p class="meta">Known secret values are redacted in this view; the files on disk are not.</p>
+  </div>
+</div>
 {{range .Data.Dirs}}
-<h2>{{.TS}}</h2>
-<ul>{{$ts := .TS}}{{range .Files}}<li><a href="/clusters/{{$.Data.Cluster}}/logs/{{$ts}}/{{.}}">{{.}}</a></li>{{end}}</ul>
-{{else}}<p>No logs yet.</p>{{end}}
+<section class="block">
+  <h2 class="mono">{{.TS}}</h2>
+  <ul class="file-list">{{$ts := .TS}}{{range .Files}}<li><a href="/clusters/{{$.Data.Cluster}}/logs/{{$ts}}/{{.}}">{{.}}</a></li>{{end}}</ul>
+</section>
+{{else}}<p class="muted">No logs yet. They appear here after the first deploy.</p>{{end}}
 {{end}}

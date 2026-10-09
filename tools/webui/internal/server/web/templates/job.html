@@ -1,33 +1,38 @@
 {{define "content"}}
-<h1>{{.Data.Job.Action}} <a href="/clusters/{{.Data.Job.Cluster}}">{{.Data.Job.Cluster}}</a>
-  <span id="jobstatus" class="status {{.Data.Job.Status}}">{{.Data.Job.Status}}</span></h1>
-<p class="muted">Job {{.Data.Job.ID}}, started {{.Data.Job.Started.Format "2006-01-02 15:04:05"}}.</p>
-
-<div hx-ext="sse" sse-connect="/jobs/{{.Data.Job.ID}}/events" sse-close="done">
-  <div id="cancel">
-  {{if eq .Data.Job.Status "running"}}
-    <form method="post" action="/jobs/{{.Data.Job.ID}}/cancel" hx-post="/jobs/{{.Data.Job.ID}}/cancel" hx-swap="none">
-      <button class="danger" type="submit">Cancel job</button>
-      <span class="muted">Sends an interrupt; a second click terminates.</span>
+{{with .Data.Job}}
+<p class="crumbs"><a href="/">Clusters</a> / <a href="/clusters/{{.Cluster}}">{{.Cluster}}</a> / job {{.ID}}</p>
+<div class="page-head">
+  <div>
+    <h1><span class="action">{{.Action}}</span> {{.Cluster}}
+      <span id="jobstatus" class="status {{.Status}}">{{statusLabel .Status}}</span></h1>
+    <p class="meta">Job <span class="mono">{{.ID}}</span>, started {{.Started.Format "2006-01-02 15:04:05"}}</p>
+  </div>
+  <div id="cancel" class="actions">
+  {{if eq .Status "running"}}
+    <form method="post" action="/jobs/{{.ID}}/cancel" hx-post="/jobs/{{.ID}}/cancel" hx-swap="none" class="inline">
+      <button class="danger" type="submit" title="Sends an interrupt; a second click terminates">Cancel job</button>
     </form>
   {{end}}
   </div>
+</div>
 
+<div hx-ext="sse" sse-connect="/jobs/{{.ID}}/events" sse-close="done">
   <div id="confirm" sse-swap="confirm"></div>
 
-  <section>
+  <section class="block">
     <h2>Progress</h2>
-    <div id="passes" sse-swap="pass"><p class="muted">Waiting for output.</p></div>
+    <div id="passes" sse-swap="pass"><div class="skeleton" aria-busy="true"><span></span><span></span><span class="visually-hidden">Waiting for output</span></div></div>
     <div id="resources" sse-swap="resource"></div>
   </section>
 
   <div id="result" sse-swap="done"></div>
 
-  <section id="plan" sse-swap="plan"></section>
+  <section id="plan" class="block" sse-swap="plan"></section>
 
-  <details>
+  <details class="rawlog block"{{if eq .Status "running"}} open{{end}}>
     <summary>Raw log</summary>
-    <div id="rawlog" class="log" sse-swap="line" hx-swap="beforeend"></div>
+    <div id="rawlog" class="log" sse-swap="line" hx-swap="beforeend" tabindex="0" aria-label="Raw log"></div>
   </details>
 </div>
+{{end}}
 {{end}}

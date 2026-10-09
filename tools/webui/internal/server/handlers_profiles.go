@@ -47,9 +47,35 @@ func (s *Server) handleProfileList(w http.ResponseWriter, r *http.Request) {
 	s.profilesPage(w, r, http.StatusOK, s.credProviders(), "")
 }
 
+// credSummary counts the stored credential fields of a provider profile.
+type credSummary struct {
+	Provider   string
+	Set, Total int
+}
+
+func (c credSummary) Ready() bool { return c.Total > 0 && c.Set == c.Total }
+
+// credSummaries reads the profile status of the given providers. A read
+// error counts as nothing stored.
+func (s *Server) credSummaries(ps []string) []credSummary {
+	out := make([]credSummary, 0, len(ps))
+	for _, p := range ps {
+		c := credSummary{Provider: p, Total: len(creds.Fields(p))}
+		if st, err := creds.Status(s.Cfg.ClustersDir(), p); err == nil {
+			for _, f := range creds.Fields(p) {
+				if st[f.Name] {
+					c.Set++
+				}
+			}
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
 func (s *Server) profilesPage(w http.ResponseWriter, r *http.Request, code int, ps []string, errMsg string) {
 	pg := s.page(w, r, "profiles", "Profiles", map[string]any{
-		"Providers": ps, "HasSSHKey": creds.HasSSHKey(s.Cfg.ClustersDir()),
+		"Providers": s.credSummaries(ps), "HasSSHKey": creds.HasSSHKey(s.Cfg.ClustersDir()),
 	})
 	if errMsg != "" {
 		pg.Err = errMsg
@@ -106,7 +132,7 @@ func (s *Server) profileView(w http.ResponseWriter, r *http.Request, code int, p
 		s.errorPage(w, r, http.StatusInternalServerError, "Cannot read credentials", err.Error())
 		return
 	}
-	pg := s.page(w, r, "profiles", "Profile: "+p, map[string]any{
+	pg := s.page(w, r, "profiles", "Profile: "+providerName(p), map[string]any{
 		"Provider": p, "Fields": creds.Fields(p), "Status": st,
 	})
 	if errMsg != "" {

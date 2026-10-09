@@ -1,24 +1,41 @@
 {{define "content"}}
-<h1>Clusters</h1>
+<div class="page-head">
+  <div>
+    <h1>Clusters</h1>
+    <p class="meta">Each cluster is one directory under <code>clusters/</code>, deployed with <code>deploy.sh</code>.</p>
+  </div>
+  {{if .Data.Clusters}}<div class="actions"><a class="button" href="/clusters/new">New cluster</a></div>{{end}}
+</div>
 {{if .Data.Clusters}}
-<table>
-  <thead><tr><th>Name</th><th>Provider</th><th>Status</th><th></th></tr></thead>
+<div class="table-wrap">
+<table class="rows">
+  <thead><tr><th>Name</th><th>Provider</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
   <tbody>
   {{range .Data.Clusters}}
     <tr>
-      <td><a href="/clusters/{{.Name}}">{{.Name}}</a></td>
-      <td>{{.Provider}}</td>
-      <td><span class="status {{.Status}}">{{.Status}}</span></td>
-      <td class="actions">
-        <a href="/clusters/{{.Name}}/edit">Edit</a>
-        <a href="/clusters/{{.Name}}">Overview</a>
-      </td>
+      <td><a class="row-link" href="/clusters/{{.Name}}">{{.Name}}</a></td>
+      <td>{{template "provider" .Provider}}</td>
+      <td><span class="status {{.Status}}">{{statusLabel .Status}}</span></td>
+      <td class="actions"><a href="/clusters/{{.Name}}/edit">Edit settings</a></td>
     </tr>
   {{end}}
   </tbody>
 </table>
+</div>
 {{else}}
-<p>No clusters yet.</p>
+<section class="panel empty">
+  <h2>No clusters yet</h2>
+  <p class="muted">Three steps to a running SUSE AI Factory.</p>
+  <ol>
+    <li><strong>Store provider credentials</strong>
+      <span class="muted">On the <a href="/profiles">Profiles</a> page. Values are write-only.
+        <span class="chips">{{range .Data.Creds}}<a class="badge {{if .Ready}}set{{else}}unset{{end}}" href="/profiles/{{.Provider}}">{{providerName .Provider}}: {{if .Ready}}set{{else}}not set{{end}}</a>{{end}}</span></span></li>
+    <li><strong>Create a cluster</strong>
+      <span class="muted">Pick a provider and a name, then fill in the settings. The cost estimate updates as you edit.</span></li>
+    <li><strong>Deploy</strong>
+      <span class="muted">Review each plan before it is applied. Outputs, kubeconfig and logs appear on the cluster page.</span></li>
+  </ol>
+  <a class="button" href="/clusters/new">New cluster</a>
+</section>
 {{end}}
-<p><a class="button" href="/clusters/new">New cluster</a></p>
 {{end}}

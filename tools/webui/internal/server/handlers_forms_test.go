@@ -120,7 +120,7 @@ func TestEditFormRenders(t *testing.T) {
 	}
 	for _, want := range []string{
 		`name="f_region"`, `id="cidr-f_admin_cidrs"`, `class="sshkeys"`, `name="f_root_password_hash.confirm"`,
-		`name="f_gpu_pools.type"`, "Show advanced settings", `name="f_control_plane_count"`,
+		`name="f_gpu_pools.type"`, "Advanced settings", `name="f_control_plane_count"`,
 		`placeholder="3"`, `name="f_tags"`, `hx-post="/clusters/demo/cost"`, "Required before a deploy",
 	} {
 		if !strings.Contains(body, want) {

@@ -5,7 +5,7 @@ Terraform or editing tfvars by hand. It runs in a container on your workstation
 and runs the same `cluster.sh` and `deploy.sh` as the command line. Design and
 threat model: [ADR 009](decisions/009-webui-runner.md).
 
-> **Alpha** (`alpha-0.0.1`): expect bugs and breaking changes between releases.
+> **Alpha** (`alpha-0.0.2`): expect bugs and breaking changes between releases.
 > Use test accounts and review every plan before applying it.
 >
 > Unofficial community project. Not affiliated with, endorsed or supported by
@@ -21,7 +21,7 @@ mkdir -p ~/aif-clusters && chown 1000:1000 ~/aif-clusters   # Linux; may need su
 docker run -d --init --name aif -p 127.0.0.1:8080:8080 --stop-timeout 600 \
   --read-only --tmpfs /tmp \
   -v ~/aif-clusters:/opt/aif/clusters \
-  ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.1
+  ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.2
 ```
 
 With podman, map your user to UID 1000 and label the volume:
@@ -31,14 +31,14 @@ podman run -d --init --name aif -p 127.0.0.1:8080:8080 --stop-timeout 600 \
   --read-only --tmpfs /tmp \
   --userns=keep-id:uid=1000,gid=1000 \
   -v ~/aif-clusters:/opt/aif/clusters:Z \
-  ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.1
+  ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.2
 ```
 
 `--init` reaps the child processes of the runner (it is PID 1). `--read-only
 --tmpfs /tmp` keeps the root file system immutable: the container writes only
 `/tmp` and the volume.
 
-Image tags: `alpha-0.0.1` is the web UI version (`tools/webui/VERSION`) and moves to
+Image tags: `alpha-0.0.2` is the web UI version (`tools/webui/VERSION`) and moves to
 the newest build of that version; `vX.Y.Z` is a repository
 [release](https://github.com/e-minguez/suse-ai-factory-cloud-providers/releases)
 and does not move. There is no `latest` tag while the web UI is alpha.
@@ -112,7 +112,7 @@ The profile page can also store an existing SSH private key in
 
 The basic form has what a first deploy needs: region, admin CIDRs (`Detect my
 IP` fills yours), SSH keys, passwords, registry credentials and GPU pools.
-`Show advanced settings` opens the remaining variables in groups (Network,
+`Advanced settings` opens the remaining variables in groups (Network,
 Nodes, AI Factory, Access, Image and build, Provider, Tags). Defaults are shown
 as placeholders. Only values you change are written; an empty field removes the
 value from the file, so the module default applies. A marker shows when advanced
@@ -157,12 +157,13 @@ nothing applied. Nothing is applied without this answer.
 `Cancel` sends an interrupt to the running job. Only one job runs per cluster.
 
 When done, the overview shows the outputs (Rancher URL and others). The image is
-rebuilt only when its inputs change. To force it, tick `Rebuild` before
-`Deploy`.
+rebuilt only when its inputs change. To force it, use `Rebuild and deploy`
+under "Other actions" on the cluster page.
 
 ## Destroy
 
-`Destroy` asks you to type the cluster name, then shows the same plan review.
+`Destroy` (under "Other actions") asks you to type the cluster name and to
+confirm once, then shows the same plan review.
 Afterwards a button runs `tools/leftovers/<provider>.sh` (read-only) in the
 container and shows the result. The image ships the aws and evroc CLIs the aws
 and evroc checks need. Outside the image, when a CLI is not in `PATH`, the page
@@ -221,7 +222,7 @@ the same volume:
 
 ```sh
 docker stop -t 600 aif && docker rm aif
-docker run -d --init --name aif ... ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.1
+docker run -d --init --name aif ... ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.2
 ```
 
 Cluster data stays on the volume. Provider plugin versions come with the image;

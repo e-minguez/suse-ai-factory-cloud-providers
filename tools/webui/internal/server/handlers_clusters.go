@@ -25,13 +25,20 @@ func (s *Server) handleClusterList(w http.ResponseWriter, r *http.Request) {
 		s.errorPage(w, r, http.StatusInternalServerError, "Cannot list clusters", err.Error())
 		return
 	}
-	s.render(w, "clusters.html", s.page(w, r, "clusters", "Clusters", map[string]any{"Clusters": list}))
+	s.render(w, "clusters.html", s.page(w, r, "clusters", "Clusters", map[string]any{
+		"Clusters": list, "Creds": s.credSummaries(s.credProviders()),
+	}))
 }
 
 func (s *Server) newForm(w http.ResponseWriter, r *http.Request, provider, name string) {
-	s.render(w, "cluster_new.html", s.page(w, r, "new", "New cluster", map[string]any{
-		"Providers": s.WS.Providers(), "Provider": provider, "Name": name,
-	}))
+	s.render(w, "cluster_new.html", s.page(w, r, "clusters", "New cluster", s.newData(provider, name)))
+}
+
+// newData lists the providers with their credential status for the form.
+func (s *Server) newData(provider, name string) map[string]any {
+	return map[string]any{
+		"Providers": s.credSummaries(s.WS.Providers()), "Provider": provider, "Name": name,
+	}
 }
 
 func (s *Server) handleClusterNew(w http.ResponseWriter, r *http.Request) {
@@ -57,9 +64,7 @@ func (s *Server) handleClusterCreate(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, workspace.ErrInvalidName) && !errors.Is(err, errClusterName) && !errors.Is(err, workspace.ErrExists) && !errors.Is(err, workspace.ErrUnknownProv) {
 			msg = "Creating the cluster failed: " + msg
 		}
-		pg := s.page(w, r, "new", "New cluster", map[string]any{
-			"Providers": s.WS.Providers(), "Provider": provider, "Name": name,
-		})
+		pg := s.page(w, r, "clusters", "New cluster", s.newData(provider, name))
 		pg.Err = msg
 		s.renderStatus(w, http.StatusBadRequest, "cluster_new.html", pg)
 		return

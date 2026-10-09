@@ -1,5 +1,9 @@
 {{define "content"}}
-<h1>{{.Data.Heading}}</h1>
-{{if .Data.Detail}}<p>{{.Data.Detail}}</p>{{end}}
-<p><a href="/">Back to clusters</a></p>
+<div class="page-head">
+  <div>
+    <h1>{{.Data.Heading}}</h1>
+    {{if .Data.Detail}}<p class="meta">{{.Data.Detail}}</p>{{end}}
+  </div>
+</div>
+<p><a class="button secondary" href="/">Back to clusters</a></p>
 {{end}}
