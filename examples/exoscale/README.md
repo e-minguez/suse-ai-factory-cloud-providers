@@ -15,7 +15,7 @@ metadata service and missing NAT gateway leave no alternative today:
 
 ## Prerequisites
 
-- Terraform 1.16.4 or later, `jq`, `curl`, `openssl`, `ssh`.
+- Terraform 1.16.5 or later, `jq`, `curl`, `openssl`, `ssh`.
 - An Exoscale API key and secret bound to an IAM role that allows the Compute
   service: see [API key](#api-key). Set `exoscale_api_key` and
   `exoscale_api_secret` in `../common-exoscale.tfvars`, or export

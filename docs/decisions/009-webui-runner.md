@@ -80,7 +80,7 @@ replaced.
 
 ### Image
 Built from the repository root. A BCI golang stage builds `webui` and `cost`
-(`CGO_ENABLED=0`). A stage downloads Terraform 1.16.4 (checksum and GPG
+(`CGO_ENABLED=0`). A stage downloads Terraform 1.16.5 (checksum and GPG
 verified) and mirrors the provider plugins after `terraform get`, so plugins are
 not downloaded at run time and the runtime has no direct registry access. The
 mirror holds one version per provider, so the image sets

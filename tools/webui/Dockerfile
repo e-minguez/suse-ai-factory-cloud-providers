@@ -27,7 +27,7 @@ RUN GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o /out/webui .
 # the target platform (copied into the image).
 FROM --platform=$BUILDPLATFORM registry.suse.com/bci/bci-base:16.0 AS terraform
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-ARG TF_VERSION=1.16.4
+ARG TF_VERSION=1.16.5
 ARG BUILDARCH
 ARG TARGETARCH
 # HashiCorp release signing key, https://www.hashicorp.com/trust/security

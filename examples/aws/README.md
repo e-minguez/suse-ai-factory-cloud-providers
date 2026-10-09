@@ -8,7 +8,7 @@ platform behaviour: [aws.md](../../docs/providers/aws.md).
 
 ## Prerequisites
 
-- Terraform >= 1.16.4, `jq`, `ssh`, and the **AWS CLI on the workstation**
+- Terraform >= 1.16.5, `jq`, `ssh`, and the **AWS CLI on the workstation**
   (`modules/aws/scripts/wait-for-raw.sh` polls S3 with it during the apply).
 - AWS credentials in the usual chain (`AWS_PROFILE`, environment, SSO); see
   [AWS credentials](#aws-credentials).

@@ -7,7 +7,7 @@
 #   deploy_precheck()              optional hook: provider-only checks, before any pass
 #   deploy_destroy()               optional hook: replaces the default single destroy pass
 #   deploy_after_destroy()         optional hook: runs after a successful destroy (suggests the leftover check)
-#   deploy_on_crash / tf_retry_on  optional workarounds, see tf.sh
+#   tf_retry_on                    optional workaround, see tf.sh
 #   deploy_main "$@"
 #
 # Optional env (see tf.sh): DEPLOY_EVENTS_FD, DEPLOY_CONFIRM_FD.
@@ -267,7 +267,6 @@ deploy_main() {
   fi
 
   if [ "$DEPLOY_VERBOSITY" != quiet ]; then
-    tf__version_note
     if [ "${#DEPLOY_VAR_FILES[@]}" -gt 0 ]; then
       echo "var-files      : ${DEPLOY_VAR_FILES[*]#-var-file=}"
     fi

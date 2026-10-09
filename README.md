@@ -10,7 +10,7 @@ SLES · RKE2 · Rancher · SUSE AI Factory (powered by SUSE Elemental)
 
 [![CI](https://github.com/e-minguez/suse-ai-factory-cloud-providers/actions/workflows/ci.yml/badge.svg)](https://github.com/e-minguez/suse-ai-factory-cloud-providers/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Terraform](https://img.shields.io/badge/terraform-%E2%89%A5%201.16.4-7B42BC.svg?logo=terraform)](docs/workarounds.md)
+[![Terraform](https://img.shields.io/badge/terraform-%E2%89%A5%201.16.5-7B42BC.svg?logo=terraform)](https://developer.hashicorp.com/terraform/install)
 
 [Quickstart](#quickstart) · [Architecture](docs/architecture.md) · [Providers](#supported-providers) · [Multi-cluster](#multi-cluster) · [Documentation](#documentation)
 
@@ -68,7 +68,7 @@ Each provider has an example root with its own README:
 
 ## Quickstart
 
-**Requirements:** Terraform 1.16.4 or later ([why](docs/workarounds.md)), `jq`, `ssh`
+**Requirements:** Terraform 1.16.5 or later, `jq`, `ssh`
 and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
 exoscale `curl` and `openssl` (signed API checks).
 
@@ -258,7 +258,7 @@ disk. See [docs/webui.md](docs/webui.md).
 | `tools/multicluster` | Several clusters from one checkout, imported into a management Rancher ([above](#multi-cluster)). |
 | `make cost PROVIDER=<p> TFVARS="..."` | Cost estimate from tfvars before a deploy; an estimate, not a quote ([tools/cost](tools/cost/README.md)). |
 | `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
-| `tools/orphans/evroc [--adopt]` | Run in `examples/evroc`: lists evroc objects missing from the state and writes `import` blocks for them. `deploy.sh` prints it after a Terraform crash, or runs it when `EVROC_ADOPT_ON_CRASH=1` ([workarounds](docs/workarounds.md)). |
+| `tools/orphans/evroc [--adopt]` | Run in `examples/evroc` (or the cluster directory): lists evroc objects missing from the state, for example after an interrupted apply, and writes `import` blocks for them (`--adopt` writes `imports.tf` directly). |
 | `tools/vultr/passthrough-stock.sh [region ...]` | Vultr GPU passthrough plans in stock per region. Needs `VULTR_API_KEY`, `curl` and `jq`. |
 
 ## Security

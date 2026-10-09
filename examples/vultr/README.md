@@ -8,7 +8,7 @@ it in two passes. Platform notes: [`docs/providers/vultr.md`](../../docs/provide
 
 ## Prerequisites
 
-- Terraform 1.16.4 or later, `jq`, `curl`, `ssh`.
+- Terraform 1.16.5 or later, `jq`, `curl`, `ssh`.
 - A Vultr API key in `vultr_api_key` (for example in `../common-vultr.tfvars`).
   Terraform passes it to the provider and the wait scripts.
 - Two different `openssl passwd -6` hashes: `root_password_hash` and

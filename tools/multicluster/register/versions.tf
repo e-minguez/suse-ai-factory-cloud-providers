@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.16.4"
+  required_version = ">= 1.16.5"
 
   # cluster.sh passes -backend-config=path=... so state lives in clusters/.register/<mgmt>/.
   backend "local" {}

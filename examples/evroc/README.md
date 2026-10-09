@@ -11,8 +11,7 @@ and outputs: [`modules/evroc/README.md`](../../modules/evroc/README.md).
 
 ## Prerequisites
 
-- Terraform 1.16.4 or later; 1.16.4 can crash on some applies, which
-  `deploy.sh` handles ([workarounds](../../docs/workarounds.md)).
+- Terraform 1.16.5 or later.
 - `jq` and `ssh`. `curl` is used by the build-status commands below.
 - `evroc login`, which writes `~/.evroc/config.yaml`. The provider block is
   empty and reads credentials, region and project from that file. `deploy.sh`
@@ -158,7 +157,6 @@ Expect `0 live`. It needs the `evroc` CLI and its login.
 | `cannot deploy a GPU VM in zone "b"` | GPU VMs run in zone `a` only | Pin the pool to `a` or list `a` first in `zones` (the plan checks this) |
 | `Ready: disk is missing DiskImageRef` on a GPU VM | The project still enforces the older GPU boot-disk rule | Ask evroc; set `gpu_pools = {}` meanwhile |
 | Create reports an object already exists, or a 409 survives the retries | An interrupted apply left objects outside state, or the `cluster_name` is used elsewhere | Run `../../tools/orphans/evroc`, review `orphan-imports.tf.proposed`, rename to `imports.tf`, re-run `./deploy.sh`, delete `imports.tf` afterwards. Or change `cluster_name` |
-| `deploy.sh` says Terraform crashed | 1.16.4 panic ([workarounds](../../docs/workarounds.md)) | Do not delete state or destroy. `deploy.sh` prints the `tools/orphans/evroc` steps; with `EVROC_ADOPT_ON_CRASH=1` it adopts the leftovers and retries the pass once |
 | Plan proposes replacing every subnet and node after editing `zones` | The list was reordered | Restore the order; append only |
 | `kubectl` times out right after pass 2 | Backend pool not yet healthy | Wait a minute for RKE2 to listen; check `curl -k https://$(terraform output -raw api_vip):6443/readyz` |
 | Nodes `Ready`, chart installs in `ImagePullBackOff` | Runtime egress blocked | `curl -sSf https://dp.apps.rancher.io/v2/` from a node |

@@ -14,10 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # 1.16.5 fixes the evroc crash (hashicorp/terraform#39283) but is not
-  # released yet. Bump this and drop the crash workaround in
-  # scripts/lib/tf.sh once it ships -- see docs/workarounds.md.
-  TF_VERSION: "1.16.4"
+  TF_VERSION: "1.16.5"
 
 jobs:
   fmt-check:

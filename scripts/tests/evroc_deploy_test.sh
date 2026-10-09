@@ -33,7 +33,7 @@ SH
 chmod +x "$W/bin/terraform" "$W/bin/terraform-fake"
 export PATH="$W/bin:$PATH" HOME="$W/home"
 export FAKE_TF_DIR="$T/fixtures" FAKE_TF_STATE="$W/state" TF_RETRY_SLEEP=0
-unset CI DEPLOY_TTY FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_VERSION FAKE_TF_APPLY_SEQ FAKE_HANDOFF
+unset CI DEPLOY_TTY FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_APPLY_SEQ FAKE_HANDOFF
 
 fail() { echo "FAIL: $*" >&2; echo "--- output:" >&2; cat "$W/out" >&2; echo "--- calls:" >&2; cat "$W/state/calls.log" >&2; exit 1; }
 plans() { grep '^plan ' "$W/state/calls.log" || true; }
