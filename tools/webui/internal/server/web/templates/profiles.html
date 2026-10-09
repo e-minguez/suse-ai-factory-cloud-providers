@@ -1,20 +1,36 @@
 {{define "content"}}
-<h1>Profiles</h1>
-<p>Account credentials per provider. Values are write-only and stored on the volume.</p>
-<ul>
-{{range .Data.Providers}}<li><a href="/profiles/{{.}}">{{.}}</a></li>{{end}}
-</ul>
-<h2>SSH private key for the container</h2>
-<p>Used by kubeconfig download and SSH from this container.
-  {{if .Data.HasSSHKey}}<span class="badge set">stored</span>{{else}}<span class="badge unset">not set</span>{{end}}
-  The key is never shown.</p>
-<form method="post" action="/profiles/sshkey" class="stack" autocomplete="off">
-  <label>
-    <span>OpenSSH private key (write-only)</span>
-    <textarea name="ssh_private_key" rows="8" spellcheck="false" autocomplete="off" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
-    <small>Passphrase-protected keys are rejected.</small>
-  </label>
-  {{if .Data.HasSSHKey}}<label><input type="checkbox" name="replace" value="1"> Replace the existing key</label>{{end}}
-  <button type="submit">Store key</button>
-</form>
+<div class="page-head">
+  <div>
+    <h1>Profiles</h1>
+    <p class="meta">Account credentials per provider. Values are write-only and stored on the volume.</p>
+  </div>
+</div>
+<section class="block">
+  <h2>Providers</h2>
+  <table class="rows">
+    <thead><tr><th>Provider</th><th>Credentials</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Data.Providers}}<tr>
+      <td><a class="row-link" href="/profiles/{{.Provider}}">{{template "provider" .Provider}}</a></td>
+      <td>{{if .Ready}}<span class="badge set">set</span>{{else if .Set}}<span class="badge changed">{{.Set}} of {{.Total}} set</span>{{else}}<span class="badge unset">not set</span>{{end}}</td>
+      <td class="actions"><a href="/profiles/{{.Provider}}">Edit</a></td>
+    </tr>{{end}}
+    </tbody>
+  </table>
+</section>
+<section class="block">
+  <h2>SSH private key for the container</h2>
+  <p class="prose">Used by kubeconfig download and SSH from this container.
+    {{if .Data.HasSSHKey}}<span class="badge set">stored</span>{{else}}<span class="badge unset">not set</span>{{end}}
+    The key is never shown.</p>
+  <form method="post" action="/profiles/sshkey" class="stack" autocomplete="off" data-once>
+    <label>
+      <span>OpenSSH private key (write-only)</span>
+      <textarea name="ssh_private_key" rows="8" spellcheck="false" autocomplete="off" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+      <small>Passphrase-protected keys are rejected.</small>
+    </label>
+    {{if .Data.HasSSHKey}}<label class="check"><input type="checkbox" name="replace" value="1"> Replace the existing key</label>{{end}}
+    <div><button type="submit">Store key</button></div>
+  </form>
+</section>
 {{end}}

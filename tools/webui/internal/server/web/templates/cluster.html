@@ -1,38 +1,64 @@
 {{define "content"}}
-<h1>{{.Data.Cluster.Name}} <span class="status {{.Data.Cluster.Status}}">{{.Data.Cluster.Status}}</span></h1>
-<p>Provider: <strong>{{.Data.Cluster.Provider}}</strong></p>
-<p><a class="button" href="/clusters/{{.Data.Cluster.Name}}/edit">Edit settings</a></p>
+{{with .Data.Cluster}}
+<p class="crumbs"><a href="/">Clusters</a> / {{.Name}}</p>
+<div class="page-head">
+  <div>
+    <h1>{{.Name}} <span class="status {{.Status}}">{{statusLabel .Status}}</span></h1>
+    <p class="meta">{{template "provider" .Provider}}</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="/clusters/{{.Name}}/edit">Edit settings</a>
+    {{if eq .Status "running"}}
+      <a class="button" href="#jobs">View running job</a>
+    {{else}}
+    <form method="post" action="/clusters/{{.Name}}/deploy" data-once><button type="submit">Deploy</button></form>
+    {{end}}
+  </div>
+</div>
 
-<section id="outputs">
+<section id="outputs" class="block">
   <h2>Outputs</h2>
-  <div hx-get="/clusters/{{.Data.Cluster.Name}}/outputs" hx-trigger="load" hx-swap="innerHTML">
-    <p class="muted">Loading.</p>
+  <div hx-get="/clusters/{{.Name}}/outputs" hx-trigger="load" hx-swap="innerHTML">
+    <div class="skeleton" aria-busy="true"><span></span><span></span><span></span><span class="visually-hidden">Loading</span></div>
   </div>
 </section>
 
-<section id="actions">
-  <h2>Actions</h2>
-  {{if eq .Data.Cluster.Status "running"}}
-    <p>A job is running for this cluster. <a href="/clusters/{{.Data.Cluster.Name}}#jobs">See jobs</a>.</p>
-  {{else}}
-  <form method="post" action="/clusters/{{.Data.Cluster.Name}}/deploy" class="inline">
-    <button type="submit">Deploy</button>
-    <label class="check"><input type="checkbox" name="rebuild"> Rebuild the image</label>
-  </form>
-  <form method="post" action="/clusters/{{.Data.Cluster.Name}}/destroy" class="inline">
-    <label>Type <code>{{.Data.Cluster.Name}}</code> to destroy
-      <input name="confirm" autocomplete="off" required pattern="{{.Data.Cluster.Name}}"></label>
-    <button type="submit" class="danger">Destroy</button>
-  </form>
-  <div hx-get="/clusters/{{.Data.Cluster.Name}}/leftovers" hx-trigger="load" hx-swap="innerHTML"></div>
-  {{end}}
+<section id="jobs" class="block">
+  <h2 class="split">Jobs <a href="/clusters/{{.Name}}/logs">Deploy logs</a></h2>
+  <div hx-get="/clusters/{{.Name}}/jobs" hx-trigger="load, every 10s" hx-swap="innerHTML">
+    <div class="skeleton" aria-busy="true"><span></span><span></span><span class="visually-hidden">Loading</span></div>
+  </div>
 </section>
 
-<section id="jobs">
-  <h2>Jobs and logs</h2>
-  <div hx-get="/clusters/{{.Data.Cluster.Name}}/jobs" hx-trigger="load, every 10s" hx-swap="innerHTML">
-    <p class="muted">Loading.</p>
+{{if ne .Status "running"}}
+<section id="actions" class="block">
+  <h2>Other actions</h2>
+  <div class="op">
+    <div class="op-text"><strong>Rebuild the image and deploy</strong>
+      <span class="muted">Builds a new image even when no build input changed. Review the plan for replaced nodes.</span></div>
+    <form method="post" action="/clusters/{{.Name}}/deploy" data-once>
+      <input type="hidden" name="rebuild" value="on">
+      <button type="submit" class="secondary">Rebuild and deploy</button>
+    </form>
   </div>
-  <p><a href="/clusters/{{.Data.Cluster.Name}}/logs">Deploy logs</a></p>
+  <div class="op">
+    <div class="op-text"><strong>Check for leftovers</strong>
+      <span class="muted">Read-only check of the cloud account, for example after a failed destroy.</span></div>
+    <div hx-get="/clusters/{{.Name}}/leftovers" hx-trigger="load" hx-swap="innerHTML"></div>
+  </div>
+  <div class="op danger">
+    <div class="op-text"><strong>Destroy cluster</strong>
+      <span class="muted">Deletes every cloud resource of this cluster; the settings in <code>clusters/</code> are kept. The plan is shown for review before anything is deleted.</span></div>
+    <form method="post" action="/clusters/{{.Name}}/destroy" class="danger-form" data-once
+      data-confirm-title="Destroy {{.Name}}?" data-confirm="This starts a destroy job. The next page shows the plan and asks once more before any resource is deleted." data-confirm-label="Start destroy">
+      <label for="destroy-confirm">Type <code>{{.Name}}</code> to confirm</label>
+      <div class="danger-row">
+        <input id="destroy-confirm" name="confirm" autocomplete="off" spellcheck="false" required pattern="{{.Name}}" data-match="{{.Name}}">
+        <button type="submit" class="danger">Destroy</button>
+      </div>
+    </form>
+  </div>
 </section>
+{{end}}
+{{end}}
 {{end}}

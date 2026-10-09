@@ -66,8 +66,11 @@ func loadTemplates() (*templates, error) {
 			}
 			return "/static/" + n
 		},
-		"since": func(ts time.Time) string { return time.Since(ts).Truncate(time.Second).String() },
-		"query": url.QueryEscape,
+		"since":        func(ts time.Time) string { return time.Since(ts).Truncate(time.Second).String() },
+		"query":        url.QueryEscape,
+		"statusLabel":  statusLabel,
+		"providerName": providerName,
+		"providerLogo": func(p string) bool { return providerLogos[p] },
 	}
 	entries, err := fs.ReadDir(webFS, "web/templates")
 	if err != nil {
@@ -92,6 +95,37 @@ func loadTemplates() (*templates, error) {
 		t.pages[n] = tp
 	}
 	return t, nil
+}
+
+// statusLabels maps cluster, job and pass status values (also used as CSS
+// classes) to the text shown in status pills.
+var statusLabels = map[string]string{
+	"no-state":   "not deployed",
+	"ok":         "finished",
+	"no_changes": "no changes",
+}
+
+func statusLabel(s string) string {
+	if l, ok := statusLabels[s]; ok {
+		return l
+	}
+	return strings.NewReplacer("_", " ", "-", " ").Replace(s)
+}
+
+// providerNames is the brand spelling of each provider; templates keep the
+// lowercase key in URLs and form values.
+var providerNames = map[string]string{
+	"aws": "AWS", "evroc": "evroc", "exoscale": "Exoscale", "vultr": "Vultr",
+}
+
+// providerLogos lists the providers with a symbol in static/providers.svg.
+var providerLogos = map[string]bool{"aws": true, "evroc": true, "exoscale": true, "vultr": true}
+
+func providerName(p string) string {
+	if n, ok := providerNames[p]; ok {
+		return n
+	}
+	return p
 }
 
 // render writes the named page (file name, e.g. "clusters.html") inside

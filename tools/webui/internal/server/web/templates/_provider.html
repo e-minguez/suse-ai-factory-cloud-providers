@@ -1,0 +1,3 @@
+{{/* Template "provider": logo and brand name. Data: the provider key (string).
+Providers without a symbol in providers.svg get a blank slot so names align. */}}
+{{define "provider"}}<span class="provider">{{if providerLogo .}}<svg class="plogo {{.}}" aria-hidden="true" focusable="false"><use href="{{asset "providers.svg"}}#{{.}}"/></svg>{{else}}<span class="plogo" aria-hidden="true"></span>{{end}}<span class="pname">{{providerName .}}</span></span>{{end}}

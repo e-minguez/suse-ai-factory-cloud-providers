@@ -2,7 +2,7 @@
 
 ## Status
 Accepted. The web UI is alpha (version in `tools/webui/VERSION`, currently
-`alpha-0.0.1`): interfaces and the volume layout may change between releases.
+`alpha-0.0.2`): interfaces and the volume layout may change between releases.
 
 ## Context
 Deploying needs Terraform, the provider plugins, `jq`, `ssh`, `openssl` and
@@ -66,7 +66,7 @@ answer when the user clicks Apply or Abort. `--yes` still skips the step.
 Fields come from `examples/<p>/variables.tf` (types, defaults, descriptions)
 and `tools/webui/ui.yaml` (basic list, groups, managed variables, labels,
 widgets). A basic form covers what a first deploy needs; the rest is under
-"Show advanced settings". Variables managed by the modules (`image_rebuild`,
+"Advanced settings". Variables managed by the modules (`image_rebuild`,
 `cp_initialized`, ...) are never shown. Tests require that every variable
 without a default is basic or a credential and that every name in `ui.yaml`
 exists. Only changed values are written, so defaults stay with the module.

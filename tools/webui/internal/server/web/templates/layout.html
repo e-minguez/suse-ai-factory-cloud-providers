@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false}'>
 <title>{{.Title}} - {{.Product}}</title>
+<script src="{{asset "prefs.js"}}"></script>
+<link rel="icon" href="{{asset "favicon.svg"}}" type="image/svg+xml">
 <link rel="stylesheet" href="{{asset "app.css"}}">
 <script src="{{asset "htmx.min.js"}}" defer></script>
 <script src="{{asset "sse.js"}}" defer></script>
@@ -12,21 +14,30 @@
 {{block "head" .}}{{end}}
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
-  <a class="brand" href="/">{{.Product}} <span class="tag alpha">alpha</span> <span class="tag">community</span></a>
-  <nav>
-    <a href="/"{{if eq .Nav "clusters"}} class="active"{{end}}>Clusters</a>
-    <a href="/clusters/new"{{if eq .Nav "new"}} class="active"{{end}}>New cluster</a>
-    <a href="/profiles"{{if eq .Nav "profiles"}} class="active"{{end}}>Profiles</a>
-    {{block "nav" .}}{{end}}
-  </nav>
+  <div class="top-inner">
+    <a class="brand" href="/">{{.Product}} <span class="tag alpha">alpha</span></a>
+    <nav aria-label="Main">
+      <a href="/"{{if eq .Nav "clusters"}} aria-current="page"{{end}}>Clusters</a>
+      <a href="/profiles"{{if eq .Nav "profiles"}} aria-current="page"{{end}}>Profiles</a>
+      {{block "nav" .}}{{end}}
+    </nav>
+    <label class="theme" id="theme" hidden><span class="visually-hidden">Colour theme</span>
+      <select>
+        <option value="system">Auto</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
+  </div>
 </header>
-<div class="alpha-banner" role="note"><strong>Alpha ({{.Version}}).</strong> Expect bugs and breaking changes between releases. Use test accounts and review every plan before applying it.</div>
-<main>
+<div class="alpha-banner" role="note"><div><strong>Alpha ({{.Version}}).</strong> Expect bugs and breaking changes between releases. Use test accounts and review every plan before applying it.</div></div>
+<main id="main" tabindex="-1">
 {{if .Flash}}<div class="flash ok" role="status">{{.Flash}}</div>{{end}}
 {{if .Err}}<div class="flash err" role="alert">{{.Err}}</div>{{end}}
 {{block "content" .}}{{end}}
 </main>
-<footer>{{.Product}} {{.Version}} (alpha). {{.Footer}}</footer>
+<footer><div>{{.Product}} {{.Version}} (alpha). {{.Footer}}</div></footer>
 </body>
 </html>{{end}}

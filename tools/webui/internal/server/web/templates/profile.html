@@ -1,7 +1,12 @@
 {{define "content"}}
-<h1>Profile: {{.Data.Provider}}</h1>
-<p class="muted">Stored values are never shown. Leave a field empty to keep the stored value.</p>
-<form method="post" action="/profiles/{{.Data.Provider}}" class="stack" autocomplete="off">
+<p class="crumbs"><a href="/profiles">Profiles</a> / {{providerName .Data.Provider}}</p>
+<div class="page-head">
+  <div>
+    <h1>Profile: {{template "provider" .Data.Provider}}</h1>
+    <p class="meta">Stored values are never shown. Leave a field empty to keep the stored value.</p>
+  </div>
+</div>
+<form method="post" action="/profiles/{{.Data.Provider}}" class="stack" autocomplete="off" data-once>
   {{range .Data.Fields}}
   <label>
     <span>{{.Label}} {{if index $.Data.Status .Name}}<span class="badge set">set</span>{{else}}<span class="badge unset">not set</span>{{end}}</span>
@@ -10,7 +15,6 @@
     <small>{{.Help}}</small>
   </label>
   {{end}}
-  <button type="submit">Save</button>
+  <div class="actions"><button type="submit">Save</button> <a href="/profiles">Cancel</a></div>
 </form>
-<p><a href="/profiles">All profiles</a></p>
 {{end}}

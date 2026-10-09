@@ -1,8 +1,8 @@
 {{/* Template "cost": live estimate fragment. Data: {Report *costReport | Error string}. */}}
-{{define "cost"}}
+{{define "cost"}}{{if not .Report}}<h3>Estimate</h3>{{end}}
 {{if .Error}}<p class="muted">{{.Error}}</p>{{end}}
 {{with .Report}}{{$r := .}}
-<h3>Estimate <small class="muted">{{.Provider}}{{if .Region}}, {{.Region}}{{end}}, {{.Currency}}</small></h3>
+<h3>Estimate <small class="muted">{{providerName .Provider}}{{if .Region}}, {{.Region}}{{end}}, {{.Currency}}</small></h3>
 <table class="cost">
   <thead><tr><th></th>{{range .Durations}}<th class="num">{{.}}</th>{{end}}</tr></thead>
   <tbody>
