@@ -23,24 +23,6 @@ DEPLOY_PASS_TOTAL=3
 # TEMPORARY (docs/workarounds.md): load-balancer writes can return 409; retry the pass.
 tf_retry_on 'API error \(409\)' 3 "load-balancer conflict (409)"
 
-# TEMPORARY (docs/workarounds.md, Terraform 1.16.4 crash): with EVROC_ADOPT_ON_CRASH=1, adopt
-# objects a crashed apply left out of state; otherwise print how to find them.
-deploy_on_crash() {
-  local pass=$1 ready=true a
-  local -a args=()
-  [ "$pass" != "Build image" ] || ready=false
-  if [ "${EVROC_ADOPT_ON_CRASH:-0}" != 1 ]; then
-    echo "       List them: $DEPLOY_ROOT/tools/orphans/evroc -- -var=image_ready=$ready"
-    echo "       Review orphan-imports.tf.proposed, rename it to imports.tf, re-run deploy.sh and"
-    echo "       delete imports.tf afterwards. EVROC_ADOPT_ON_CRASH=1 does this on a crash unattended."
-    return 1
-  fi
-  for a in ${DEPLOY_TF_ARGS[@]+"${DEPLOY_TF_ARGS[@]}"}; do
-    [ "$a" = -auto-approve ] || args+=("$a")
-  done
-  "$DEPLOY_ROOT/tools/orphans/evroc" --adopt -- -var=image_ready=$ready ${args[@]+"${args[@]}"}
-}
-
 deploy_precheck() {
   [ -f "$HOME/.evroc/config.yaml" ] || deploy_die "$HOME/.evroc/config.yaml not found; run: evroc login"
 }

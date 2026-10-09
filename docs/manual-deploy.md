@@ -181,20 +181,16 @@ printf '{\n  "image_ready": true\n}\n' > pass2.auto.tfvars.json
 Never apply with `image_ready=false` here unless a new image is intended: it
 destroys the snapshots.
 
-### Retries and crash recovery
+### Retries and recovery
 
 - `deploy.sh` tries a pass up to 3 times when the apply fails with
   `API error (409)` (concurrent load balancer writes). By hand: run the same
   plan/apply again.
-- On a Terraform 1.16.4 crash
-  ([hashicorp/terraform#39283](https://github.com/hashicorp/terraform/issues/39283))
-  resources created during the crashed apply are missing from state.
-  `deploy.sh` prints the `tools/orphans/evroc -- -var=image_ready=<pass value>`
-  command (it adds the var files itself), which writes
-  `orphan-imports.tf.proposed` with import blocks for them; review it, rename
-  it to `imports.tf`, retry the pass and delete `imports.tf` afterwards. With
-  `EVROC_ADOPT_ON_CRASH=1`, `deploy.sh` runs it with `--adopt` (writes
-  `imports.tf` directly) and retries the pass once.
+- After an interrupted apply, resources it created can be missing from state.
+  `tools/orphans/evroc -- -var=image_ready=<pass value>` (adds the var files itself)
+  writes `orphan-imports.tf.proposed` with import blocks for them; review it,
+  rename it to `imports.tf`, retry the pass and delete `imports.tf` afterwards.
+  `--adopt` writes `imports.tf` directly.
 
 `deploy.sh` also requires `~/.evroc/config.yaml` (`evroc login`).
 

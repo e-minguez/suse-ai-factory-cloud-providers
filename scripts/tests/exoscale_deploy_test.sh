@@ -13,7 +13,7 @@ cp "$T/fake-terraform-deploy.sh" "$W/bin/terraform"
 chmod +x "$W/bin/terraform"
 export PATH="$W/bin:$PATH"
 export FAKE_TF_DIR="$T/fixtures" FAKE_TF_STATE="$W/state" TF_RETRY_SLEEP=0
-unset CI DEPLOY_TTY FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_VERSION FAKE_TF_APPLY_SEQ FAKE_TF_STATE_LIST
+unset CI DEPLOY_TTY FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_APPLY_SEQ FAKE_TF_STATE_LIST
 
 fail() { echo "FAIL: $*" >&2; cat "$W/out" >&2 || true; exit 1; }
 

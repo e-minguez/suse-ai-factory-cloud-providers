@@ -3,7 +3,6 @@
 #
 #   tf_pass <name> [terraform plan args...]   never returns on failure (exits)
 #   tf_retry_on <ERE> [max_attempts] [note]   retry a failed apply when the log matches
-#   deploy_on_crash <pass> <log>              optional hook, see tf__crash
 #   TF_PLAN_HOOK=<fn>                         optional: called as <fn> <plan.json> after each plan;
 #                                             returns 1 after changing inputs to have the plan redone
 #
@@ -19,7 +18,6 @@ TF_PASS_INDEX=0
 TF_RETRY_RE=()
 TF_RETRY_MAX=()
 TF_RETRY_NOTE=()
-TF_CRASH_RETRIED=0
 TF__FIFO_DIR=""
 TF_PASS_OPEN=0
 TF_PASS_T0=0
@@ -268,35 +266,6 @@ tf__confirm() {
   return 1
 }
 
-tf__version_note() {
-  local v
-  v=$(terraform version -json 2>/dev/null | jq -r '.terraform_version // empty' 2>/dev/null) || v=""
-  # TEMPORARY WORKAROUND (docs/workarounds.md, Terraform crash): remove with 1.16.5.
-  if [ "$v" = 1.16.4 ]; then
-    echo "note: Terraform 1.16.4 can crash while applying (hashicorp/terraform#39283); 1.16.5 or later is not affected."
-  fi
-}
-
-# TEMPORARY WORKAROUND (docs/workarounds.md, Terraform crash): remove with 1.16.5.
-# Returns 0 to retry once: only when deploy_on_crash <pass> <log>, if defined, reconciled the
-# state (a crash can leave created objects out of it) and returned 0. Returns 1 to stop.
-tf__crash() {
-  local pass=$1 log=$2
-  grep -q 'TERRAFORM CRASH' "$log" || return 1
-  echo
-  echo "ERROR: $pass: Terraform crashed (hashicorp/terraform#39283, fixed in 1.16.5)."
-  echo "       Objects created during this apply may be missing from the state while they"
-  echo "       still exist in the cloud project. Do not delete the state and do not rely on"
-  echo "       'terraform destroy' now: it only sees what is in state."
-  if [ "$TF_CRASH_RETRIED" = 0 ] && declare -F deploy_on_crash >/dev/null && deploy_on_crash "$pass" "$log"; then
-    TF_CRASH_RETRIED=1
-    echo "       State reconciled by deploy_on_crash; retrying once."
-    return 0
-  fi
-  echo "       Re-run deploy.sh; upgrade Terraform to 1.16.5 or later if the trace mentions 'ObjectStatus(0)'."
-  return 1
-}
-
 # TEMPORARY WORKAROUND (docs/workarounds.md, retry on pattern; evroc 409 on load-balancer writes):
 # register an ERE. A failed apply whose log matches is re-planned and re-applied (asking again
 # only if the new plan deletes something) up to max_attempts total attempts. Other failures stop.
@@ -346,7 +315,6 @@ tf_pass() {
   quiet=0
   [ "$mode" = quiet ] && quiet=1
   TF_PASS_INDEX=$((TF_PASS_INDEX + 1))
-  TF_CRASH_RETRIED=0
   TF_INT=""
 
   tf__logdir
@@ -463,13 +431,6 @@ tf_pass() {
       return 0
     fi
     [ -z "${TF_INT:-}" ] || { TF_ABORTED=1; tf__fail "$name: interrupted" "$rc" "$applylog"; }
-    if tf__crash "$name" "$applylog"; then
-      attempt=$((attempt + 1))
-      continue
-    fi
-    if grep -q 'TERRAFORM CRASH' "$applylog"; then
-      tf__fail "$name: apply" "$rc" "$applylog"
-    fi
     if tf__retry_match "$applylog" "$attempt"; then
       attempt=$((attempt + 1))
       sleep "${TF_RETRY_SLEEP:-5}"

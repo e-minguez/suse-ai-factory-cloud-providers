@@ -15,7 +15,7 @@ cp "$T/fake-terraform-deploy.sh" "$W/bin/terraform"
 chmod +x "$W/bin/terraform"
 export PATH="$W/bin:$PATH"
 export FAKE_TF_DIR="$T/fixtures" FAKE_TF_STATE="$W/state" TF_RETRY_SLEEP=0
-unset CI DEPLOY_TTY FAKE_TF_IMAGE FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_PLAN_WARN FAKE_TF_VERSION FAKE_TF_APPLY_SEQ
+unset CI DEPLOY_TTY FAKE_TF_IMAGE FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_PLAN_WARN FAKE_TF_APPLY_SEQ
 
 cat >"$EX/deploy.sh" <<SH
 #!/usr/bin/env bash
@@ -25,7 +25,6 @@ DEPLOY_PROVIDER=p
 DEPLOY_PASS_TOTAL=2
 . "$LIB/deploy-common.sh"
 [ -z "\${TEST_RETRY:-}" ] || tf_retry_on 'API error \(409\)' 3 "load-balancer conflict"
-if [ -n "\${TEST_CRASH_HOOK:-}" ]; then deploy_on_crash() { echo "hook ran: \$1"; return 0; }; fi
 deploy_passes() {
   tf_pass "Build image" -target=module.ai_factory.module.image -var=deploy_nodes=false
   tf_pass "Create nodes"
@@ -40,7 +39,7 @@ calls() { grep -c "^$1" "$W/state/calls.log" || true; }
 reset() {
   rm -rf "$EX/.deploy" "$EX/.terraform" "$EX/rebuild.auto.tfvars.json" "$W/state"/* "$W"/repo/*.tfvars "$W"/repo/examples/*.tfvars "$EX"/*.tfvars
   : >"$W/state/calls.log"
-  unset TEST_RETRY TEST_CRASH_HOOK FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_PLAN_WARN FAKE_TF_VERSION FAKE_TF_APPLY_SEQ DEPLOY_TTY
+  unset TEST_RETRY FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_PLAN_WARN FAKE_TF_APPLY_SEQ DEPLOY_TTY
 }
 # run_deploy [--in TEXT] args...: sets OUT and RC, keeps the raw output in $W/out.
 run_deploy() {
@@ -115,19 +114,6 @@ has "$OUT" "still failing after 3 attempts"
 reset
 FAKE_TF_APPLY_SEQ="apply-409.jsonl:1" run_deploy --yes
 [ "$(calls apply)" -eq 1 ] || fail "retried without registered pattern"
-
-# --- crash
-reset
-FAKE_TF_APPLY_SEQ="apply-crash.jsonl:1" run_deploy --yes
-[ "$RC" -ne 0 ] || fail "crash accepted"
-[ "$(calls apply)" -eq 1 ] || fail "crash retried without hook"
-reset
-TEST_CRASH_HOOK=1 FAKE_TF_APPLY_SEQ="apply-crash.jsonl:1 apply-ok.jsonl:0 apply-ok.jsonl:0" run_deploy --yes
-[ "$RC" -eq 0 ] || fail "crash hook rc=$RC"
-has "$OUT" "hook ran: Build image"
-reset
-FAKE_TF_VERSION=1.16.4 run_deploy --yes
-has "$OUT" "1.16.4"
 
 # --- destroy
 reset

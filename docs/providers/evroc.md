@@ -12,7 +12,7 @@ what happens when those two properties meet evroc.
 
 Provider: [`evroc-oss/evroc`](https://registry.terraform.io/providers/evroc-oss/evroc),
 `~> 0.9.4`. Attribute names are from that schema. Workarounds tied to upstream
-defects (Terraform crash, load-balancer 409 retry, beta OS image, GPU driver
+defects (load-balancer 409 retry, beta OS image, GPU driver
 override) are listed in [workarounds.md](../workarounds.md) and not repeated here.
 
 ## Passes

@@ -1,6 +1,5 @@
 terraform {
-  # 1.16.4 crashes on some plans; raise to 1.16.5 once released (docs/workarounds.md).
-  required_version = ">= 1.16.4"
+  required_version = ">= 1.16.5"
 
   required_providers {
     # 0.9.4 is the first release where evroc_loadbalancer accepts backend_network.
