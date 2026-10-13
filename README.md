@@ -73,8 +73,9 @@ and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
 exoscale `curl` and `openssl` (signed API checks).
 
 **1. Shared values.** Copy `common-all.tfvars.example` to `common-all.tfvars` at
-the repo root and fill in what every cluster shares: admin CIDRs, SSH keys,
-password hashes, registry credentials, `aif_release`.
+the repo root and fill in what every cluster shares: admin CIDRs, SSH keys
+(no key yet? see [docs/ssh-keys.md](docs/ssh-keys.md)), password hashes,
+registry credentials, `aif_release`.
 
 **2. Cluster values.** Pick a provider and set the cluster-specific values:
 

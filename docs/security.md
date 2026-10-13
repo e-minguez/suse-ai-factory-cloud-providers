@@ -48,6 +48,8 @@ meant to be tracked. `.deploy/` logs can contain sensitive values.
   in a file you choose. No host keys are managed by Terraform, nothing is
   written to the operator's `~/.ssh`, and no script uses
   `StrictHostKeyChecking=no`.
+- Creating and protecting the SSH key pair you list in `ssh_authorized_keys`:
+  [ssh-keys.md](ssh-keys.md).
 
 ## Network exposure
 

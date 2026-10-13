@@ -21,7 +21,8 @@
 admin_cidrs = ["REPLACE-ME/32"]
 
 # At least one public key, injected onto node_username on every node (and
-# onto root only if permit_root_ssh is true).
+# onto root only if permit_root_ssh is true). Public key only (the .pub file);
+# to create one see docs/ssh-keys.md.
 ssh_authorized_keys = ["REPLACE-ME-ssh-ed25519-OR-ssh-rsa-PUBLIC-KEY"]
 
 # Generate both with: openssl passwd -6
