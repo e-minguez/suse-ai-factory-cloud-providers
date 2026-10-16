@@ -335,7 +335,7 @@ run_deploy --yes
 plain=$OUT
 reset
 run_events --yes
-[ "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' <<<"$plain")" = "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' <<<"$OUT")" ] ||
+[ "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//; s/Total time .*//' <<<"$plain")" = "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//; s/Total time .*//' <<<"$OUT")" ] ||
   fail "events: rendering differs"
 
 # confirmation via the fd, no TTY
@@ -391,7 +391,7 @@ reset
 RC=0
 (cd "$EX" && DEPLOY_EVENTS_FD=9 bash ./deploy.sh --yes </dev/null) >"$W/out" 2>&1 || RC=$?
 [ "$RC" -eq 0 ] || fail "bad events fd: rc=$RC"
-[ "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' <<<"$plain")" = "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//' "$W/out")" ] ||
+[ "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//; s/Total time .*//' <<<"$plain")" = "$(sed 's/in [0-9]*s/in Ns/; s/([0-9]*:[0-9]*)/(T)/; s/Logs .*//; s/Total time .*//' "$W/out")" ] ||
   fail "bad events fd: rendering differs"
 ls "$TMPDIR"/tf-events.* >/dev/null 2>&1 && fail "bad events fd: fifo left behind"
 # CONFIRM_FD without events, no TTY

@@ -147,6 +147,14 @@ TF_JQ_EVENTS='
 
 tf__say() { [ "${DEPLOY_VERBOSITY:-normal}" = quiet ] || printf '%s\n' "$*"; }
 
+# Seconds as "45s", "12m 3s" or "1h 4m".
+tf__fmt_duration() {
+  local s=$1
+  if [ "$s" -ge 3600 ]; then printf '%dh %dm' $((s / 3600)) $((s % 3600 / 60))
+  elif [ "$s" -ge 60 ]; then printf '%dm %ds' $((s / 60)) $((s % 60))
+  else printf '%ds' "$s"; fi
+}
+
 tf__logdir() {
   if [ -z "${DEPLOY_LOG_DIR:-}" ]; then
     # Absolute, so the printed log paths work from any directory.
@@ -423,7 +431,7 @@ tf_pass() {
     rm -f "$plan"
 
     if [ "$rc" -eq 0 ]; then
-      tf__say "    done in $(($(date +%s) - t0))s"
+      tf__say "    done in $(tf__fmt_duration $(($(date +%s) - t0)))"
       # shellcheck disable=SC2016 # jq program, not shell
       tf__event pass_done '{index: $i, status: "ok", duration_s: $d}' \
         --argjson i "$TF_PASS_INDEX" --argjson d "$(($(date +%s) - t0))"

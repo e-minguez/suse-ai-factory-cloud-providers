@@ -243,6 +243,12 @@ deploy_print_next_steps() {
   fi
 }
 
+# Wall-clock time since deploy_main started, as the last summary line.
+deploy_print_total_time() {
+  [ -n "${DEPLOY_START:-}" ] || return 0
+  echo "Total time     : $(tf__fmt_duration $(($(date +%s) - DEPLOY_START)))"
+}
+
 # EXIT trap: remove plan files, then emit the final `done` event (when DEPLOY_EVENTS_FD is set).
 deploy__exit() {
   local rc=$?
@@ -252,6 +258,7 @@ deploy__exit() {
 }
 
 deploy_main() {
+  DEPLOY_START=$(date +%s)
   [ -n "${DEPLOY_PROVIDER:-}" ] || deploy_die "DEPLOY_PROVIDER is not set"
   deploy_parse_args "$@"
   deploy_detect_tty
@@ -286,6 +293,7 @@ deploy_main() {
       echo
       echo "Logs           : $DEPLOY_LOG_DIR/"
     fi
+    deploy_print_total_time
     return 0
   fi
 
@@ -293,4 +301,5 @@ deploy_main() {
   if [ "$DEPLOY_REBUILD" = 1 ]; then deploy_bump_rebuild; else deploy_keep_rebuild; fi
   deploy_passes
   deploy_print_next_steps
+  deploy_print_total_time
 }
