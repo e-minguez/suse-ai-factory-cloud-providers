@@ -36,6 +36,7 @@ module "ai_factory" {
   image_rebuild              = var.image_rebuild
   aif_release                = var.aif_release
   rancher_hostname           = var.rancher_hostname
+  ingress_domain             = var.ingress_domain
   rancher_bootstrap_password = var.rancher_bootstrap_password
   appco_username             = var.appco_username
   appco_password             = var.appco_password

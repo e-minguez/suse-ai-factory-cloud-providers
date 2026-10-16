@@ -283,6 +283,9 @@ and the cluster uses `apiVIPMode: external` (no MetalLB or kube-vip). RKE2
 servers retry the 9345 registration until it answers, so the backend pool can
 fill after the VMs exist.
 
+With `ingress_domain`, create `*.<domain>` as an A record to the VIP; the API
+keeps its own name.
+
 ## Jumphost
 
 `data.evroc_disk_images.this.opensuse_15_6_1` (openSUSE Leap 15.6, python 3.6):

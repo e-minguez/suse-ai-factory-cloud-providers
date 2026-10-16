@@ -38,6 +38,7 @@ module "ai_factory" {
   nvidia_api_key             = var.nvidia_api_key
   nvidia_username            = var.nvidia_username
   rancher_hostname           = var.rancher_hostname
+  ingress_domain             = var.ingress_domain
   rancher_bootstrap_password = var.rancher_bootstrap_password
 
   vultr_api_key = var.vultr_api_key

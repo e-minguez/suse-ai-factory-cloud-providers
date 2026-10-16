@@ -82,6 +82,8 @@ cluster). The backends are then detached until pass 2. A missing or reset
   module ignores changes to that one attribute.
 - sslip.io names work for Rancher and the API: `rancher-<ingress-ip>.sslip.io`,
   `rke2-<api-ip>.sslip.io`.
+- With `ingress_domain`, create `*.<domain>` as an A record to the ingress IP;
+  the API keeps its own name.
 
 ## Labels
 

@@ -198,6 +198,11 @@ names that resolve to the load balancer. `api_host` goes into the RKE2 API
 certificate (`network.apiHost`); aws also adds both load balancer names and the
 API VIP as `tls-san`.
 
+Alternatively set `ingress_domain` and create one wildcard record `*.<domain>`
+(CNAME to the NLB DNS name on aws, A record to the ingress IP elsewhere):
+Rancher becomes `rancher.<domain>`. An explicit `rancher_hostname` wins;
+`api_host` is not affected.
+
 ### Single-node clusters
 
 `control_plane_count = 1` deploys one control-plane node and keeps everything

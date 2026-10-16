@@ -611,3 +611,30 @@ run "api_cidrs_restrict_public_kube_api" {
     error_message = "The public NLB must admit 6443 from api_cidrs only."
   }
 }
+
+run "ingress_domain_rancher_hostname" {
+  command = apply
+
+  variables {
+    rancher_hostname = null
+    ingress_domain   = "aif.example.com"
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.aif.example.com" && output.rancher_url == "https://rancher.aif.example.com"
+    error_message = "ingress_domain must set the Rancher hostname to rancher.<domain>."
+  }
+}
+
+run "ingress_domain_unset_keeps_nlb_dns_name" {
+  command = apply
+
+  variables {
+    rancher_hostname = null
+  }
+
+  assert {
+    condition     = output.rancher_hostname == aws_lb.public.dns_name
+    error_message = "Without ingress_domain the Rancher hostname stays the NLB DNS name."
+  }
+}

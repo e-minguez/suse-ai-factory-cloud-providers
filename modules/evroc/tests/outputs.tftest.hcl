@@ -561,3 +561,45 @@ run "api_cidrs_restrict_kube_api" {
     error_message = "With api_cidrs narrowed, the kube_api health check must target 9345."
   }
 }
+
+run "ingress_domain_rancher_hostname" {
+  command = plan
+
+  variables {
+    rancher_hostname = null
+    ingress_domain   = "aif.example.com"
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.aif.example.com" && output.rancher_url == "https://rancher.aif.example.com"
+    error_message = "ingress_domain must set the Rancher hostname to rancher.<domain>."
+  }
+}
+
+run "explicit_rancher_hostname_beats_ingress_domain" {
+  command = plan
+
+  variables {
+    rancher_hostname = "rancher.example.com"
+    ingress_domain   = "aif.example.com"
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.example.com"
+    error_message = "An explicit rancher_hostname must win over ingress_domain."
+  }
+}
+
+run "rancher_hostname_default_sslip" {
+  command = plan
+
+  variables {
+    rancher_hostname = null
+  }
+
+  assert {
+    condition     = output.rancher_hostname == null || endswith(output.rancher_hostname, ".sslip.io") || !can(tostring(output.rancher_hostname))
+    error_message = "Without ingress_domain the Rancher hostname must keep the sslip.io default."
+  }
+}
+

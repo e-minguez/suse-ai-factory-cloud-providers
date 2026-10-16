@@ -71,7 +71,7 @@ locals {
   admin_api_host = coalesce(var.api_host, aws_lb.public.dns_name)
 
   # Null rancher_hostname falls back to the public NLB DNS name.
-  rancher_hostname = coalesce(var.rancher_hostname, aws_lb.public.dns_name)
+  rancher_hostname = coalesce(var.rancher_hostname, var.ingress_domain == null ? null : "rancher.${var.ingress_domain}", aws_lb.public.dns_name)
 }
 
 # Node model: identity, placement and address.

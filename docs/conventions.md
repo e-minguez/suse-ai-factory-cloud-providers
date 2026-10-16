@@ -113,7 +113,7 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 | `api_host` | string | DNS name of the API for kubectl |
 | `api_vip` | string | address baked into the nodes as `network.apiVIP` |
 | `ingress_endpoint` | string or null | `https://...` of the ingress; null with `ingress_controller = "none"` |
-| `rancher_url`, `rancher_hostname` | string or null | null when `rancher` is not in `components` |
+| `rancher_url`, `rancher_hostname` | string or null | null when `rancher` is not in `components`; hostname precedence: `rancher_hostname`, `ingress_domain` (`rancher.<domain>`), provider default |
 | `rancher_bootstrap_password` | string, sensitive | null without Rancher |
 | `jumphost` | object | `{ public_ip, private_ip, ssh_user }`; IPs are null when `image_id` is set and no jumphost exists |
 | `nodes` | map(object) | key = hostname; `{ role, pool, init, zone, private_ip, public_ip, instance_type, id, ssh_user }`; `role` is `control_plane`, `worker` or `gpu`; `ssh_user` is `node_username` |

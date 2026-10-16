@@ -548,3 +548,32 @@ run "api_cidrs_restrict_kube_api" {
     error_message = "The API load balancer must admit 6443 from api_cidrs only."
   }
 }
+
+run "ingress_domain_rancher_hostname" {
+  command = plan
+
+  variables {
+    rancher_hostname = null
+    ingress_domain   = "aif.example.com"
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.aif.example.com" && output.rancher_url == "https://rancher.aif.example.com"
+    error_message = "ingress_domain must set the Rancher hostname to rancher.<domain>."
+  }
+}
+
+run "explicit_rancher_hostname_beats_ingress_domain" {
+  command = plan
+
+  variables {
+    rancher_hostname = "rancher.example.com"
+    ingress_domain   = "aif.example.com"
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.example.com"
+    error_message = "An explicit rancher_hostname must win over ingress_domain."
+  }
+}
+

@@ -82,5 +82,6 @@ module "ai_factory" {
   gpu_driver_version     = var.gpu_driver_version
 
   rancher_hostname           = var.rancher_hostname
+  ingress_domain             = var.ingress_domain
   rancher_bootstrap_password = var.rancher_bootstrap_password
 }

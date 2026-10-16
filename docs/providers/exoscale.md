@@ -130,7 +130,8 @@ closes it again.
 - One NLB carries 6443 and 9345 (TCP checks) and the ingress listeners 80/443
   (Traefik: HTTP `/ping` on 8080). The NLB address is in the image (`apiVIP`,
   `api_host`, Rancher hostname); `rancher_hostname` and `api_host` default to
-  `sslip.io` names on it.
+  `sslip.io` names on it. With `ingress_domain`, create `*.<domain>` as an A
+  record to it; the API keeps its own name.
 - The NLB keeps the client address and returns traffic directly from the
   member's public interface (documented), so members need a public IPv4 and
   the control plane security group admits the clients themselves.

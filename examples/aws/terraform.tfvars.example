@@ -35,6 +35,7 @@ ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
 # Hostname of the Rancher ingress. A DNS name that points at the public NLB;
 # the NLB's own DNS name is used when null.
 # rancher_hostname = null
+# ingress_domain             = "aif.example.com"  # *.<domain> -> ingress; Rancher becomes rancher.<domain>
 # rancher_bootstrap_password = null  # generated when null
 # api_host                   = null  # NLB DNS names when null
 

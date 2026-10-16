@@ -195,6 +195,17 @@ variable "rancher_hostname" {
   description = "Rancher hostname. Null derives rancher-<ingress IP>.sslip.io."
 }
 
+variable "ingress_domain" {
+  type        = string
+  default     = null
+  description = "A domain with a wildcard DNS record (`*.<domain>`) pointing at the ingress: a CNAME to the load balancer DNS name on aws, an A record to the ingress IP elsewhere. The Rancher hostname becomes rancher.<domain>; null keeps the default."
+
+  validation {
+    condition     = var.ingress_domain == null || can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$", var.ingress_domain))
+    error_message = "ingress_domain must be a lowercase DNS name without scheme, leading \"*.\" or trailing dot."
+  }
+}
+
 variable "rancher_bootstrap_password" {
   type        = string
   default     = null

@@ -96,6 +96,7 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 # suse_storage_nodes = ["control_plane"]  # roles (control_plane, worker, gpu) and/or pool keys; 3+ nodes
 
 # rancher_hostname           = null  # defaults to "rancher-<ingress IP>.sslip.io"
+# ingress_domain             = "aif.example.com"  # *.<domain> -> ingress; Rancher becomes rancher.<domain>
 # rancher_bootstrap_password = null  # defaults to a generated password
 # api_cidrs                  = ["0.0.0.0/0"]  # who may reach the Kubernetes API on 6443
 # ingress_cidrs              = ["0.0.0.0/0"]  # who may reach the ingress on 80/443

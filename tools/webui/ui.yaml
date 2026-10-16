@@ -29,6 +29,7 @@ common:
       - {name: ingress_cidrs, widget: cidr_list}
       - api_host
       - rancher_hostname
+      - ingress_domain
     Nodes:
       - control_plane_count
       - control_plane_instance_type

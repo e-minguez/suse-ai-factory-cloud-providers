@@ -321,6 +321,9 @@ pool's `disk_size_gb` (default 200).
   `api_host` to use your own DNS names. Nodes always reach the API through the
   internal NLB (`provider_details.internal_api_host`); `api_host` also
   replaces the public NLB name in the `api_host` output and the kubeconfig.
+- With `ingress_domain`, create `*.<domain>` as a CNAME to the public NLB DNS
+  name; Rancher then uses `rancher.<domain>`. The API keeps its own name
+  (`api_host`).
 
 ## Cost estimate
 

@@ -181,6 +181,7 @@ control_plane_public_ip = false
 # ingress_cidrs = ["0.0.0.0/0"]   # who may reach the ingress listeners (80/443)
 
 # rancher_hostname           = null  # defaults to "rancher-<api_vip>.sslip.io"
+# ingress_domain             = "aif.example.com"  # *.<domain> -> ingress; Rancher becomes rancher.<domain>
 # rancher_bootstrap_password = null  # defaults to a generated password
 # api_host                   = null  # defaults to "rke2-<api_vip>.sslip.io", added to the
                                       # API server certificate's SANs

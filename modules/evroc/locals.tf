@@ -74,7 +74,7 @@ locals {
 
   # Rancher's ingress and the Kubernetes API share the load balancer's one
   # public IP (loadbalancer.tf).
-  rancher_hostname = coalesce(var.rancher_hostname, "rancher-${local.api_vip}.sslip.io")
+  rancher_hostname = coalesce(var.rancher_hostname, var.ingress_domain == null ? null : "rancher.${var.ingress_domain}", "rancher-${local.api_vip}.sslip.io")
 }
 
 # Queried live so the jumphost image tracks what evroc offers. Leap 15.6 is the

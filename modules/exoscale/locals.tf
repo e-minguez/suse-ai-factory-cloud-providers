@@ -65,7 +65,7 @@ locals {
 
   # Rancher answers on the NLB's ingress services; without an ingress controller
   # the chart still needs a hostname, so the same address is used.
-  rancher_hostname = coalesce(var.rancher_hostname, "rancher-${local.api_vip}.sslip.io")
+  rancher_hostname = coalesce(var.rancher_hostname, var.ingress_domain == null ? null : "rancher.${var.ingress_domain}", "rancher-${local.api_vip}.sslip.io")
   api_host         = coalesce(var.api_host, "rke2-${local.api_vip}.sslip.io")
 }
 
