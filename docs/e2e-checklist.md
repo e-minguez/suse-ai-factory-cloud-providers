@@ -39,3 +39,30 @@ check. Not run yet:
       registered downstream.
 - [ ] `cluster.sh register <mgmt> <second>` adds the second downstream and keeps
       the first.
+
+## SUSE Security and SUSE Observability
+
+[ADR 010](decisions/010-security-observability.md). Not run yet:
+
+- [ ] Single cluster with `observability-server`, `observability-plugin` and
+      `security-management`: the Observability UI and the SUSE AI extension
+      load, the Rancher Observability extension shows the cluster, NeuVector
+      opens in Rancher and at its own hostname, `admin` is `fedAdmin`.
+- [ ] Management + downstream federation: the downstream cluster appears in
+      **Multiple Clusters** of the primary, and `admin` there is `fedAdmin`
+      (`security-fed-init` succeeds; a later downstream still joins, so the
+      primary kept its join token).
+- [ ] Downstream agent self-registration: the downstream cluster shows up in
+      SUSE Observability (`kubernetes-v2` instance, topology, OTLP data) with
+      no cluster list on the server.
+- [ ] CronJob recovery: deploy the downstream cluster before the primary (own
+      DNS names); `security-fed-join` joins it within ~15 minutes of the
+      primary becoming ready.
+- [ ] SNI passthrough: the NeuVector controller sends SNI, so the Traefik
+      `IngressRouteTCP` on 443 reaches `fed-master`/`fed-managed`; no other
+      port is opened. `kubectl -n cattle-neuvector-system get ingressroutetcp
+      neuvector-federation` exists (applied by the security-fed-* jobs).
+- [ ] aws with sslip.io hostnames from the public NLB address: the address is
+      stable across a node replacement and every hostname resolves and serves.
+- [ ] aws: the jumphost `user_data` fits the 16 KiB limit with every component
+      enabled; record the size.

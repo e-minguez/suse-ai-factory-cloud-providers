@@ -121,6 +121,10 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 | `egress_ips` | list(string) | public source IPs of cluster egress, used for allow-lists in [multicluster](../tools/multicluster/README.md#network) |
 | `network` | object | `{ vpc_cidr, subnet_cidrs }` |
 | `build_status` | object or null | `{ method, url_or_key, hosts }` while a build runs, null once the image exists; `scripts/build-logs.sh` follows `hosts` |
+| `security` | object or null | `{ role, url, federation_endpoint, ca_pem }`; `role` is `management` or `downstream`, `url` is the NeuVector Manager URL (null on downstream), `federation_endpoint` is `<host>:443`, `ca_pem` is the cluster CA the Manager certificate chains to (null on downstream); null without a `security-*` component |
+| `security_credentials` | object, sensitive | `{ admin_password, join_token }`; null without a `security-*` component |
+| `observability` | object or null | `{ url, ca_pem, otlp_grpc_endpoint, otlp_http_endpoint }`; null without `observability-server` |
+| `observability_credentials` | object, sensitive | `{ admin_password, bootstrap_token }`; null without `observability-server` |
 | `next_steps` | string | post-deploy hints printed by `deploy.sh` |
 | `provider_details` | object | everything else; contents differ per provider and are documented in `docs/providers/<p>.md` |
 

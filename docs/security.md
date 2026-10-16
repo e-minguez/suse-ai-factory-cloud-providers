@@ -22,6 +22,50 @@ user_data by design. Treat state as a credential:
 `tools/multicluster` keeps register state under `clusters/.register/<mgmt>/`.
 With `--bootstrap` it holds a Rancher admin token: treat it the same way.
 
+## SUSE Security and SUSE Observability
+
+The `security-*` and `observability-*` components
+([ADR 010](decisions/010-security-observability.md)) add these secrets to state
+and to the image (`-priority` manifests, setup Jobs and Secrets):
+
+- The per-cluster CA key, the ingress certificate key and, with
+  `security-management`, the NeuVector Manager backend key. The ingress
+  certificate is valid 820 days and is re-issued by an apply within 30 days of
+  expiry (an image rebuild); the backend certificate is valid 5 years and the CA
+  10, without renewal.
+- The NeuVector admin password and the federation join token. The join token is
+  shared across clusters and also sits in `common-all.tfvars`.
+- The Observability admin password, the license key and the bootstrap token.
+  The bootstrap token persists in the server `HelmChart` values (it is the
+  `stackstate-admin` service token); the setup Jobs delete only their own copy.
+- The Application Collection credentials (as for other AppCo charts).
+
+Federation endpoints use the NeuVector controller's self-signed certificate, so
+the clusters do not verify each other's certificate: trust comes from the join
+token, and exposure is limited by `ingress_cidrs` on both clusters (federation
+shares port 443 through SNI passthrough). Other clients (setup Jobs, agent,
+collector) verify the server against the CA passed in `observability_ca_pem`.
+Browsers do not trust the per-cluster CA until you import it.
+
+### Trusting the cluster CA in the browser
+
+The SUSE Security and SUSE Observability UIs, and the Rancher Observability
+extension (it calls the Observability API from the browser), need the cluster
+CA trusted. The CA is public; its key never leaves Terraform state.
+
+```bash
+# the same CA in both outputs; use security when observability-server is not enabled
+terraform -chdir=<cluster-dir> output -json observability | jq -r .ca_pem > aif-ca.crt
+# macOS
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain aif-ca.crt
+# openSUSE / SLES
+sudo cp aif-ca.crt /etc/pki/trust/anchors/ && sudo update-ca-certificates
+```
+
+Firefox keeps its own store: Settings, Privacy & Security, Certificates, View
+Certificates, Authorities, Import. Rancher itself uses its own self-signed
+certificate (accept it once), not this CA.
+
 ## Never commit these
 
 `*.tfvars` (including `common-all.tfvars`, `common-<provider>.tfvars`,

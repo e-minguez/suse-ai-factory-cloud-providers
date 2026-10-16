@@ -342,6 +342,48 @@ flowchart LR
     tpl -- "fetch over HTTP :80 (pass 1)" --> jh
 ```
 
+### SUSE Security and SUSE Observability
+
+Components come from `-priority` manifests in the image
+([ADR 010](decisions/010-security-observability.md)); the chart pass and the
+setup Jobs run in-cluster after boot. Between clusters only 443 is used, and
+`ingress_cidrs` of each side admits the other.
+
+```mermaid
+flowchart LR
+    users(["Users"])
+
+    subgraph mgmt ["Management cluster"]
+        tm["Traefik :443"]
+        nvm["NeuVector controller (primary)<br/>fed-master :11443"]
+        nvui["NeuVector Manager"]
+        obs["SUSE Observability server<br/>UI/API, receiver, OTLP"]
+        init["CronJob security-fed-init"]
+        tm -- "SNI fed-neuvector-*" --> nvm
+        tm -- "Host neuvector-*" --> nvui
+        tm -- "Host obs-*, otlp-*, otlp-http-*" --> obs
+        init -- "apply route, check master + fedAdmin" --> nvm
+    end
+
+    subgraph down ["Downstream cluster"]
+        td["Traefik :443"]
+        nvd["NeuVector controller (managed)<br/>fed-managed :10443"]
+        agent["Observability agent<br/>OTel Collector"]
+        cron["CronJob security-fed-join"]
+        td -- "SNI fed-neuvector-*" --> nvd
+        cron -- "restart all controllers when not joined or kicked" --> nvd
+    end
+
+    users -- "443 (ingress_cidrs)" --> tm
+    nvd -- "join request (token), 443 passthrough" --> tm
+    nvm -- "policy sync, 443 passthrough" --> td
+    agent -- "agent receiver, OTLP, topology: 443" --> tm
+```
+
+The SNI route passes TLS through, so the controllers terminate it with their
+own certificates. Hostnames default to sslip.io names built from the ingress
+address (on aws the public NLB address).
+
 ## Web UI runner
 
 The runner container serves the UI on the host's loopback address and starts

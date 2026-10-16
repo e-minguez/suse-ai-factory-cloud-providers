@@ -104,8 +104,17 @@ run "output_set" {
       output.api_host, output.api_vip, output.rancher_url, output.rancher_hostname,
       output.jumphost, output.nodes, output.image, output.egress_ips, output.network,
       output.next_steps, output.provider_details, output.ingress_endpoint, output.build_status,
-    ]) == 17
+      output.security, output.security_credentials, output.observability, output.observability_credentials,
+    ]) == 21
     error_message = "A required output is missing."
+  }
+
+  assert {
+    condition = (
+      output.security == null && nonsensitive(output.security_credentials) == null &&
+      output.observability == null && nonsensitive(output.observability_credentials) == null
+    )
+    error_message = "security and observability outputs must be null by default."
   }
 
   assert {
@@ -336,4 +345,3 @@ run "rancher_hostname_default_sslip" {
     error_message = "Without ingress_domain the Rancher hostname must keep the sslip.io default."
   }
 }
-

@@ -94,8 +94,9 @@ locals {
     },
   ]
 
-  enabled_specs      = [for c in local.component_catalog : c if contains(var.components, c.name)]
-  enabled_components = [for c in local.enabled_specs : c.name]
+  enabled_specs = [for c in local.component_catalog : c if contains(var.components, c.name)]
+  # Chart catalog entries, then the add-ons (addons.tf), which are never in release.yaml.
+  enabled_components = concat([for c in local.enabled_specs : c.name], local.enabled_addons)
   enabled_sysexts    = distinct([for c in local.enabled_specs : c.sysext if c.sysext != null])
 
   component_values_files = {

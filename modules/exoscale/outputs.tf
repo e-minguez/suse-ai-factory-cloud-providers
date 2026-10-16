@@ -137,13 +137,43 @@ output "build_status" {
   value       = local.effective_template_id == null ? local.build_status_value : null
 }
 
+output "security" {
+  description = "SUSE Security (NeuVector): role, Manager URL and CA (management only) and federation endpoint. Null when neither security component is enabled."
+  value       = module.config.security
+}
+
+output "security_credentials" {
+  description = "SUSE Security admin password and federation join token. Null when neither security component is enabled."
+  value       = module.config.security_credentials
+  sensitive   = true
+}
+
+output "observability" {
+  description = "SUSE Observability URL, CA certificate and OTLP endpoints. Null when observability-server is not enabled."
+  value       = module.config.observability
+}
+
+output "observability_credentials" {
+  description = "SUSE Observability admin password and bootstrap token. Null when observability-server is not enabled."
+  value       = module.config.observability_credentials
+  sensitive   = true
+}
+
 output "next_steps" {
   description = "Post-deploy hints."
   value = join("\n", concat(
     ["Kubernetes API : https://${local.api_host}:6443"],
     contains(module.config.enabled_components, "rancher") ? [
       "Rancher        : https://${local.rancher_hostname}",
-      "                 password: terraform -chdir=${local.cluster_dir} output -raw rancher_bootstrap_password",
+      "                 password: terraform -chdir=${local.cluster_dir} output -raw rancher_bootstrap_password  (until cluster.sh register --bootstrap replaces it)",
+    ] : [],
+    module.config.security != null && module.config.security.url != null ? [
+      "NeuVector      : ${module.config.security.url}",
+      "                 password: terraform -chdir=${local.cluster_dir} output -json security_credentials",
+    ] : [],
+    module.config.observability != null ? [
+      "Observability  : ${module.config.observability.url}",
+      "                 password: terraform -chdir=${local.cluster_dir} output -json observability_credentials",
     ] : [],
     local.effective_template_id == null ? [
       "Image build    : in progress; follow it with ${local.helper["build-logs"]}",

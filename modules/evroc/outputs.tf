@@ -59,7 +59,15 @@ locals {
     ["Kubernetes API : https://${local.api_host}:6443"],
     local.rancher_enabled ? [
       "Rancher        : https://${local.rancher_hostname}",
-      "                 password: terraform -chdir=${local.cluster_dir} output -raw rancher_bootstrap_password",
+      "                 password: terraform -chdir=${local.cluster_dir} output -raw rancher_bootstrap_password  (until cluster.sh register --bootstrap replaces it)",
+    ] : [],
+    module.config.security != null && module.config.security.url != null ? [
+      "NeuVector      : ${module.config.security.url}",
+      "                 password: terraform -chdir=${local.cluster_dir} output -json security_credentials",
+    ] : [],
+    module.config.observability != null ? [
+      "Observability  : ${module.config.observability.url}",
+      "                 password: terraform -chdir=${local.cluster_dir} output -json observability_credentials",
     ] : [],
     !local.snapshot_expected ? [
       "Image build    : in progress; follow it with ${local.helper["build-logs"]}",
@@ -159,6 +167,28 @@ output "network" {
 output "build_status" {
   description = "Build-status relay URL and the build hosts (private IPs reachable via the jumphost) while an image build runs; null afterwards."
   value       = local.build_status
+}
+
+output "security" {
+  description = "SUSE Security (NeuVector): role, Manager URL and CA (management only) and federation endpoint. Null when neither security component is enabled."
+  value       = module.config.security
+}
+
+output "security_credentials" {
+  description = "SUSE Security admin password and federation join token. Null when neither security component is enabled."
+  value       = module.config.security_credentials
+  sensitive   = true
+}
+
+output "observability" {
+  description = "SUSE Observability URL, CA certificate and OTLP endpoints. Null when observability-server is not enabled."
+  value       = module.config.observability
+}
+
+output "observability_credentials" {
+  description = "SUSE Observability admin password and bootstrap token. Null when observability-server is not enabled."
+  value       = module.config.observability_credentials
+  sensitive   = true
 }
 
 output "next_steps" {

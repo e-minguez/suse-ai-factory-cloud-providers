@@ -144,15 +144,15 @@ variable "fips" {
 variable "components" {
   type        = list(string)
   default     = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
-  description = "AI Factory Helm charts to enable. Rendered in canonical order, not the order given."
+  description = "AI Factory Helm charts and add-ons to enable. Rendered in canonical order, not the order given."
 
   validation {
     condition = alltrue([
       for c in var.components : contains(
-        ["cert-manager", "rancher", "gpu-operator", "local-path-provisioner", "suse-storage", "aif-operator"], c
+        ["cert-manager", "rancher", "gpu-operator", "local-path-provisioner", "suse-storage", "aif-operator", "observability-server", "observability-plugin", "observability-agent", "security-management", "security-downstream"], c
       )
     ])
-    error_message = "components entries must be one of: cert-manager, rancher, gpu-operator, local-path-provisioner, suse-storage, aif-operator."
+    error_message = "components entries must be one of: cert-manager, rancher, gpu-operator, local-path-provisioner, suse-storage, aif-operator, observability-server, observability-plugin, observability-agent, security-management, security-downstream."
   }
 
   validation {
@@ -422,4 +422,115 @@ variable "image_rebuild" {
   default     = 0
   description = "Rebuild counter mixed into build_hash when greater than 0; bumping it forces a new image."
   nullable    = false
+}
+
+variable "ingress_address" {
+  type        = string
+  default     = null
+  description = "Public IPv4 the ingress (Traefik 80/443) answers on, for the sslip.io hostname defaults of the observability and security components."
+}
+
+variable "security_admin_password" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "NeuVector admin password; a random one is generated when null."
+}
+
+variable "ingress_domain" {
+  type        = string
+  default     = null
+  description = "Domain whose wildcard record points at the ingress; obs.<domain> and neuvector.<domain> become the default hostnames. Null keeps the sslip.io defaults."
+}
+
+variable "security_hostname" {
+  type        = string
+  default     = null
+  description = "Hostname of the NeuVector Manager ingress; defaults to neuvector-<ingress_address>.sslip.io when null."
+}
+
+variable "security_join_token" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "NeuVector federation join token (a UUID). Required with security-downstream; generated with security-management when null."
+}
+
+variable "security_primary_endpoint" {
+  type        = string
+  default     = null
+  description = "host or host:port (default 443) of the primary NeuVector federation endpoint. Required with security-downstream."
+}
+
+variable "security_rancher_url" {
+  type        = string
+  default     = null
+  description = "Rancher URL (https://...) for NeuVector Rancher SSO; null uses the local Rancher when enabled, else SSO is off."
+}
+
+variable "observability_license_key" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability license key. Required with observability-server."
+}
+
+variable "observability_admin_password" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability admin password; a random one is generated when null."
+}
+
+variable "observability_sizing_profile" {
+  type        = string
+  default     = "trial"
+  description = "SUSE Observability sizing profile: trial, 10-nonha, 20-nonha, 50-nonha, 100-nonha, 150-ha, 250-ha, 500-ha or 4000-ha."
+}
+
+variable "observability_hostname" {
+  type        = string
+  default     = null
+  description = "Hostname of the SUSE Observability ingress; defaults to obs-<ingress_address>.sslip.io when null."
+}
+
+variable "observability_bootstrap_token" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability service token used by the setup Jobs. Generated with observability-server when null; required for agent and plugin without a local server."
+}
+
+variable "observability_server_url" {
+  type        = string
+  default     = null
+  description = "https URL of a remote SUSE Observability server. Required for agent and plugin without observability-server, null otherwise."
+}
+
+variable "observability_ca_pem" {
+  type        = string
+  default     = null
+  description = "PEM CA certificate of the remote SUSE Observability server. Required with observability_server_url."
+}
+
+variable "observability_allowed_origins" {
+  type        = list(string)
+  default     = []
+  description = "Extra CORS origins for the SUSE Observability API, such as remote Rancher URLs. The local Rancher URL is added automatically."
+}
+
+variable "observability_suse_ai_namespace" {
+  type        = string
+  default     = "suse-private-ai"
+  description = "Namespace of the SUSE AI workloads the OpenTelemetry collector scrapes."
+}
+
+variable "observability_opensearch_credentials" {
+  type = object({
+    username = string
+    password = string
+  })
+  default     = null
+  sensitive   = true
+  description = "OpenSearch credentials for the collector elasticsearch receiver; null disables the receiver."
 }

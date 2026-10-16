@@ -94,7 +94,8 @@ closes it again.
 - `ignition.platform.id=exoscale` reads the config from
   `http://169.254.169.254/1.0/user-data`. The API takes at most 32768 base64
   characters of `user_data` (about 24 KiB of payload); the per-node files are
-  well below 1 KiB. The jumphost config travels as one gzip bundle.
+  well below 1 KiB. The jumphost config travels as one gzip bundle (about 30 KB
+  of base64 for a management set with security and observability).
 - Instances created with `private = true` have no metadata service; they get a
   NoCloud drive labelled `cidata` instead (documented), which this platform id
   does not read. A private Elemental node stops in emergency mode ("Failed to
@@ -130,8 +131,9 @@ closes it again.
 - One NLB carries 6443 and 9345 (TCP checks) and the ingress listeners 80/443
   (Traefik: HTTP `/ping` on 8080). The NLB address is in the image (`apiVIP`,
   `api_host`, Rancher hostname); `rancher_hostname` and `api_host` default to
-  `sslip.io` names on it. With `ingress_domain`, create `*.<domain>` as an A
-  record to it; the API keeps its own name.
+  `sslip.io` names on it. The SUSE Security and SUSE Observability components
+  use the same address (`neuvector-<ip>`, `obs-<ip>`). With `ingress_domain`,
+  create `*.<domain>` as an A record to it; the API keeps its own name.
 - The NLB keeps the client address and returns traffic directly from the
   member's public interface (documented), so members need a public IPv4 and
   the control plane security group admits the clients themselves.

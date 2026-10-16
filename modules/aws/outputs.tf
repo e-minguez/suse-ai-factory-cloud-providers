@@ -25,8 +25,19 @@ locals {
 
   next_steps_rancher = local.rancher_enabled ? [
     "Rancher        : https://${local.rancher_hostname}",
-    "                 password: terraform -chdir=${local.cluster_dir} output -raw rancher_bootstrap_password",
+    "                 password: terraform -chdir=${local.cluster_dir} output -raw rancher_bootstrap_password  (until cluster.sh register --bootstrap replaces it)",
   ] : []
+
+  next_steps_addons = concat(
+    module.elemental_config.security != null && module.elemental_config.security.url != null ? [
+      "NeuVector      : ${module.elemental_config.security.url}",
+      "                 password: terraform -chdir=${local.cluster_dir} output -json security_credentials",
+    ] : [],
+    module.elemental_config.observability != null ? [
+      "Observability  : ${module.elemental_config.observability.url}",
+      "                 password: terraform -chdir=${local.cluster_dir} output -json observability_credentials",
+    ] : [],
+  )
 
   next_steps_access = [
     "Kubeconfig     : ${local.helper["kubeconfig"]} -o ~/.kube/${var.cluster_name}.yaml   (admin credential, mode 600)",
@@ -45,6 +56,7 @@ locals {
   next_steps_lines = concat(
     local.next_steps_header,
     local.next_steps_rancher,
+    local.next_steps_addons,
     local.build_in_progress ? local.next_steps_building : !var.deploy_nodes ? local.next_steps_no_nodes : local.next_steps_access,
   )
 }
@@ -147,6 +159,28 @@ output "network" {
 output "build_status" {
   description = "Where the image build is followed while it runs; null once the AMI exists or when image_id is set."
   value       = local.build_in_progress ? local.build_status_value : null
+}
+
+output "security" {
+  description = "SUSE Security (NeuVector): role, Manager URL and CA (management only) and federation endpoint. Null when neither security component is enabled."
+  value       = module.elemental_config.security
+}
+
+output "security_credentials" {
+  description = "SUSE Security admin password and federation join token. Null when neither security component is enabled."
+  value       = module.elemental_config.security_credentials
+  sensitive   = true
+}
+
+output "observability" {
+  description = "SUSE Observability URL, CA certificate and OTLP endpoints. Null when observability-server is not enabled."
+  value       = module.elemental_config.observability
+}
+
+output "observability_credentials" {
+  description = "SUSE Observability admin password and bootstrap token. Null when observability-server is not enabled."
+  value       = module.elemental_config.observability_credentials
+  sensitive   = true
 }
 
 output "next_steps" {

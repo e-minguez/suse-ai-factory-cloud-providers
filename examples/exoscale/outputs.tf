@@ -90,3 +90,25 @@ output "provider_details" {
   description = "Provider-specific values."
   value       = module.ai_factory.provider_details
 }
+
+output "security" {
+  description = "NeuVector role and endpoints; null without a security-* component."
+  value       = module.ai_factory.security
+}
+
+output "security_credentials" {
+  description = "NeuVector admin password and federation join token; null without a security-* component."
+  value       = module.ai_factory.security_credentials
+  sensitive   = true
+}
+
+output "observability" {
+  description = "SUSE Observability URL, CA and OTLP endpoints; null without observability-server."
+  value       = module.ai_factory.observability
+}
+
+output "observability_credentials" {
+  description = "SUSE Observability admin password and bootstrap token; null without observability-server."
+  value       = module.ai_factory.observability_credentials
+  sensitive   = true
+}

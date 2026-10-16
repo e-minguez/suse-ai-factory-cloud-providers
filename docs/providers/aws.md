@@ -250,6 +250,13 @@ image in S3 and skips the build. If the raw has expired (one day after upload,
 unless `keep_build_artifacts = true`), the script builds and uploads the image
 again; the AMI is not replaced, so the upload is unused.
 
+The add-on components ([ADR 010](../decisions/010-security-observability.md))
+take most of the budget. A management cluster with every component,
+cert-manager, suse-storage and two SSH keys measures 16147 bytes
+(`modules/aws/tests/user-data-size.tftest.hcl`). Long RSA SSH keys or extra
+components can exceed the limit; ed25519 keys are shortest. On a first apply
+the certificates are unknown at plan time, so an overflow fails at apply.
+
 ## Jumphost AMI: Marketplace listing
 
 The jumphost runs openSUSE Leap 16 (x86_64, publisher `679593333241`), an AWS
@@ -328,9 +335,17 @@ pool's `disk_size_gb` (default 200).
   `api_host` to use your own DNS names. Nodes always reach the API through the
   internal NLB (`provider_details.internal_api_host`); `api_host` also
   replaces the public NLB name in the `api_host` output and the kubeconfig.
+- The SUSE Security and SUSE Observability components use `sslip.io` names
+  (`neuvector-<ip>`, `obs-<ip>`) on the static IP of the public NLB in the
+  first zone; cross-zone balancing lets that one address reach every target.
+  While that zone is unavailable those hostnames are too, and Rancher keeps
+  working on the NLB DNS name. Set `security_hostname` or
+  `observability_hostname` to use your own DNS names.
 - With `ingress_domain`, create `*.<domain>` as a CNAME to the public NLB DNS
-  name; Rancher then uses `rancher.<domain>`. The API keeps its own name
-  (`api_host`).
+  name. Rancher, Observability and
+  NeuVector then use `rancher.<domain>`, `obs.<domain>` and
+  `neuvector.<domain>`, and the NLB DNS name keeps all zones, so the single-zone
+  caveat above does not apply. The API keeps its own name (`api_host`).
 
 ## Cost estimate
 

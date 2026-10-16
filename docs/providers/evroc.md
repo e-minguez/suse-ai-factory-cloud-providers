@@ -283,8 +283,9 @@ and the cluster uses `apiVIPMode: external` (no MetalLB or kube-vip). RKE2
 servers retry the 9345 registration until it answers, so the backend pool can
 fill after the VMs exist.
 
-With `ingress_domain`, create `*.<domain>` as an A record to the VIP; the API
-keeps its own name.
+The VIP is also the ingress address for the sslip.io names of the SUSE
+Security and SUSE Observability components (`neuvector-<ip>`, `obs-<ip>`). With `ingress_domain`, create `*.<domain>` as
+an A record to the VIP; the API keeps its own name.
 
 ## Jumphost
 

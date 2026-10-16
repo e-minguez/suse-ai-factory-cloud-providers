@@ -1,0 +1,13 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  # The release name becomes the UIPlugin's spec.plugin.name and must stay
+  # "neuvector-ui-ext", or Rancher fails to load the extension.
+  name: neuvector-ui-ext
+  namespace: kube-system
+spec:
+  repo: https://github.com/rancher/ui-plugin-charts/raw/main
+  chart: neuvector-ui-ext
+  version: ${jsonencode(version)}
+  targetNamespace: cattle-ui-plugin-system

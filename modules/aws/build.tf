@@ -135,7 +135,7 @@ resource "aws_instance" "jumphost" {
     precondition {
       # EC2 hard limit on user_data; nonsensitive() on the length only.
       condition     = local.jumphost_user_data_bytes <= 16384
-      error_message = "Gzipped jumphost user_data is ${nonsensitive(local.jumphost_user_data_bytes)} bytes, over EC2's 16384-byte limit. The script and config are inline; a large ssh_authorized_keys or config tree is the likely cause."
+      error_message = "Gzipped jumphost user_data is ${nonsensitive(local.jumphost_user_data_bytes)} bytes, over EC2's 16384-byte limit. The script and config are inline; a large ssh_authorized_keys or many add-on components (security-*, observability-*) are the likely cause."
     }
   }
 }

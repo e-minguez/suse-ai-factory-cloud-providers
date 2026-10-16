@@ -86,6 +86,12 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 %{ endif ~}
+%{ if enable_debugfs ~}
+    # The SUSE Observability node agent mounts the host /sys/kernel/debug for its
+    # eBPF network tracer; systemd ships this unit, the preset leaves it disabled.
+    - name: sys-kernel-debug.mount
+      enabled: true
+%{ endif ~}
 %{ if extra_units_yaml != "" ~}
     ${indent(4, extra_units_yaml)}
 %{ endif ~}

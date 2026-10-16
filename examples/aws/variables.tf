@@ -239,7 +239,7 @@ variable "rancher_hostname" {
 variable "ingress_domain" {
   type        = string
   default     = null
-  description = "A domain with a wildcard DNS record (`*.<domain>`) pointing at the ingress: a CNAME to the load balancer DNS name on aws, an A record to the ingress IP elsewhere. The Rancher hostname becomes rancher.<domain>; null keeps the default."
+  description = "A domain with a wildcard DNS record (`*.<domain>`) pointing at the ingress: a CNAME to the load balancer DNS name on aws, an A record to the ingress IP elsewhere. Hostnames become rancher.<domain>, obs.<domain> and neuvector.<domain>; null keeps the defaults."
 
   validation {
     condition     = var.ingress_domain == null || can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$", var.ingress_domain))
@@ -252,6 +252,105 @@ variable "rancher_bootstrap_password" {
   default     = null
   sensitive   = true
   description = "Rancher initial admin password. Null generates one."
+}
+
+variable "security_admin_password" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "NeuVector admin password for the security-management and security-downstream components; a random one is generated when null."
+}
+
+variable "security_hostname" {
+  type        = string
+  default     = null
+  description = "Hostname of the NeuVector Manager ingress (security-management). Null selects an sslip.io name from the ingress address."
+}
+
+variable "security_join_token" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "NeuVector federation join token (a lowercase UUID). Required with security-downstream; generated when null with security-management."
+}
+
+variable "security_primary_endpoint" {
+  type        = string
+  default     = null
+  description = "Federation endpoint of the primary NeuVector cluster as host or host:port (port defaults to 443). Required with security-downstream."
+}
+
+variable "security_rancher_url" {
+  type        = string
+  default     = null
+  description = "Rancher URL (https://...) used for NeuVector Rancher SSO. Null uses the local Rancher when rancher is enabled, otherwise SSO is off."
+}
+
+variable "observability_license_key" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability license key. Required with observability-server."
+}
+
+variable "observability_admin_password" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability admin password; a random one is generated when null."
+}
+
+variable "observability_sizing_profile" {
+  type        = string
+  default     = "trial"
+  description = "SUSE Observability sizing profile (trial, 10-nonha, 20-nonha, 50-nonha, 100-nonha, 150-ha, 250-ha, 500-ha or 4000-ha). Used with observability-server."
+}
+
+variable "observability_hostname" {
+  type        = string
+  default     = null
+  description = "Hostname of the SUSE Observability ingress (observability-server). Null selects an sslip.io name from the ingress address."
+}
+
+variable "observability_bootstrap_token" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability service token used by agents and the Rancher plugin. Generated when null with observability-server; required for observability-agent and observability-plugin without a local server."
+}
+
+variable "observability_server_url" {
+  type        = string
+  default     = null
+  description = "HTTPS URL of a remote SUSE Observability server. Required for observability-agent and observability-plugin without observability-server; must be null with it."
+}
+
+variable "observability_ca_pem" {
+  type        = string
+  default     = null
+  description = "PEM CA certificate of the remote SUSE Observability server (the observability output ca_pem). Required with observability_server_url."
+}
+
+variable "observability_allowed_origins" {
+  type        = list(string)
+  default     = []
+  description = "Extra CORS origins allowed by the SUSE Observability server, for example remote Rancher URLs. The local Rancher URL is added automatically."
+}
+
+variable "observability_suse_ai_namespace" {
+  type        = string
+  default     = "suse-private-ai"
+  description = "Namespace of the SUSE AI workloads whose metrics the observability-agent collector scrapes."
+}
+
+variable "observability_opensearch_credentials" {
+  type = object({
+    username = string
+    password = string
+  })
+  default     = null
+  sensitive   = true
+  description = "OpenSearch username and password for the collector elasticsearch receiver. Null disables the receiver."
 }
 
 variable "image_rebuild" {

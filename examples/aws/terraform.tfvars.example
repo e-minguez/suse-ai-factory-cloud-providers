@@ -35,9 +35,43 @@ ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
 # Hostname of the Rancher ingress. A DNS name that points at the public NLB;
 # the NLB's own DNS name is used when null.
 # rancher_hostname = null
-# ingress_domain             = "aif.example.com"  # *.<domain> -> ingress; Rancher becomes rancher.<domain>
+# ingress_domain             = "aif.example.com"  # *.<domain> -> ingress: rancher.<domain>, obs.<domain>, neuvector.<domain>
 # rancher_bootstrap_password = null  # generated when null
 # api_host                   = null  # NLB DNS names when null
+
+# --------------------------------------------------------------------------
+# Security (NeuVector) and Observability (SUSE Observability) -- optional.
+# Components: security-management | security-downstream (exclusive),
+# observability-server (adds the agent), observability-agent,
+# observability-plugin (needs rancher). All need ingress_controller = "traefik";
+# changing components rebuilds the image. Hostnames default to sslip.io names
+# of the ingress address. Put shared tokens (security_join_token,
+# observability_bootstrap_token) in common-all.tfvars so every cluster agrees.
+# --------------------------------------------------------------------------
+# Management cluster:
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator",
+#               "security-management", "observability-server", "observability-plugin"]
+# security_join_token          = "REPLACE_WITH_A_LOWERCASE_UUID"  # generated when null
+# observability_license_key    = "REPLACE_WITH_YOUR_OBSERVABILITY_LICENSE_KEY"
+# observability_bootstrap_token = "REPLACE_WITH_A_TOKEN"          # generated when null
+# observability_sizing_profile = "trial"  # 10-nonha ... 150-ha ... 4000-ha
+# observability_allowed_origins = ["https://rancher.downstream.example.com"]  # remote Rancher URLs
+# observability_opensearch_credentials = { username = "admin", password = "REPLACE" }  # null disables the receiver
+# security_admin_password      = null  # generated when null
+# security_hostname            = null  # "neuvector-<ingress IP>.sslip.io"
+# observability_hostname       = null  # "obs-<ingress IP>.sslip.io"
+# Read the results with `terraform output -json security` (and `observability`)
+# (`security_credentials` and `observability_credentials` are sensitive).
+#
+# Downstream cluster (values come from the management cluster outputs):
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator",
+#               "security-downstream", "observability-agent", "observability-plugin"]
+# security_join_token           = "SAME_UUID_AS_THE_MANAGEMENT_CLUSTER"
+# security_primary_endpoint     = "fed-neuvector-<mgmt ingress IP>.sslip.io"  # security.federation_endpoint
+# observability_server_url      = "https://obs-<mgmt ingress IP>.sslip.io"    # observability.url
+# observability_ca_pem          = "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n"  # observability.ca_pem
+# observability_bootstrap_token = "SAME_TOKEN_AS_THE_MANAGEMENT_CLUSTER"
+# security_rancher_url          = null  # local Rancher when enabled; set to enable NeuVector SSO otherwise
 
 # Registry credentials. Application Collection is required with
 # local-path-provisioner (in the default components) or suse-storage; the SUSE

@@ -1,0 +1,50 @@
+---
+# OPTIONAL. OpenTelemetry Operator, for auto-instrumenting workloads.
+# It does not deploy a collector: instrumented pods send to the
+# opentelemetry-collector from otel-collector.yaml (see instrumentation.yaml).
+# https://documentation.suse.com/cloudnative/suse-observability/latest/en/setup/otel/getting-started/getting-started-k8s-operator.html
+apiVersion: v1
+data:
+  .dockerconfigjson: <APPCO_DOCKERCONFIGJSON_BASE64>
+kind: Secret
+metadata:
+  name: appco-credentials
+  namespace: kube-system
+type: kubernetes.io/dockerconfigjson
+---
+apiVersion: v1
+data:
+  .dockerconfigjson: <APPCO_DOCKERCONFIGJSON_BASE64>
+kind: Secret
+metadata:
+  name: appco-credentials
+  namespace: open-telemetry
+type: kubernetes.io/dockerconfigjson
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: opentelemetry-operator
+  namespace: kube-system
+spec:
+  chart: oci://dp.apps.rancher.io/charts/opentelemetry-operator
+  version: 0.124.1
+  targetNamespace: open-telemetry
+  dockerRegistrySecret:
+    name: appco-credentials
+  valuesContent: |-
+    global:
+      imagePullSecrets:
+        - appco-credentials
+    manager:
+      createRbacPermissions: true
+      autoInstrumentation:
+        # eBPF based; instrumented Go pods run privileged
+        go:
+          enabled: true
+    # Self-generated webhook certificate, no cert-manager dependency
+    admissionWebhooks:
+      certManager:
+        enabled: false
+      autoGenerateCert:
+        enabled: true

@@ -81,3 +81,25 @@ output "write_node_ip_script" {
   description = "Rendered write-node-ip.sh, for providers that deliver it another way."
   value       = local.write_node_ip_script
 }
+
+output "security" {
+  description = "SUSE Security (NeuVector) endpoints and CA; null unless security-management or security-downstream is enabled. url and ca_pem are null on a downstream cluster."
+  value       = local.security_output
+}
+
+output "security_credentials" {
+  description = "NeuVector admin password and federation join token; null unless a security component is enabled."
+  value       = local.security_credentials_output
+  sensitive   = true
+}
+
+output "observability" {
+  description = "SUSE Observability URL, CA certificate and OTLP endpoints; null unless observability-server is enabled."
+  value       = local.observability_output
+}
+
+output "observability_credentials" {
+  description = "SUSE Observability admin password and bootstrap token; null unless observability-server is enabled."
+  value       = local.observability_credentials_output
+  sensitive   = true
+}

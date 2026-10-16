@@ -1,0 +1,129 @@
+# Rancher UI extension for SUSE Observability and the Job that writes the
+# `configuration` Secret (URL + service token) the extension reads.
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: observability
+  namespace: kube-system
+spec:
+  repo: https://github.com/rancher/ui-plugin-charts/raw/main
+  chart: observability
+  version: ${jsonencode(version)}
+  targetNamespace: cattle-ui-plugin-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: suse-observability-extension
+---
+%{ if ca_pem != "" ~}
+# Public CA of the remote SUSE Observability ingress certificate.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-ca
+  namespace: suse-observability-extension
+data:
+  ca.crt: |
+    ${indent(4, chomp(ca_pem))}
+---
+%{ endif ~}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sts-cli-secret
+  namespace: suse-observability-extension
+type: Opaque
+stringData:
+  STS_CLI_SERVICE_TOKEN: ${jsonencode(bootstrap_token)}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sts-config-applier
+  namespace: suse-observability-extension
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sts-config-applier-role
+  namespace: suse-observability-extension
+rules:
+  # Create the `configuration` Secret and delete its own bootstrap Secret
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sts-config-applier-binding
+  namespace: suse-observability-extension
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sts-config-applier-role
+subjects:
+  - kind: ServiceAccount
+    name: sts-config-applier
+    namespace: suse-observability-extension
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: generate-sts-config
+  namespace: suse-observability-extension
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      serviceAccountName: sts-config-applier
+      restartPolicy: Never
+%{ if ca_pem != "" ~}
+      volumes:
+        - name: observability-ca
+          configMap:
+            name: observability-ca
+%{ endif ~}
+      containers:
+        - name: apply-config
+          image: ${jsonencode(tools_image)}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+
+              if ! kubectl get secret configuration -n suse-observability-extension > /dev/null 2>&1; then
+                until curl -s -f %{ if ca_pem != "" ~}--cacert "$${STS_CA_CERT_PATH}" %{ endif ~}-H "X-API-Key: $${STS_CLI_SERVICE_TOKEN}" "$${STS_CLI_URL}/api/server/info" > /dev/null; do sleep 5; done
+                # sts reads STS_CLI_URL, STS_CLI_SERVICE_TOKEN and STS_CA_CERT_PATH from the environment
+                TOKEN=$(sts service-token create --name suse-observability-extension --roles stackstate-guest -o json \
+                  | jq -r '."service-token".token')
+                if [ -z "$${TOKEN}" ] || [ "$${TOKEN}" = "null" ]; then
+                  echo "Error: failed to create the service token."
+                  exit 1
+                fi
+                # The extension is used from the browser: it gets the external URL
+                kubectl create secret generic configuration -n suse-observability-extension \
+                  --from-literal=serviceToken="$${TOKEN}" --from-literal=url="$${EXTERNAL_URL}"
+              fi
+
+              kubectl delete secret sts-cli-secret -n suse-observability-extension --ignore-not-found
+          env:
+            - name: STS_CLI_URL
+              value: ${jsonencode(api_url)}
+            - name: EXTERNAL_URL
+              value: ${jsonencode(external_url)}
+%{ if ca_pem != "" ~}
+            - name: STS_CA_CERT_PATH
+              value: /etc/observability-ca/ca.crt
+%{ endif ~}
+          envFrom:
+            - secretRef:
+                name: sts-cli-secret
+%{ if ca_pem != "" ~}
+          volumeMounts:
+            - name: observability-ca
+              mountPath: /etc/observability-ca
+              readOnly: true
+%{ endif ~}

@@ -41,6 +41,7 @@ locals {
         enable_iscsi_prep       = local.enabled_iscsi_prep
         iscsi_prep_script       = file("${path.module}/templates/elemental/storage/iscsi-prep.sh")
         enable_local_path_prep  = local.enabled_local_path_prep
+        enable_debugfs          = contains(local.enabled_components, "observability-agent")
         extra_units_yaml        = local.extra_units_yaml
         extra_files             = var.extra_butane_files
       })
@@ -66,6 +67,7 @@ locals {
     # -priority: elemental applies these before its HelmCharts; other manifests
     # wait for every chart job (docs/decisions/001-elemental-config-rationale.md).
     local.component_pull_secret_manifests,
+    local.addon_manifests,
     var.ingress_controller != "traefik" ? {} : {
       "kubernetes/manifests/traefik-priority.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/manifests/traefik.yaml.tftpl", {
         vpc_cidr = var.vpc_cidr

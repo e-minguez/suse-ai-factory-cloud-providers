@@ -50,6 +50,15 @@ mock_provider "aws" {
     }
   }
 
+  # Static IP of the public NLB in the first zone, read only when a security or
+  # observability component is enabled.
+  override_data {
+    target = data.aws_network_interface.public_nlb
+    values = {
+      association = [{ public_ip = "203.0.113.10" }]
+    }
+  }
+
   # aws_lb_listener validates load_balancer_arn/target_group_arn look like
   # real ARNs client-side, even against a mocked provider -- the mock
   # default for a computed "arn" attribute is not ARN-shaped, so every
@@ -157,8 +166,17 @@ run "output_set" {
       output.rancher_hostname, output.jumphost, output.nodes, output.image,
       output.egress_ips, output.network, output.build_status, output.next_steps,
       output.provider_details,
-    ]) == 17
+      output.security, output.security_credentials, output.observability, output.observability_credentials,
+    ]) == 21
     error_message = "A required output is missing."
+  }
+
+  assert {
+    condition = (
+      output.security == null && nonsensitive(output.security_credentials) == null &&
+      output.observability == null && nonsensitive(output.observability_credentials) == null
+    )
+    error_message = "security and observability outputs must be null by default."
   }
 
   assert {
@@ -612,29 +630,57 @@ run "api_cidrs_restrict_public_kube_api" {
   }
 }
 
+run "observability_uses_nlb_zone_ip" {
+  command = apply
+
+  variables {
+    components                = ["rancher", "local-path-provisioner", "observability-server"]
+    observability_license_key = "DUMMY-LICENSE"
+  }
+
+  assert {
+    condition     = output.observability.url == "https://obs-203.0.113.10.sslip.io"
+    error_message = "observability.url must use the sslip.io name of the first-zone NLB IP."
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.example.com" && strcontains(output.next_steps, "Observability  : https://obs-203.0.113.10.sslip.io")
+    error_message = "Rancher keeps its hostname; next_steps must list the Observability URL."
+  }
+}
+
 run "ingress_domain_rancher_hostname" {
   command = apply
 
   variables {
-    rancher_hostname = null
-    ingress_domain   = "aif.example.com"
+    rancher_hostname          = null
+    ingress_domain            = "aif.example.com"
+    components                = ["rancher", "local-path-provisioner", "observability-server"]
+    observability_license_key = "DUMMY-LICENSE"
   }
 
   assert {
-    condition     = output.rancher_hostname == "rancher.aif.example.com" && output.rancher_url == "https://rancher.aif.example.com"
-    error_message = "ingress_domain must set the Rancher hostname to rancher.<domain>."
+    condition     = output.rancher_hostname == "rancher.aif.example.com" && output.observability.url == "https://obs.aif.example.com"
+    error_message = "ingress_domain must set the Rancher and Observability hostnames."
+  }
+
+  assert {
+    condition     = length(data.aws_network_interface.public_nlb) == 0
+    error_message = "ingress_domain must skip the NLB network-interface lookup."
   }
 }
 
-run "ingress_domain_unset_keeps_nlb_dns_name" {
+run "ingress_domain_unset_keeps_nlb_lookup" {
   command = apply
 
   variables {
-    rancher_hostname = null
+    rancher_hostname          = null
+    components                = ["rancher", "local-path-provisioner", "observability-server"]
+    observability_license_key = "DUMMY-LICENSE"
   }
 
   assert {
-    condition     = output.rancher_hostname == aws_lb.public.dns_name
-    error_message = "Without ingress_domain the Rancher hostname stays the NLB DNS name."
+    condition     = length(data.aws_network_interface.public_nlb) == 1 && output.rancher_hostname == aws_lb.public.dns_name
+    error_message = "Without ingress_domain the default stays the NLB DNS name and the lookup runs."
   }
 }

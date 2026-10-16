@@ -415,10 +415,11 @@ variable "components" {
   validation {
     condition = alltrue([
       for c in var.components : contains(
-        ["cert-manager", "rancher", "gpu-operator", "local-path-provisioner", "suse-storage", "aif-operator"], c
+        ["cert-manager", "rancher", "gpu-operator", "local-path-provisioner", "suse-storage", "aif-operator",
+        "observability-server", "observability-plugin", "observability-agent", "security-management", "security-downstream"], c
       )
     ])
-    error_message = "components entries must be one of: cert-manager, rancher, gpu-operator, local-path-provisioner, suse-storage, aif-operator."
+    error_message = "components entries must be one of: cert-manager, rancher, gpu-operator, local-path-provisioner, suse-storage, aif-operator, observability-server, observability-plugin, observability-agent, security-management, security-downstream."
   }
 
   validation {
@@ -434,6 +435,59 @@ variable "components" {
   validation {
     condition     = !contains(var.components, "aif-operator") || contains(var.components, "rancher")
     error_message = "components lists aif-operator without rancher, which the AIF release manifest declares as its dependency."
+  }
+
+  validation {
+    condition     = !(contains(var.components, "security-management") && contains(var.components, "security-downstream"))
+    error_message = "components cannot list both security-management and security-downstream."
+  }
+
+  validation {
+    condition = (
+      !anytrue([for c in var.components : contains(["observability-server", "observability-plugin", "observability-agent", "security-management", "security-downstream"], c)])
+      || var.ingress_controller == "traefik"
+    )
+    error_message = "The observability-* and security-* components publish their endpoints through Traefik and need ingress_controller = \"traefik\"."
+  }
+
+  validation {
+    condition     = !contains(var.components, "observability-plugin") || contains(var.components, "rancher")
+    error_message = "components lists observability-plugin without rancher, which hosts the UI extension."
+  }
+
+  validation {
+    condition = (
+      !contains(var.components, "observability-server")
+      || (contains(var.components, "local-path-provisioner") || contains(var.components, "suse-storage"))
+    )
+    error_message = "observability-server stores its data on persistent volumes and needs local-path-provisioner or suse-storage in components."
+  }
+
+  validation {
+    condition     = !contains(var.components, "observability-server") || try(trimspace(var.observability_license_key) != "", false)
+    error_message = "observability-server needs observability_license_key."
+  }
+
+  validation {
+    condition = (
+      contains(var.components, "observability-server")
+      || !(contains(var.components, "observability-agent") || contains(var.components, "observability-plugin"))
+      || (var.observability_server_url != null && var.observability_ca_pem != null && var.observability_bootstrap_token != null)
+    )
+    error_message = "observability-agent and observability-plugin without observability-server need observability_server_url, observability_ca_pem and observability_bootstrap_token."
+  }
+
+  validation {
+    condition     = !contains(var.components, "observability-server") || var.observability_server_url == null
+    error_message = "observability_server_url must be null with observability-server, which is its own server."
+  }
+
+  validation {
+    condition = (
+      !contains(var.components, "security-downstream")
+      || (var.security_join_token != null && var.security_primary_endpoint != null)
+    )
+    error_message = "security-downstream needs security_join_token and security_primary_endpoint from the primary cluster."
   }
 }
 
@@ -515,6 +569,14 @@ variable "appco_username" {
     condition     = try(trimspace(var.appco_username) != "", false) == try(trimspace(var.appco_password) != "", false)
     error_message = "appco_username and appco_password must be set together."
   }
+
+  validation {
+    condition = (
+      !(contains(var.components, "observability-server") || contains(var.components, "observability-agent"))
+      || try(trimspace(var.appco_username) != "" && trimspace(var.appco_password) != "", false)
+    )
+    error_message = "observability-server and observability-agent pull charts from Application Collection and need appco_username and appco_password."
+  }
 }
 
 variable "appco_password" {
@@ -590,7 +652,7 @@ variable "rancher_hostname" {
 variable "ingress_domain" {
   type        = string
   default     = null
-  description = "A domain with a wildcard DNS record (`*.<domain>`) pointing at the ingress: a CNAME to the load balancer DNS name on aws, an A record to the ingress IP elsewhere. The Rancher hostname becomes rancher.<domain>; null keeps the default."
+  description = "A domain with a wildcard DNS record (`*.<domain>`) pointing at the ingress: a CNAME to the load balancer DNS name on aws, an A record to the ingress IP elsewhere. Hostnames become rancher.<domain>, obs.<domain> and neuvector.<domain>; null keeps the defaults."
 
   validation {
     condition     = var.ingress_domain == null || can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$", var.ingress_domain))
@@ -603,6 +665,136 @@ variable "rancher_bootstrap_password" {
   default     = null
   sensitive   = true
   description = "Rancher initial admin password; a random one is generated when null."
+}
+
+# --- Security and Observability ------------------------------------------
+
+variable "security_admin_password" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "NeuVector admin password for the security-management and security-downstream components; a random one is generated when null."
+}
+
+variable "security_hostname" {
+  type        = string
+  default     = null
+  description = "Hostname of the NeuVector Manager ingress (security-management). Null selects an sslip.io name from the ingress address."
+}
+
+variable "security_join_token" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "NeuVector federation join token (a lowercase UUID). Required with security-downstream; generated when null with security-management."
+
+  validation {
+    condition     = var.security_join_token == null || can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.security_join_token))
+    error_message = "security_join_token must be a lowercase UUID, for example 123e4567-e89b-12d3-a456-426614174000."
+  }
+}
+
+variable "security_primary_endpoint" {
+  type        = string
+  default     = null
+  description = "Federation endpoint of the primary NeuVector cluster as host or host:port (port defaults to 443). Required with security-downstream."
+  validation {
+    condition     = var.security_primary_endpoint == null || can(regex("^[A-Za-z0-9.-]+(:[0-9]{1,5})?$", var.security_primary_endpoint))
+    error_message = "security_primary_endpoint must be host or host:port without a scheme or path."
+  }
+}
+
+variable "security_rancher_url" {
+  type        = string
+  default     = null
+  description = "Rancher URL (https://...) used for NeuVector Rancher SSO. Null uses the local Rancher when rancher is enabled, otherwise SSO is off."
+
+  validation {
+    condition     = var.security_rancher_url == null || can(regex("^https://", var.security_rancher_url))
+    error_message = "security_rancher_url must start with https://."
+  }
+}
+
+variable "observability_license_key" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability license key. Required with observability-server."
+
+  validation {
+    condition     = var.observability_license_key == null || !can(regex("[<>[:space:]]", var.observability_license_key))
+    error_message = "observability_license_key must be the license key itself, not a placeholder such as <...>; it cannot contain <, > or whitespace."
+  }
+}
+
+variable "observability_admin_password" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability admin password; a random one is generated when null."
+}
+
+variable "observability_sizing_profile" {
+  type        = string
+  default     = "trial"
+  description = "SUSE Observability sizing profile (trial, 10-nonha, 20-nonha, 50-nonha, 100-nonha, 150-ha, 250-ha, 500-ha or 4000-ha). Used with observability-server."
+
+  validation {
+    condition     = contains(["trial", "10-nonha", "20-nonha", "50-nonha", "100-nonha", "150-ha", "250-ha", "500-ha", "4000-ha"], var.observability_sizing_profile)
+    error_message = "observability_sizing_profile must be one of: trial, 10-nonha, 20-nonha, 50-nonha, 100-nonha, 150-ha, 250-ha, 500-ha, 4000-ha."
+  }
+}
+
+variable "observability_hostname" {
+  type        = string
+  default     = null
+  description = "Hostname of the SUSE Observability ingress (observability-server). Null selects an sslip.io name from the ingress address."
+}
+
+variable "observability_bootstrap_token" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "SUSE Observability service token used by agents and the Rancher plugin. Generated when null with observability-server; required for observability-agent and observability-plugin without a local server."
+}
+
+variable "observability_server_url" {
+  type        = string
+  default     = null
+  description = "HTTPS URL of a remote SUSE Observability server. Required for observability-agent and observability-plugin without observability-server; must be null with it."
+
+  validation {
+    condition     = var.observability_server_url == null || can(regex("^https://", var.observability_server_url))
+    error_message = "observability_server_url must start with https://."
+  }
+}
+
+variable "observability_ca_pem" {
+  type        = string
+  default     = null
+  description = "PEM CA certificate of the remote SUSE Observability server (the observability output ca_pem). Required with observability_server_url."
+}
+
+variable "observability_allowed_origins" {
+  type        = list(string)
+  default     = []
+  description = "Extra CORS origins allowed by the SUSE Observability server, for example remote Rancher URLs. The local Rancher URL is added automatically."
+}
+
+variable "observability_suse_ai_namespace" {
+  type        = string
+  default     = "suse-private-ai"
+  description = "Namespace of the SUSE AI workloads whose metrics the observability-agent collector scrapes."
+}
+
+variable "observability_opensearch_credentials" {
+  type = object({
+    username = string
+    password = string
+  })
+  default     = null
+  sensitive   = true
+  description = "OpenSearch username and password for the collector elasticsearch receiver. Null disables the receiver."
 }
 
 variable "image_rebuild" {

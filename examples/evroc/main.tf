@@ -38,15 +38,31 @@ module "ai_factory" {
   rancher_hostname           = var.rancher_hostname
   ingress_domain             = var.ingress_domain
   rancher_bootstrap_password = var.rancher_bootstrap_password
-  appco_username             = var.appco_username
-  appco_password             = var.appco_password
-  appco_registry             = var.appco_registry
-  suse_registry_username     = var.suse_registry_username
-  suse_registry_password     = var.suse_registry_password
-  nvidia_api_key             = var.nvidia_api_key
-  nvidia_username            = var.nvidia_username
-  gpu_driver_repository      = var.gpu_driver_repository
-  gpu_driver_version         = var.gpu_driver_version
+
+  security_admin_password              = var.security_admin_password
+  security_hostname                    = var.security_hostname
+  security_join_token                  = var.security_join_token
+  security_primary_endpoint            = var.security_primary_endpoint
+  security_rancher_url                 = var.security_rancher_url
+  observability_license_key            = var.observability_license_key
+  observability_admin_password         = var.observability_admin_password
+  observability_sizing_profile         = var.observability_sizing_profile
+  observability_hostname               = var.observability_hostname
+  observability_bootstrap_token        = var.observability_bootstrap_token
+  observability_server_url             = var.observability_server_url
+  observability_ca_pem                 = var.observability_ca_pem
+  observability_allowed_origins        = var.observability_allowed_origins
+  observability_suse_ai_namespace      = var.observability_suse_ai_namespace
+  observability_opensearch_credentials = var.observability_opensearch_credentials
+  appco_username                       = var.appco_username
+  appco_password                       = var.appco_password
+  appco_registry                       = var.appco_registry
+  suse_registry_username               = var.suse_registry_username
+  suse_registry_password               = var.suse_registry_password
+  nvidia_api_key                       = var.nvidia_api_key
+  nvidia_username                      = var.nvidia_username
+  gpu_driver_repository                = var.gpu_driver_repository
+  gpu_driver_version                   = var.gpu_driver_version
 
   # Set by deploy.sh through pass2.auto.tfvars.json; declared here because an
   # auto-loaded value for an undeclared root variable is silently ignored.

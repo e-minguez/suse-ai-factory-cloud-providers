@@ -71,7 +71,7 @@ done <<<"$common_names"
 
 # 4. Output set (docs/conventions.md): same names in every provider module,
 #    and examples/<p>/outputs.tf identical across providers.
-required_outputs="api_host api_vip build_status cluster_name egress_ips image ingress_endpoint jumphost kubernetes_api_endpoint network next_steps nodes provider provider_details rancher_bootstrap_password rancher_hostname rancher_url region"
+required_outputs="api_host api_vip build_status cluster_name egress_ips image ingress_endpoint jumphost kubernetes_api_endpoint network next_steps nodes observability observability_credentials provider provider_details rancher_bootstrap_password rancher_hostname rancher_url region security security_credentials"
 outputs_of() { sed -n 's/^output "\([a-z0-9_]*\)".*/\1/p' "$@" | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//'; }
 ref_example=""
 for p in "${providers[@]}"; do

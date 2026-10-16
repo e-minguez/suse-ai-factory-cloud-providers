@@ -53,7 +53,8 @@ cluster). The backends are then detached until pass 2. A missing or reset
 - Jumphost `user_data` carries the elemental config as one gzip bundle
   (`config_bundle`, unpacked by `/opt/elemental-config.sh`) plus the build script.
   Vultr accepts up to 16 MB; the module's 64 KiB precondition only catches
-  rendering bugs.
+  rendering bugs. A management set with security and observability measures
+  about 22 KiB.
 - The jumphost does not hold a Vultr API key. Terraform polls the URL from the
   operator machine first, over the same public path the fetcher uses.
 - Python 3 on the jumphost is the HTTP server (`python3 -m http.server`); this is
@@ -86,6 +87,8 @@ cluster). The backends are then detached until pass 2. A missing or reset
   module ignores changes to that one attribute.
 - sslip.io names work for Rancher and the API: `rancher-<ingress-ip>.sslip.io`,
   `rke2-<api-ip>.sslip.io`.
+- The SUSE Security and SUSE Observability components use the same ingress
+  address for their sslip.io names (`neuvector-<ip>`, `obs-<ip>`).
 - With `ingress_domain`, create `*.<domain>` as an A record to the ingress IP;
   the API keeps its own name.
 

@@ -113,7 +113,8 @@ The profile page can also store an existing SSH private key in
 The basic form has what a first deploy needs: region, admin CIDRs (`Detect my
 IP` fills yours), SSH keys, passwords, registry credentials and GPU pools.
 `Advanced settings` opens the remaining variables in groups (Network,
-Nodes, AI Factory, Access, Image and build, Provider, Tags). Defaults are shown
+Nodes, AI Factory, Security & Observability, Access, Image and build, Provider,
+Tags). Defaults are shown
 as placeholders. Only values you change are written; an empty field removes the
 value from the file, so the module default applies. A marker shows when advanced
 values differ from their defaults. Passwords are typed in clear and stored as

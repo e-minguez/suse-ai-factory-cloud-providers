@@ -10,6 +10,8 @@ common:
   examples:
     tags: |
       {"team": "ai", "cost-center": "1234"}
+    observability_opensearch_credentials: |
+      {"username": "admin", "password": "changeme"}
   basic:
     - {name: cluster_name, label: Cluster name}
     - {name: region, label: Region}
@@ -47,6 +49,22 @@ common:
       - nvidia_username
       - gpu_driver_repository
       - gpu_driver_version
+    Security & Observability:
+      - security_hostname
+      - {name: security_admin_password, widget: password}
+      - {name: security_join_token, widget: password}
+      - security_primary_endpoint
+      - security_rancher_url
+      - observability_hostname
+      - {name: observability_license_key, widget: password}
+      - {name: observability_admin_password, widget: password}
+      - {name: observability_bootstrap_token, widget: password}
+      - {name: observability_sizing_profile, widget: select, options: [trial, 10-nonha, 20-nonha, 50-nonha, 100-nonha, 150-ha, 250-ha, 500-ha, 4000-ha]}
+      - observability_server_url
+      - {name: observability_ca_pem, widget: text}
+      - {name: observability_allowed_origins, widget: list}
+      - observability_suse_ai_namespace
+      - {name: observability_opensearch_credentials, widget: json}
     Access:
       - node_username
       - permit_root_ssh

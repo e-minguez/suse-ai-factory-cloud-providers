@@ -24,3 +24,4 @@ with `# see docs/decisions/NNN-title.md`.
 - [007](007-cost-estimator.md) cost estimator
 - [008](008-exoscale-module.md) exoscale module design
 - [009](009-webui-runner.md) web UI runner
+- [010](010-security-observability.md) SUSE Security and SUSE Observability components

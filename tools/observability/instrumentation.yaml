@@ -1,0 +1,34 @@
+---
+# OPTIONAL. Requires otel-operator.yaml (apply this once its CRDs exist).
+# Apply in every namespace with workloads to instrument, then annotate the pods:
+#   instrumentation.opentelemetry.io/inject-<java|nodejs|python|go>: "true"
+# Go also needs instrumentation.opentelemetry.io/otel-go-auto-target-exe: <binary path>
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: otel-instrumentation
+spec:
+  exporter:
+    endpoint: http://opentelemetry-collector.open-telemetry.svc.cluster.local:4317
+  propagators:
+    - tracecontext
+    - baggage
+  defaults:
+    # Use the app.kubernetes.io/ labels for the service name, version and namespace
+    useLabelsForResourceAttributes: true
+  # These SDKs default to http/protobuf, so they use port 4318
+  python:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-collector.open-telemetry.svc.cluster.local:4318
+  dotnet:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-collector.open-telemetry.svc.cluster.local:4318
+  go:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-collector.open-telemetry.svc.cluster.local:4318
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"

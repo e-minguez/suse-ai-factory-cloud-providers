@@ -1,0 +1,248 @@
+# SUSE Observability server plus the SUSE AI extension, applied from the image.
+# TLS comes from the pre-created suse-observability-tls Secret (no cert-manager).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: suse-observability
+---
+# One leaf certificate serves the UI/API, OTLP gRPC and OTLP HTTP ingresses.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: suse-observability-tls
+  namespace: suse-observability
+type: kubernetes.io/tls
+stringData:
+  tls.crt: |
+    ${indent(4, chomp(tls_cert_pem))}
+  tls.key: |
+    ${indent(4, chomp(tls_key_pem))}
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: suse-observability
+  namespace: kube-system
+spec:
+  repo: https://charts.rancher.com/server-charts/prime/suse-observability
+  chart: suse-observability
+  version: ${jsonencode(versions.server)}
+  targetNamespace: suse-observability
+  valuesContent: |-
+    global:
+      suseObservability:
+        license: ${jsonencode(license_key)}
+        baseUrl: ${jsonencode("https://${hostname}")}
+        sizing:
+          profile: ${jsonencode(sizing_profile)}
+        adminPassword: ${jsonencode(admin_password)}
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      annotations:
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      hosts:
+      - host: ${jsonencode(hostname)}
+      tls:
+      - hosts:
+        - ${jsonencode(hostname)}
+        secretName: suse-observability-tls
+    # Receives the OTel data from collectors on other clusters
+    opentelemetry-collector:
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hosts:
+          - host: ${jsonencode(otlp_hostname)}
+            paths:
+              - path: /
+                pathType: Prefix
+                # Traefik needs the dedicated gRPC (h2c) service
+                serviceName: suse-observability-otel-collector-grpc
+                port: 4317
+        tls:
+          - hosts:
+              - ${jsonencode(otlp_hostname)}
+            secretName: suse-observability-tls
+        additionalIngresses:
+          - name: otlp-http
+            ingressClassName: traefik
+            annotations:
+              traefik.ingress.kubernetes.io/router.entrypoints: websecure
+            hosts:
+              - host: ${jsonencode(otlp_http_hostname)}
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    port: 4318
+            tls:
+              - hosts:
+                  - ${jsonencode(otlp_http_hostname)}
+                secretName: suse-observability-tls
+    stackstate:
+      allowedOrigins: ${jsonencode(allowed_origins)}
+      baseUrl: ${jsonencode("https://${hostname}")}
+      authentication:
+        serviceToken:
+          # Admin token used by the setup Jobs on every cluster
+          bootstrap:
+            token: ${jsonencode(bootstrap_token)}
+            roles:
+              - stackstate-admin
+      # StackPacks are installed by the SUSE AI extension and by the agent
+      # token Job: `stackstate.stackpacks.installed` does not work (STAC-24533).
+---
+# SUSE AI Observability extension: installs the open-telemetry and suse-ai
+# StackPacks and kubernetes-v2 for the clusters in kubernetesClusters.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: appco-credentials
+  namespace: kube-system
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: ${dockerconfigjson_b64}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: so-extensions
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: appco-credentials
+  namespace: so-extensions
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: ${dockerconfigjson_b64}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sts-extension-secret
+  namespace: suse-observability
+type: Opaque
+stringData:
+  STS_CLI_SERVICE_TOKEN: ${jsonencode(bootstrap_token)}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sts-extension-applier
+  namespace: suse-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sts-extension-role
+  namespace: suse-observability
+rules:
+  # Only to delete its own bootstrap Secret once done
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sts-extension-binding
+  namespace: suse-observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sts-extension-role
+subjects:
+  - kind: ServiceAccount
+    name: sts-extension-applier
+    namespace: suse-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sts-extension-secret-role
+  namespace: so-extensions
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sts-extension-secret-binding
+  namespace: so-extensions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sts-extension-secret-role
+subjects:
+  - kind: ServiceAccount
+    name: sts-extension-applier
+    namespace: suse-observability
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: suse-ai-observability-extension
+  namespace: kube-system
+spec:
+  chart: ${jsonencode("oci://${appco_registry}/charts/suse-ai-observability-extension")}
+  version: ${jsonencode(versions.extension)}
+  targetNamespace: so-extensions
+  dockerRegistrySecret:
+    name: appco-credentials
+  valuesContent: |-
+    global:
+      imagePullSecrets:
+      - appco-credentials
+    serverUrl: http://suse-observability-router.suse-observability.svc.cluster.local:8080
+    tokenType: service
+    existingSecret: suse-ai-obs-extension-token
+    existingSecretKey: API_TOKEN
+    # Only this cluster: the extension fails on an empty list
+    kubernetesClusters: ${jsonencode([cluster_name])}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: generate-extension-token
+  namespace: suse-observability
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      serviceAccountName: sts-extension-applier
+      restartPolicy: Never
+      containers:
+        - name: generate-token
+          image: ${jsonencode(tools_image)}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+
+              if ! kubectl get secret suse-ai-obs-extension-token -n so-extensions > /dev/null 2>&1; then
+                until curl -s -f -H "X-API-Key: $${STS_CLI_SERVICE_TOKEN}" "$${STS_CLI_URL}/api/server/info" > /dev/null; do sleep 5; done
+                # sts reads STS_CLI_URL and STS_CLI_SERVICE_TOKEN from the environment
+                TOKEN=$(sts service-token create --name suse-ai-obs-extension --roles stackstate-admin -o json \
+                  | jq -r '."service-token".token')
+                if [ -z "$${TOKEN}" ] || [ "$${TOKEN}" = "null" ]; then
+                  echo "Error: failed to create the service token."
+                  exit 1
+                fi
+                kubectl create secret generic suse-ai-obs-extension-token -n so-extensions \
+                  --from-literal=API_TOKEN="$${TOKEN}"
+              fi
+
+              kubectl delete secret sts-extension-secret -n suse-observability --ignore-not-found
+          env:
+            - name: STS_CLI_URL
+              # In-cluster router: no ingress or TLS involved
+              value: http://suse-observability-router.suse-observability.svc.cluster.local:8080
+          envFrom:
+            - secretRef:
+                name: sts-extension-secret

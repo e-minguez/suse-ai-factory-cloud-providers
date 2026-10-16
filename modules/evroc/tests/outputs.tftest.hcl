@@ -106,8 +106,20 @@ run "common_output_set" {
       output.build_status == output.build_status,
       output.next_steps == output.next_steps,
       output.provider_details == output.provider_details,
+      output.security == output.security,
+      output.observability == output.observability,
+      nonsensitive(output.security_credentials) == nonsensitive(output.security_credentials),
+      nonsensitive(output.observability_credentials) == nonsensitive(output.observability_credentials),
     ])
     error_message = "output set differs from docs/conventions.md#outputs"
+  }
+
+  assert {
+    condition = (
+      output.security == null && nonsensitive(output.security_credentials) == null &&
+      output.observability == null && nonsensitive(output.observability_credentials) == null
+    )
+    error_message = "security and observability outputs must be null by default."
   }
 
   assert {
@@ -602,4 +614,3 @@ run "rancher_hostname_default_sslip" {
     error_message = "Without ingress_domain the Rancher hostname must keep the sslip.io default."
   }
 }
-

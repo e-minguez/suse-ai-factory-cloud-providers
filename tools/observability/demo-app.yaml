@@ -1,0 +1,180 @@
+---
+# OPTIONAL. Example GenAI application that sends telemetry to the collector from
+# otel-collector.yaml: a Python loop that asks the vLLM OpenAI-compatible API a
+# question every INTERVAL_SECONDS, instrumented with the OpenLIT SDK. OpenLIT
+# emits the gen_ai.* traces and metrics (tokens, duration, cost) the SUSE AI
+# extension uses, and the collector's infer-* pipelines create the application
+# -> inference engine -> model topology from them.
+# Needs internet access to PyPI (the init container installs the SDKs).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: genai-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: genai-demo
+  namespace: genai-demo
+data:
+  app.py: |
+    import json
+    import os
+    import random
+    import time
+    import urllib.request
+
+    import openlit
+    from openai import OpenAI
+
+    BASE_URL = os.environ["OPENAI_BASE_URL"].rstrip("/")
+    INTERVAL = int(os.environ.get("INTERVAL_SECONDS", "30"))
+    MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "128"))
+    QUESTIONS = [
+        "Explain Kubernetes in one sentence.",
+        "What is a GPU used for in AI inference?",
+        "Give me three tips to write good commit messages.",
+        "What is the difference between a container and a virtual machine?",
+        "Summarize what OpenTelemetry is in two sentences.",
+    ]
+
+
+    def first_model():
+        # Wait for the inference endpoint and use the first model it serves
+        while True:
+            try:
+                with urllib.request.urlopen(f"{BASE_URL}/models", timeout=10) as r:
+                    return json.load(r)["data"][0]["id"]
+            except Exception as e:
+                print(f"Waiting for {BASE_URL}/models: {e}", flush=True)
+                time.sleep(10)
+
+
+    model = first_model()
+    # OpenLIT prices per 1000 tokens. Self-hosted models aren't in its default
+    # pricing.json (cost 0), so price the served model with the env values.
+    with open("/tmp/pricing.json", "w") as f:
+        json.dump({"chat": {model: {
+            "promptPrice": float(os.environ.get("PROMPT_PRICE_PER_1K", "0.0005")),
+            "completionPrice": float(os.environ.get("COMPLETION_PRICE_PER_1K", "0.0015")),
+        }}}, f)
+
+    # OpenLIT reports the client library ("openai") as provider. Name the actual
+    # inference engine instead, so the topology links the app to the vLLM
+    # component built from the scraped vLLM metrics.
+    provider = {"gen_ai.provider.name": os.environ.get("GENAI_PROVIDER_NAME", "vllm")}
+    openlit.init(
+        otlp_endpoint=os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"],
+        application_name=os.environ.get("APPLICATION_NAME", "genai-demo"),
+        environment=os.environ.get("DEPLOYMENT_ENVIRONMENT", "default"),
+        pricing_json="/tmp/pricing.json",
+        custom_span_attributes=provider,
+        custom_metrics_attributes=provider,
+        # The collector has no logs pipeline
+        disable_events=True,
+    )
+    client = OpenAI(base_url=BASE_URL, api_key=os.environ.get("OPENAI_API_KEY", "dummy"))
+    print(f"Using model {model}", flush=True)
+
+    while True:
+        question = random.choice(QUESTIONS)
+        try:
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": question}],
+                max_tokens=MAX_TOKENS,
+            )
+            print(f"{question!r}: {resp.usage.prompt_tokens}+{resp.usage.completion_tokens} tokens", flush=True)
+        except Exception as e:
+            print(f"Request failed: {e}", flush=True)
+        time.sleep(INTERVAL)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: genai-demo
+  namespace: genai-demo
+  labels:
+    app.kubernetes.io/name: genai-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: genai-demo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: genai-demo
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: install-sdks
+          image: registry.suse.com/bci/python:3.13
+          command: ["pip", "install", "--no-cache-dir", "--target", "/deps", "openlit==1.45.0", "openai==2.54.0"]
+          env:
+            - name: HOME
+              value: /tmp
+          securityContext: &restricted
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: deps
+              mountPath: /deps
+      containers:
+        - name: app
+          image: registry.suse.com/bci/python:3.13
+          command: ["python3", "/app/app.py"]
+          env:
+            - name: PYTHONPATH
+              value: /deps
+            # OpenAI-compatible endpoint. The default is the vLLM router of the
+            # SUSE AI "Simple Chatbot with RAG (vLLM and Milvus)" blueprint
+            - name: OPENAI_BASE_URL
+              value: "http://vllm-router-service.<SUSE_AI_NAMESPACE>.svc.cluster.local/v1"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://opentelemetry-collector.open-telemetry.svc.cluster.local:4318"
+            - name: APPLICATION_NAME
+              value: genai-demo
+            # Must match the inference engine's component name (vllm for the
+            # collector's vllm scrape job)
+            - name: GENAI_PROVIDER_NAME
+              value: vllm
+            - name: INTERVAL_SECONDS
+              value: "30"
+            - name: MAX_TOKENS
+              value: "128"
+            # Cost estimation, in USD per 1000 tokens
+            - name: PROMPT_PRICE_PER_1K
+              value: "0.0005"
+            - name: COMPLETION_PRICE_PER_1K
+              value: "0.0015"
+          securityContext: *restricted
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+            - name: deps
+              mountPath: /deps
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: app
+          configMap:
+            name: genai-demo
+        - name: deps
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

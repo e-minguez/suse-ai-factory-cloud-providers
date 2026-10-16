@@ -57,7 +57,26 @@ module "config" {
   gpu_driver_version     = var.gpu_driver_version
 
   rancher_hostname           = local.rancher_hostname
+  ingress_domain             = var.ingress_domain
   rancher_bootstrap_password = var.rancher_bootstrap_password
+
+  ingress_address = local.api_vip
+
+  security_admin_password              = var.security_admin_password
+  security_hostname                    = var.security_hostname
+  security_join_token                  = var.security_join_token
+  security_primary_endpoint            = var.security_primary_endpoint
+  security_rancher_url                 = var.security_rancher_url
+  observability_license_key            = var.observability_license_key
+  observability_admin_password         = var.observability_admin_password
+  observability_sizing_profile         = var.observability_sizing_profile
+  observability_hostname               = var.observability_hostname
+  observability_bootstrap_token        = var.observability_bootstrap_token
+  observability_server_url             = var.observability_server_url
+  observability_ca_pem                 = var.observability_ca_pem
+  observability_allowed_origins        = var.observability_allowed_origins
+  observability_suse_ai_namespace      = var.observability_suse_ai_namespace
+  observability_opensearch_credentials = var.observability_opensearch_credentials
 
   # Every node has a public and a privnet NIC: pin RKE2 to the privnet one.
   enable_write_node_ip = true
