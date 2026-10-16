@@ -53,18 +53,19 @@ locals {
     local.build_id_placeholder, module.elemental_config.build_id
   )
 
-  # Files written by cloud-init, each gzip+base64. Config files carry credentials.
+  # Files written by cloud-init, as JSON strings: the whole user_data is gzipped
+  # once (compresses across files). Config files carry credentials.
   jumphost_files = concat(
     [{
       path    = "/opt/image-factory.sh"
       mode    = "0700"
-      content = base64gzip(local.factory_script)
+      content = jsonencode(local.factory_script)
     }],
     [
       for name in module.elemental_config.elemental_file_names : {
         path    = "${local.config_dir}/${name}"
         mode    = "0600"
-        content = base64gzip(module.elemental_config.elemental_files[name])
+        content = jsonencode(module.elemental_config.elemental_files[name])
       }
     ]
   )
@@ -79,6 +80,10 @@ locals {
     }),
     "/(?m)^[ \\t]*# .*\\n/", ""
   )
+
+  # cloud-init accepts gzip user_data; EC2 counts the bytes before base64.
+  jumphost_user_data_gz    = base64gzip(local.jumphost_user_data)
+  jumphost_user_data_bytes = floor(length(local.jumphost_user_data_gz) * 3 / 4) - length(regexall("=", local.jumphost_user_data_gz))
 }
 
 resource "aws_instance" "jumphost" {
@@ -94,7 +99,7 @@ resource "aws_instance" "jumphost" {
   vpc_security_group_ids      = [aws_security_group.jumphost.id]
   iam_instance_profile        = local.jumphost_profile
 
-  user_data = local.jumphost_user_data
+  user_data_base64 = local.jumphost_user_data_gz
   # EC2 reads user_data on first boot only.
   user_data_replace_on_change = true
 
@@ -129,8 +134,8 @@ resource "aws_instance" "jumphost" {
   lifecycle {
     precondition {
       # EC2 hard limit on user_data; nonsensitive() on the length only.
-      condition     = length(local.jumphost_user_data) <= 16384
-      error_message = "Rendered jumphost user_data is ${nonsensitive(length(local.jumphost_user_data))} bytes, over EC2's 16384-byte limit. The script and config are inline, gzipped; a large ssh_authorized_keys or config tree is the likely cause."
+      condition     = local.jumphost_user_data_bytes <= 16384
+      error_message = "Gzipped jumphost user_data is ${nonsensitive(local.jumphost_user_data_bytes)} bytes, over EC2's 16384-byte limit. The script and config are inline; a large ssh_authorized_keys or config tree is the likely cause."
     }
   }
 }

@@ -57,7 +57,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 - Comments are stripped from rendered configs before hashing and before user_data.
 
 ## Provider facts
-- user_data limits: EC2 16 KiB (gzip + comment strip + size preconditions), vultr 32 KiB, evroc 768 KiB, exoscale 32768 base64 characters (~24 KiB).
+- user_data limits: EC2 16 KiB (gzip + comment strip + size preconditions), vultr 16 MB (stated by Vultr support, not in their docs; 64 KiB sanity ceiling), evroc 768 KiB, exoscale 32768 base64 characters (~24 KiB).
 - Passes: aws 1; vultr 2 (LB address in the image ↔ inline LB backends cycle; ADR 006); evroc 2 (a disk cannot be attached and detached in one apply) + optional 3rd to reclaim build disks. exoscale 2 (NLB targets instance pools only and a pool has one user_data: control plane pool bootstraps with one init member, then join config + scale-up; ADR 008).
 - Hostnames: sslip.io works for Rancher and the RKE2 API on vultr, evroc and exoscale (confirmed by the user); aws uses NLB DNS names.
 - aws: AMI via S3 + `aws_ebs_snapshot_import`; single regional image.

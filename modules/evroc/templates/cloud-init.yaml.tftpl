@@ -19,13 +19,11 @@ users:
 %{ endif ~}
 
 write_files:
-%{ for path in file_names ~}
-  - path: ${config_dir}/${path}
+  - path: /opt/elemental-config.sh
     encoding: gz+b64
-    content: ${base64gzip(files[path])}
+    content: ${config_bundle}
     owner: root:root
-    permissions: '${endswith(path, ".sh") ? "0755" : "0600"}'
-%{ endfor ~}
+    permissions: '0700'
   - path: /opt/image-factory.sh
     encoding: gz+b64
     content: ${base64gzip(factory_script)}
@@ -69,4 +67,6 @@ runcmd:
   - 'systemctl daemon-reload'
   - 'systemctl enable --now status-relay.service'
 %{ endif ~}
+  - 'bash /opt/elemental-config.sh ${config_dir}'
+  - 'rm -f /opt/elemental-config.sh'
   - 'nohup setsid /opt/image-factory.sh </dev/null >/dev/null 2>&1 &'

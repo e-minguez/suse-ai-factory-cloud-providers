@@ -49,7 +49,7 @@ flowchart TD
     end
 
     subgraph build_host ["Build host (jumphost; evroc: one per zone)"]
-        ud["cloud-init user_data:<br/>config files + build script inline"]
+        ud["cloud-init user_data:<br/>one gzip config bundle + build script inline"]
         cust["podman: elemental customize --type raw"]
         raw["raw image"]
         ud --> cust --> raw

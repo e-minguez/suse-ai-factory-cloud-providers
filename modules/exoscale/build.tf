@@ -37,7 +37,7 @@ module "image_factory" {
 locals {
   # A local so the size precondition can read it.
   jumphost_user_data = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    files               = module.config.elemental_files
+    config_bundle       = module.config.config_bundle
     factory_script      = local.factory_script
     config_dir          = local.config_dir
     ssh_authorized_keys = var.ssh_authorized_keys
@@ -89,7 +89,7 @@ resource "exoscale_compute_instance" "jumphost" {
       # The API takes at most 32768 base64 characters. nonsensitive() on the
       # length only, so the error can show the size.
       condition     = length(base64encode(local.jumphost_user_data)) < 32768
-      error_message = "Rendered jumphost user_data is ${nonsensitive(length(base64encode(local.jumphost_user_data)))} characters in base64, over the 32768 limit. Look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
+      error_message = "Rendered jumphost user_data is ${nonsensitive(length(base64encode(local.jumphost_user_data)))} characters in base64, over the 32768 limit. The elemental config is one gzip bundle (config_bundle). Look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
     }
   }
 }

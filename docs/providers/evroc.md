@@ -388,7 +388,8 @@ Every node boots the same image. Its role comes from per-node Ignition in
   `user-data` and `meta-data`), delivered byte for byte, with no
   `network-config`. The platform limit is 1 MB on the VM object. Node user data
   is checked against 768 KiB; build-host user data against 32 KiB, a size
-  tripwire for template bugs that render content twice.
+  tripwire for template bugs that render content twice. The elemental config
+  reaches the build hosts as one gzip bundle.
 - **`ignition.platform.id=proxmoxve`.** The id selects a config-delivery
   convention, not a hypervisor. The guest reports KubeVirt, but the
   `kubevirt` provider reads a ConfigDrive (`config-2`) and retries without

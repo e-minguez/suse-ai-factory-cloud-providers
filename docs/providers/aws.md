@@ -243,6 +243,13 @@ precondition fails the plan when the rendered size exceeds the limit. Node
 Ignition is gzip-compressed and size-checked the same way
 (`user_data_max_bytes = 16384`).
 
+The whole jumphost `user_data` is gzipped (`user_data_base64`). When an upgrade
+changes it, the jumphost is replaced and the new instance re-runs the factory
+script. With an unchanged `build_hash` the `is_already_built` hook finds the raw
+image in S3 and skips the build. If the raw has expired (one day after upload,
+unless `keep_build_artifacts = true`), the script builds and uploads the image
+again; the AMI is not replaced, so the upload is unused.
+
 ## Jumphost AMI: Marketplace listing
 
 The jumphost runs openSUSE Leap 16 (x86_64, publisher `679593333241`), an AWS

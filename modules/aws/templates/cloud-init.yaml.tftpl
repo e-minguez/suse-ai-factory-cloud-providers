@@ -1,6 +1,7 @@
 #cloud-config
 # Jumphost user_data: accounts, the factory script and the elemental config
-# tree, all inline (gz+b64). Instances read nothing from S3.
+# tree, all inline; the user_data itself is gzipped. Instances read nothing
+# from S3.
 disable_root: false
 
 # Accounts are listed explicitly, without cloud-init's `default`, so no
@@ -29,7 +30,6 @@ write_files:
   - path: ${f.path}
     owner: root:root
     permissions: '${f.mode}'
-    encoding: gz+b64
     content: ${f.content}
 %{ endfor ~}
 

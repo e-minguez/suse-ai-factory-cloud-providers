@@ -50,6 +50,10 @@ cluster). The backends are then detached until pass 2. A missing or reset
   `terraform state rm 'module.ai_factory.vultr_snapshot_from_url.ai_factory[0]'`,
   then `./deploy.sh` (or `./deploy.sh --rebuild` after the serve window closed).
 - Vultr does not report UEFI back for a snapshot. A node that boots is the check.
+- Jumphost `user_data` carries the elemental config as one gzip bundle
+  (`config_bundle`, unpacked by `/opt/elemental-config.sh`) plus the build script.
+  Vultr accepts up to 16 MB; the module's 64 KiB precondition only catches
+  rendering bugs.
 - The jumphost does not hold a Vultr API key. Terraform polls the URL from the
   operator machine first, over the same public path the fetcher uses.
 - Python 3 on the jumphost is the HTTP server (`python3 -m http.server`); this is

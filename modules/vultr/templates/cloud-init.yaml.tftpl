@@ -19,13 +19,11 @@ users:
 %{ endif ~}
 
 write_files:
-%{ for path, content in files ~}
-  - path: ${config_dir}/${path}
+  - path: /opt/elemental-config.sh
     encoding: gz+b64
-    content: ${base64gzip(content)}
+    content: ${config_bundle}
     owner: root:root
-    permissions: '${endswith(path, ".sh") ? "0755" : "0600"}'
-%{ endfor ~}
+    permissions: '0700'
   - path: /opt/image-factory.sh
     encoding: gz+b64
     content: ${base64gzip(factory_script)}
@@ -33,4 +31,6 @@ write_files:
     permissions: '0700'
 
 runcmd:
+  - 'bash /opt/elemental-config.sh ${config_dir}'
+  - 'rm -f /opt/elemental-config.sh'
   - 'nohup setsid /opt/image-factory.sh </dev/null >/dev/null 2>&1 &'

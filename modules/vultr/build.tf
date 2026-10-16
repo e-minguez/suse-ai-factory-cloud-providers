@@ -45,7 +45,7 @@ module "image_factory" {
 locals {
   # A local so the size precondition can read it.
   jumphost_user_data = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    files               = module.config.elemental_files
+    config_bundle       = module.config.config_bundle
     factory_script      = local.factory_script
     config_dir          = local.config_dir
     ssh_authorized_keys = var.ssh_authorized_keys
@@ -77,10 +77,10 @@ resource "vultr_instance" "jumphost" {
 
   lifecycle {
     precondition {
-      # 32 KiB is a sanity ceiling, not a documented limit. nonsensitive() on the
-      # length only, so the error can show the size.
-      condition     = length(local.jumphost_user_data) <= 32768
-      error_message = "Rendered jumphost user_data is ${nonsensitive(length(local.jumphost_user_data))} bytes, over the 32 KiB sanity ceiling. Check the comment strip in locals.tf still covers local.factory_script (the module strips the elemental files), then look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
+      # Vultr accepts up to 16 MB; 64 KiB is only a sanity ceiling against rendering
+      # bugs. nonsensitive() on the length only, so the error can show the size.
+      condition     = length(local.jumphost_user_data) <= 65536
+      error_message = "Rendered jumphost user_data is ${nonsensitive(length(local.jumphost_user_data))} bytes, over the 64 KiB sanity ceiling (Vultr accepts up to 16 MB; the ceiling only catches rendering bugs). Check the comment strip in locals.tf still covers local.factory_script (the module strips the elemental files), then look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
     }
   }
 }
