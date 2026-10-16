@@ -49,7 +49,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 ## Image and node facts
 - The Elemental image has **no sudo**. Login is `node_username` + `su -`. RKE2 sets `write-kubeconfig-group: <node_username>` and `write-kubeconfig-mode: "0640"` so tooling never needs root. `permit_root_ssh` is a debug toggle, default false.
 - Ignition runs with most of the filesystem read-only. Anything depending on runtime state (network, NICs, sysext binaries) is a script written by Ignition plus a systemd oneshot unit or an elemental initrd hook, not a static config file.
-- `write-node-ip.sh` is required: bare-metal nodes have two NICs with default gateways and RKE2 would otherwise pick the public one. Single NIC → no-op; else pick the IPv4 inside `vpc_cidr`.
+- `write-node-ip.sh` is required: bare-metal nodes have two NICs with default gateways and RKE2 would otherwise pick the public one. Single NIC → no-op, except on vultr (`pin_single_nic_node_ip`: VPC DHCP can lease a CGNAT address first); else pick the IPv4 inside `vpc_cidr`.
 - `configure-network.sh` (initrd hook, evroc and vultr) is required there: MTU and the dual-NIC bare-metal case.
 - `ignition.platform.id`: aws → `aws`, vultr → `vultr`, evroc → `proxmoxve`, exoscale → `exoscale` (metadata service only: private instances cannot boot Elemental).
 - GA `elemental3ctl` 3.0.x ignores `initrdExtensions`; hence the `core_platform_override` / `sysext_image_overrides` beta workarounds. Remove once a GA image ships elemental3ctl ≥ 3.1.

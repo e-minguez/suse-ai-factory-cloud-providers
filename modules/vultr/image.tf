@@ -59,6 +59,8 @@ module "config" {
   rancher_bootstrap_password = var.rancher_bootstrap_password
 
   enable_write_node_ip = true
+  # VPC DHCP can lease a CGNAT address first (docs/providers/vultr.md#network).
+  pin_single_nic_node_ip = true
 
   extra_config_files = {
     "network/configure-network.sh" = templatefile("${path.module}/templates/elemental/network/configure-network.sh.tftpl", {

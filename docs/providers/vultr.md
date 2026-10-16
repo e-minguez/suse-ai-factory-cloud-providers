@@ -105,6 +105,10 @@ cannot tag are listed under [Known limitations](#known-limitations).
   metadata tree reports `ipv4/address` as `dhcp` on `vpc_only` nodes.
 - Bare metal nodes have two NICs with default gateways. `write-node-ip.sh` pins the
   RKE2 node IP to the address inside `vpc_cidr` (see `CLAUDE.md`).
+- Single-NIC (`vpc_only`) nodes are pinned too (`pin_single_nic_node_ip`): a node
+  whose NIC held a CGNAT lease when RKE2 started registered that address with
+  etcd and the API, and no other node could reach it. The script waits up to 10
+  minutes for an address inside `vpc_cidr` before RKE2 starts.
 - Metadata is served on `169.254.169.254` without authentication and is not
   reachable over a VPC NIC before its DHCP has completed.
 

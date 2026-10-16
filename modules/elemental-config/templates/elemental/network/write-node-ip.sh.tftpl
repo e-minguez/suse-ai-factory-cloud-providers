@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Pins the RKE2 node-ip on multi-NIC nodes to the IPv4 address inside
-# ${vpc_cidr}. Single-NIC nodes keep RKE2's default and nothing is written.
+# Pins the RKE2 node-ip to the IPv4 address inside ${vpc_cidr}: on multi-NIC
+# nodes always; on single-NIC nodes only with PIN_SINGLE_NIC (the platform's
+# DHCP can hand out an address outside the VPC range first).
 set -euo pipefail
 
 VPC_CIDR="${vpc_cidr}"
+PIN_SINGLE_NIC="${pin_single_nic}"
 CONFIG_DIR="/etc/rancher/rke2/config.yaml.d"
 
 log() { echo "[write-node-ip] $*"; }
@@ -15,9 +17,14 @@ for dev in /sys/class/net/*/device; do
   nics+=("$${dev##*/}")
 done
 
+# 2 s per try: 1 minute for multi-NIC nodes, 10 minutes when pinning a single NIC.
+tries=30
 if [ "$${#nics[@]}" -le 1 ]; then
-  log "found $${#nics[@]} NIC(s); nothing to do"
-  exit 0
+  if [ "$PIN_SINGLE_NIC" != "true" ]; then
+    log "found $${#nics[@]} NIC(s); nothing to do"
+    exit 0
+  fi
+  tries=300
 fi
 
 ip_to_int() {
@@ -31,7 +38,7 @@ mask=$(( bits == 0 ? 0 : (0xFFFFFFFF << (32 - bits)) & 0xFFFFFFFF ))
 net=$(( $(ip_to_int "$${VPC_CIDR%/*}") & mask ))
 
 node_ip=""
-for _ in $(seq 1 30); do
+for _ in $(seq 1 "$tries"); do
   while read -r line; do
     rest=$${line#*inet }
     [ "$rest" = "$line" ] && continue
@@ -47,7 +54,7 @@ for _ in $(seq 1 30); do
 done
 
 if [ -z "$node_ip" ]; then
-  log "ERROR: no IPv4 address inside $VPC_CIDR after 60s"
+  log "ERROR: no IPv4 address inside $VPC_CIDR after $((tries * 2))s"
   exit 1
 fi
 

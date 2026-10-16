@@ -140,6 +140,11 @@ run "butane_parses_and_carries_extra_hooks" {
     condition     = strcontains(output.write_node_ip_script, "VPC_CIDR=\"10.20.0.0/16\"")
     error_message = "write-node-ip.sh must carry vpc_cidr."
   }
+
+  assert {
+    condition     = strcontains(output.write_node_ip_script, "PIN_SINGLE_NIC=\"false\"")
+    error_message = "write-node-ip.sh must leave single-NIC nodes alone unless pin_single_nic_node_ip is set."
+  }
 }
 
 run "write_node_ip_is_off_by_default" {
@@ -205,5 +210,19 @@ run "server_kubeconfig_group_readable" {
   assert {
     condition     = yamldecode(output.elemental_files["kubernetes/config/server.yaml"])["write-kubeconfig-group"] == "suse"
     error_message = "server.yaml must set write-kubeconfig-group to node_username."
+  }
+}
+
+run "write_node_ip_pins_single_nic_when_asked" {
+  command = plan
+
+  variables {
+    enable_write_node_ip   = true
+    pin_single_nic_node_ip = true
+  }
+
+  assert {
+    condition     = strcontains(output.write_node_ip_script, "PIN_SINGLE_NIC=\"true\"")
+    error_message = "pin_single_nic_node_ip must reach write-node-ip.sh."
   }
 }

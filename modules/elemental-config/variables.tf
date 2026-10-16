@@ -221,6 +221,12 @@ variable "enable_write_node_ip" {
   description = "Add write-node-ip.sh and its unit to the image: on multi-NIC nodes it pins the RKE2 node-ip to the address inside vpc_cidr."
 }
 
+variable "pin_single_nic_node_ip" {
+  type        = bool
+  default     = false
+  description = "Make write-node-ip.sh pin single-NIC nodes too, waiting up to 10 minutes for an address inside vpc_cidr. For platforms whose DHCP can hand out an address outside the VPC range."
+}
+
 variable "extra_build_inputs" {
   type        = map(string)
   default     = {}

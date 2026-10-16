@@ -76,7 +76,7 @@ resource "vultr_instance" "agent_cloud" {
   enable_ipv6 = each.value.vpc_only ? false : local.enable_ipv6
 
   # Raw Ignition JSON, not cloud-init. The node-ip drop-in is written at first
-  # boot by write-node-ip.service, on a dual-NIC node only (control-plane.tf).
+  # boot by write-node-ip.service, also on single-NIC nodes (control-plane.tf).
   user_data = module.config.node_runtime_ignition[each.key]
 
   # Ignition runs on first boot only: a changed user_data (e.g. suse_storage_nodes)

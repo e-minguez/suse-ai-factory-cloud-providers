@@ -26,8 +26,8 @@ resource "vultr_instance" "control_plane" {
 
   # Raw Ignition JSON (ignition.platform.id=vultr), merged over the image's
   # base config: only per-node data (hostname, runtime.env, RKE2 manifests).
-  # write-node-ip.service writes nothing on a single-NIC node, so RKE2 keeps its
-  # DHCP address, which is the one the load balancers have on file.
+  # write-node-ip.service pins the node-ip to the VPC address (pin_single_nic_node_ip):
+  # the load balancers have that address on file, not a CGNAT lease.
   user_data = module.config.node_runtime_ignition[local.control_plane_nodes[count.index].hostname]
 
   # Ignition runs on first boot only: a changed user_data (e.g. suse_storage_nodes)

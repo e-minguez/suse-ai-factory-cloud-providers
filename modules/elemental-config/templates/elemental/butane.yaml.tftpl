@@ -33,7 +33,7 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=Write RKE2 node-ip override, if this node has more than one NIC
+        Description=Write RKE2 node-ip override (address inside the VPC CIDR)
         Wants=network-online.target
         After=network-online.target
         Before=rke2-server.service rke2-agent.service k8s-config-installer.service

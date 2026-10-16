@@ -1,5 +1,8 @@
 locals {
-  write_node_ip_script = templatefile("${path.module}/templates/elemental/network/write-node-ip.sh.tftpl", { vpc_cidr = var.vpc_cidr })
+  write_node_ip_script = templatefile("${path.module}/templates/elemental/network/write-node-ip.sh.tftpl", {
+    vpc_cidr       = var.vpc_cidr
+    pin_single_nic = var.pin_single_nic_node_ip
+  })
 
   extra_units_yaml = length(var.extra_butane_units) == 0 ? "" : trimspace(yamlencode([
     for u in var.extra_butane_units : { for k, v in u : k => v if v != null }
