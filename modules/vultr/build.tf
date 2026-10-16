@@ -76,6 +76,10 @@ resource "vultr_instance" "jumphost" {
   user_data = local.jumphost_user_data
 
   lifecycle {
+    # Vultr updates user_data in place without re-running cloud-init: a new
+    # build needs a new jumphost.
+    replace_triggered_by = [random_id.serve_path]
+
     precondition {
       # 32 KiB is a sanity ceiling, not a documented limit. nonsensitive() on the
       # length only, so the error can show the size.
