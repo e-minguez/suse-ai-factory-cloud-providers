@@ -224,7 +224,7 @@ variable "enable_write_node_ip" {
 variable "pin_single_nic_node_ip" {
   type        = bool
   default     = false
-  description = "Make write-node-ip.sh pin single-NIC nodes too, waiting up to 10 minutes for an address inside vpc_cidr. For platforms whose DHCP can hand out an address outside the VPC range."
+  description = "Make write-node-ip.sh pin single-NIC nodes too, waiting up to 10 minutes for an address inside vpc_cidr; RKE2 does not start if none appears. For platforms whose DHCP can hand out an address outside the VPC range."
 }
 
 variable "extra_build_inputs" {

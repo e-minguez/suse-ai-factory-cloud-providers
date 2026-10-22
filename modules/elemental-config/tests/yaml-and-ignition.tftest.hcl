@@ -145,6 +145,11 @@ run "butane_parses_and_carries_extra_hooks" {
     condition     = strcontains(output.write_node_ip_script, "PIN_SINGLE_NIC=\"false\"")
     error_message = "write-node-ip.sh must leave single-NIC nodes alone unless pin_single_nic_node_ip is set."
   }
+
+  assert {
+    condition     = !strcontains(output.elemental_files["butane.yaml"], "Requires=write-node-ip.service")
+    error_message = "RKE2 units must not require write-node-ip.service unless pin_single_nic_node_ip is set."
+  }
 }
 
 run "write_node_ip_is_off_by_default" {
@@ -224,5 +229,13 @@ run "write_node_ip_pins_single_nic_when_asked" {
   assert {
     condition     = strcontains(output.write_node_ip_script, "PIN_SINGLE_NIC=\"true\"")
     error_message = "pin_single_nic_node_ip must reach write-node-ip.sh."
+  }
+
+  assert {
+    condition = alltrue([
+      for u in ["rke2-server.service", "rke2-agent.service"] :
+      strcontains(one([for x in yamldecode(output.elemental_files["butane.yaml"]).systemd.units : x if x.name == u]).dropins[0].contents, "Requires=write-node-ip.service")
+    ])
+    error_message = "With pin_single_nic_node_ip, RKE2 units must require write-node-ip.service."
   }
 }

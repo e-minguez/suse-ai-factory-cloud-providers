@@ -37,6 +37,7 @@ locals {
         node_user_password_hash = var.node_user_password_hash
         permit_root_ssh         = var.permit_root_ssh
         enable_write_node_ip    = var.enable_write_node_ip
+        pin_single_nic_node_ip  = var.pin_single_nic_node_ip
         write_node_ip_script    = local.write_node_ip_script
         enable_iscsi_prep       = local.enabled_iscsi_prep
         iscsi_prep_script       = file("${path.module}/templates/elemental/storage/iscsi-prep.sh")

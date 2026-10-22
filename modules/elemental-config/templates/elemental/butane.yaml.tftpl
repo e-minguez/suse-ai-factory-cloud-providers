@@ -46,6 +46,19 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
+%{ if pin_single_nic_node_ip ~}
+    # Pinned single-NIC nodes: RKE2 does not start without a VPC node-ip, so a
+    # node holding only an out-of-range lease never registers that address.
+%{ for unit in ["rke2-server.service", "rke2-agent.service"] ~}
+    - name: ${unit}
+      dropins:
+        - name: 10-write-node-ip.conf
+          contents: |
+            [Unit]
+            Requires=write-node-ip.service
+            After=write-node-ip.service
+%{ endfor ~}
+%{ endif ~}
 %{ endif ~}
 %{ if enable_iscsi_prep ~}
     # The suse-storage sysext ships iscsid under /usr and nothing under /etc.

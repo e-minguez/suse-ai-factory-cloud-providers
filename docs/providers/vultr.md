@@ -117,7 +117,12 @@ cannot tag are listed under [Known limitations](#known-limitations).
 - Single-NIC (`vpc_only`) nodes are pinned too (`pin_single_nic_node_ip`): a node
   whose NIC held a CGNAT lease when RKE2 started registered that address with
   etcd and the API, and no other node could reach it. The script waits up to 10
-  minutes for an address inside `vpc_cidr` before RKE2 starts.
+  minutes for an address inside `vpc_cidr`, and RKE2 requires it
+  (`Requires=write-node-ip.service`): without one, RKE2 does not start.
+- The first DHCP transaction of a `vpc_only` instance can also return a CGNAT
+  address, and later transactions on that NIC return the same address. Such a
+  node never gets its VPC address and never joins the cluster
+  (`write-node-ip.service` failed); replace it with `deploy.sh -- -replace=<address>`.
 - Metadata is served on `169.254.169.254` without authentication and is not
   reachable over a VPC NIC before its DHCP has completed.
 
