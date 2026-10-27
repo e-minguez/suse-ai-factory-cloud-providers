@@ -15,6 +15,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 CLUSTERS="$ROOT/clusters"
 REGISTER_ROOT="$HERE/register"
+# shellcheck source=../../scripts/lib/tfbin.sh
+. "$ROOT/scripts/lib/tfbin.sh"
 # Files every example provides; clusters/<name> links to each.
 LINKED_FILES="main.tf variables.tf outputs.tf versions.tf deploy.sh"
 LINKED_SCRIPTS="kubeconfig.sh ssh.sh build-logs.sh"
@@ -166,7 +168,7 @@ var_file_args() {
 check_ingress() { # mgmt_dir mgmt_name, then "name<TAB>ips" lines on stdin
   local mdir=$1 cidrs_json args=() line ips ip name missing=0 cidr ok cidrs
   while IFS= read -r line; do args+=("$line"); done < <(var_file_args "$mdir")
-  cidrs_json=$(cd "$mdir" && echo 'jsonencode(var.ingress_cidrs)' | terraform console ${args[@]+"${args[@]}"} 2>/dev/null | jq -r '. | fromjson | .[]' 2>/dev/null) || cidrs_json=""
+  cidrs_json=$(cd "$mdir" && echo 'jsonencode(var.ingress_cidrs)' | "$TF_BIN" console ${args[@]+"${args[@]}"} 2>/dev/null | jq -r '. | fromjson | .[]' 2>/dev/null) || cidrs_json=""
   cidrs=$cidrs_json
   local known=1
   [ -n "$cidrs" ] || known=0
@@ -229,7 +231,7 @@ cmd_register() {
     shift
   done
   [ ${#names[@]} -ge 2 ] || die "usage: cluster.sh register [--bootstrap] [--skip-cidr-check] [--yes] <mgmt> <downstream...>"
-  for n in jq terraform curl; do command -v "$n" >/dev/null 2>&1 || die "$n not found"; done
+  for n in jq "$TF_BIN" curl; do command -v "$n" >/dev/null 2>&1 || die "$n not found"; done
 
   mgmt=${names[0]}
   m_dir=$(cluster_dir "$mgmt")
@@ -249,7 +251,7 @@ cmd_register() {
   [ "$bootstrap" = 1 ] || [ ! -f "$state/bootstrap" ] || bootstrap=1
 
   local m_json rancher_url rancher_name
-  m_json=$(cd "$m_dir" && terraform output -json) || die "no outputs for $mgmt (deploy it first)"
+  m_json=$(cd "$m_dir" && "$TF_BIN" output -json) || die "no outputs for $mgmt (deploy it first)"
   rancher_url=$(jq -r '.rancher_url.value // empty' <<<"$m_json")
   rancher_name=$(jq -r '.cluster_name.value // empty' <<<"$m_json")
   [ -n "$rancher_url" ] || die "$mgmt has no rancher_url (Rancher is not enabled there)"
@@ -258,7 +260,7 @@ cmd_register() {
   local ds_json='{}' egress_lines="" j
   for n in "${downstream[@]}"; do
     d_dir=$(cluster_dir "$n")
-    j=$(cd "$d_dir" && terraform output -json) || die "no outputs for $n (deploy it first)"
+    j=$(cd "$d_dir" && "$TF_BIN" output -json) || die "no outputs for $n (deploy it first)"
     ds_json=$(jq -c --arg k "$n" --argjson o "$j" \
       '. + {($k): {cluster_name: $o.cluster_name.value, provider: $o.provider.value, egress_ips: ($o.egress_ips.value // [])}}' <<<"$ds_json") ||
       die "outputs of $n are missing cluster_name, provider or egress_ips"
@@ -295,11 +297,11 @@ cmd_register() {
   export TF_VAR_mgmt TF_VAR_downstream
   # TF_DATA_DIR only on the register root: exported, it would also redirect the
   # terraform output that remote_apply runs in each cluster directory.
-  reg_tf() { TF_DATA_DIR="$state/.terraform" terraform -chdir="$REGISTER_ROOT" "$@"; }
+  reg_tf() { TF_DATA_DIR="$state/.terraform" "$TF_BIN" -chdir="$REGISTER_ROOT" "$@"; }
 
   reg_tf init -input=false -reconfigure -backend-config="path=$state/terraform.tfstate" >/dev/null ||
-    die "terraform init failed in tools/multicluster/register"
-  reg_tf apply "${tf_args[@]}" || die "terraform apply failed"
+    die "$TF_BIN init failed in tools/multicluster/register"
+  reg_tf apply "${tf_args[@]}" || die "$TF_BIN apply failed"
   printf '%s\n' "${downstream[@]}" >"$state/downstream.list"
 
   local regs insecure url

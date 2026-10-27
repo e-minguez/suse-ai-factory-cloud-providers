@@ -68,6 +68,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 
 ## Tooling
 - Terraform `>= 1.16.5` everywhere (`versions.tf`, CI `TF_VERSION`, webui Dockerfile `TF_VERSION`); bump them together.
+- OpenTofu works too. `scripts/lib/tfbin.sh` sets `TF_BIN` (env override, else `terraform`, else `tofu`); scripts call `"$TF_BIN"`, never `terraform`, and use only init, plan, apply, show, output, state and console. The Makefile uses `TF` (same rule). CI job `opentofu` runs fmt and validate; `terraform test` suites are Terraform-only (`override_during`, `file()` in overrides), so `make test-tf` skips under tofu. The webui image still bundles Terraform.
 - `deploy.sh` flow: `plan -out` → show replacements/destroys → confirm (unless `--yes`) → `apply -json` of the saved plan rendered by `jq`. Full logs in `.deploy/logs/<ts>/` (gitignored).
 - Event protocol (opt-in, CLI unchanged when unset): `DEPLOY_EVENTS_FD=<n>` gets JSON lines from `tf.sh`/`deploy-common.sh`; `DEPLOY_CONFIRM_FD=<n>` supplies the confirm answer without TTY or `--yes`. Keep both in step with the webui parser.
 - webui: binds localhost, token → cookie, Host/Origin checks, strict CSP, secrets write-only and redacted; volume `/opt/aif/clusters` is the secret and shares `cluster.sh` layout. SSH keys are resolved once (feed `build_hash`). Stop with `docker stop -t 600`; run with `--init`.

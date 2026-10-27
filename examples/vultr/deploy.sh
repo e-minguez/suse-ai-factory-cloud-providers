@@ -40,7 +40,7 @@ vultr_pass1_hook() {
 # output is missing (fresh root). --if-nodes: also fails with no control plane.
 vultr_pin_from_state() {
   local details
-  details=$(terraform output -json provider_details 2>/dev/null) || return 1
+  details=$("$TF_BIN" output -json provider_details 2>/dev/null) || return 1
   [ "${1:-}" != --if-nodes ] || jq -e '(.control_plane_ids // []) != []' <<<"$details" >/dev/null || return 1
   jq '{
     lb_backend_instance_ids: .control_plane_ids,

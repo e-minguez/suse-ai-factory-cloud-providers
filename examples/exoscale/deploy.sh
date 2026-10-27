@@ -39,7 +39,7 @@ exo_pinned() { jq -r --arg k "$1" 'if has($k) then .[$k] else empty end' "$PASS2
 # with pipefail the SIGPIPE it gives terraform would read as "not in state".
 exo_bootstrapped() {
   local list
-  list=$(terraform state list 2>/dev/null) || return 1
+  list=$("$TF_BIN" state list 2>/dev/null) || return 1
   grep -qxF "${POOL}[0]" <<<"$list" && [ "$(exo_pinned cp_initialized)" != false ]
 }
 

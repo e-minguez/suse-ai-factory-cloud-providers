@@ -1,9 +1,12 @@
 # SUSE AI Factory: cloud providers
 #
-# Terraform targets walk TF_DIRS; shell lint only sees files git would track.
+# Terraform/OpenTofu targets walk TF_DIRS; shell lint only sees files git would track.
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+
+# Terraform or OpenTofu: TF_BIN (or `make TF=tofu`), else terraform when installed, else tofu.
+TF ?= $(or $(TF_BIN),$(if $(shell command -v terraform 2>/dev/null),terraform,tofu))
 
 TF_DIRS := modules examples tools/multicluster
 # modules/common only holds the variable file symlinked into each provider module.
@@ -21,24 +24,24 @@ help: ## Show this help
 fmt: ## Reformat all Terraform files (modules/, examples/, tools/multicluster/)
 	@for d in $(TF_DIRS); do \
 		[ -d "$$d" ] || continue; \
-		terraform fmt -recursive "$$d"; \
+		$(TF) fmt -recursive "$$d"; \
 	done
 
 fmt-check: ## Check Terraform formatting without writing changes
 	@status=0; \
 	for d in $(TF_DIRS); do \
 		[ -d "$$d" ] || continue; \
-		terraform fmt -recursive -check -diff "$$d" || status=1; \
+		$(TF) fmt -recursive -check -diff "$$d" || status=1; \
 	done; \
 	exit $$status
 
-validate: ## terraform init -backend=false + validate for every examples/<provider> and tools root (EXAMPLES=, TOOL_ROOTS= to narrow)
+validate: ## init -backend=false + validate for every examples/<provider> and tools root (EXAMPLES=, TOOL_ROOTS= to narrow)
 	@status=0; \
 	for d in $(EXAMPLES) $(TOOL_ROOTS); do \
 		d="$${d%/}"; \
 		[ -f "$$d/main.tf" ] || continue; \
 		echo "==> validate $$d"; \
-		( cd "$$d" && terraform init -backend=false -input=false >/dev/null && terraform validate ) || status=1; \
+		( cd "$$d" && $(TF) init -backend=false -input=false >/dev/null && $(TF) validate ) || status=1; \
 		rm -rf "$$d/.terraform" "$$d/.terraform.lock.hcl"; \
 	done; \
 	exit $$status
@@ -63,9 +66,12 @@ lint-sh: ## shellcheck (skipped if not installed) on every tracked *.sh
 
 test: test-tf test-catalog test-scripts test-go test-webui ## Run terraform, script and Go tests
 
-test-scripts: ## Script tests (fake terraform and ssh) and poll.sh self-test
+test-scripts: ## Script tests (fake terraform, tofu and ssh) and poll.sh self-test
+	bash scripts/tests/tfbin_test.sh
 	bash scripts/tests/scripts_test.sh
+	FAKE_TF_NAME=tofu bash scripts/tests/scripts_test.sh
 	bash scripts/tests/deploy_test.sh
+	FAKE_TF_NAME=tofu bash scripts/tests/deploy_test.sh
 	bash scripts/tests/vultr_deploy_test.sh
 	bash scripts/tests/evroc_deploy_test.sh
 	bash scripts/tests/exoscale_deploy_test.sh
@@ -114,14 +120,18 @@ cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|vultr
 cost-fixtures: ## Run the live-tagged cost tests (network, optional credentials)
 	cd tools/cost && go test -tags live ./...
 
-test-tf: ## terraform test in every module and tools root that has a tests/ directory
-	@dirs=$$( { find modules -mindepth 2 -maxdepth 2 -type d -name tests; find tools -mindepth 3 -maxdepth 3 -type d -name tests; } 2>/dev/null); \
+test-tf: ## terraform test in every module and tools root that has a tests/ directory (skipped with OpenTofu)
+	@if [ "$$(basename "$(TF)")" = tofu ]; then \
+		echo "test-tf: skipped with OpenTofu: the tests use Terraform-only mock syntax (override_during, file() in override values); run with TF=terraform"; \
+		exit 0; \
+	fi; \
+	dirs=$$( { find modules -mindepth 2 -maxdepth 2 -type d -name tests; find tools -mindepth 3 -maxdepth 3 -type d -name tests; } 2>/dev/null); \
 	if [ -z "$$dirs" ]; then echo "test: no modules with a tests/ directory yet"; exit 0; fi; \
 	status=0; \
 	for t in $$dirs; do \
 		mod=$$(dirname "$$t"); \
 		echo "==> terraform test $$mod"; \
-		( cd "$$mod" && terraform init -backend=false -input=false >/dev/null && terraform test ) || status=1; \
+		( cd "$$mod" && $(TF) init -backend=false -input=false >/dev/null && $(TF) test ) || status=1; \
 		rm -rf "$$mod/.terraform" "$$mod/.terraform.lock.hcl"; \
 	done; \
 	exit $$status

@@ -23,6 +23,8 @@ set -o pipefail
 DEPLOY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tf.sh
 . "$DEPLOY_LIB_DIR/tf.sh"
+# shellcheck source=tfbin.sh
+. "$DEPLOY_LIB_DIR/tfbin.sh"
 
 DEPLOY_REBUILD=0
 DEPLOY_REBUILD_FILE=rebuild.auto.tfvars.json
@@ -43,7 +45,7 @@ Usage: deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform
   -v          stream the full Terraform output
   -q          print only step headers, diagnostics and the summary
   --destroy   plan and apply a destroy
-  --          pass everything after it to `terraform plan`
+  --          pass everything after it to the plan command (terraform or tofu)
 
 Var files, later wins: ../../common-all.tfvars, ../common-all.tfvars,
 ../common-<provider>.tfvars, terraform.tfvars (only those that exist).
@@ -93,7 +95,7 @@ deploy_parse_args() {
 
 deploy_check_deps() {
   local missing="" c
-  for c in terraform jq ssh; do
+  for c in "$TF_BIN" jq ssh; do
     command -v "$c" >/dev/null 2>&1 || missing="$missing $c"
   done
   [ -z "$missing" ] || deploy_die "missing required tools:$missing"
@@ -172,16 +174,16 @@ deploy_init() {
   [ -d .terraform ] && return 0
   tf__logdir
   log="$DEPLOY_LOG_DIR/init.log"
-  tf__say "==> terraform init"
-  terraform init -input=false -no-color >"$log" 2>&1 || rc=$?
-  [ "$rc" -eq 0 ] || tf__fail "terraform init" "$rc" "$log"
+  tf__say "==> $TF_BIN init"
+  "$TF_BIN" init -input=false -no-color >"$log" 2>&1 || rc=$?
+  [ "$rc" -eq 0 ] || tf__fail "$TF_BIN init" "$rc" "$log"
 }
 
 # Current rebuild counter: the larger of the state's image.rebuild and the
 # persisted file, so a lost file never lowers it.
 deploy_rebuild_state() {
   local v
-  v=$(terraform output -json image 2>/dev/null | jq -r '.rebuild // 0' 2>/dev/null) || v=0
+  v=$("$TF_BIN" output -json image 2>/dev/null | jq -r '.rebuild // 0' 2>/dev/null) || v=0
   echo "${v:-0}"
 }
 
@@ -275,8 +277,10 @@ deploy_wait_cluster() {
 
 deploy_print_next_steps() {
   local out
-  out=$(terraform output -raw next_steps 2>/dev/null) || return 0
+  out=$("$TF_BIN" output -raw next_steps 2>/dev/null) || return 0
   [ -n "$out" ] || return 0
+  # The modules print `terraform -chdir=...` hints; show the binary in use.
+  out=${out//terraform -chdir/$TF_BIN -chdir}
   echo
   printf '%s\n' "$out"
   if [ -n "${DEPLOY_LOG_DIR:-}" ]; then

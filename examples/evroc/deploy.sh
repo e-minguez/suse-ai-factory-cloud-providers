@@ -41,7 +41,7 @@ deploy_after_destroy() {
 
 # True when state already holds a snapshot: the image handoff is done.
 deploy_image_handed_off() {
-  terraform output -json image 2>/dev/null |
+  "$TF_BIN" output -json image 2>/dev/null |
     jq -e '[(.ids // {}) | to_entries[] | select(.value != null)] | length > 0' >/dev/null 2>&1
 }
 

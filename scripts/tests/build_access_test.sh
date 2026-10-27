@@ -14,6 +14,7 @@ cp "$T/fake-terraform.sh" "$W/bin/terraform"
 cp "$T/fake-ssh.sh" "$W/bin/ssh"
 chmod +x "$W/bin/terraform" "$W/bin/ssh"
 export PATH="$W/bin:$PATH"
+unset TF_BIN # the fake is installed as terraform
 export TMPDIR="$W/tmp"
 export FAKE_SSH_LOG="$W/ssh.log"
 export FAKE_SSH_CFGCOPY="$W/cfg.copy"

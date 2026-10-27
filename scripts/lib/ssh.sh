@@ -14,6 +14,9 @@
 #
 # Sets an EXIT trap that removes the temp dir. Needs jq and terraform.
 
+# shellcheck source=tfbin.sh
+. "$(dirname "${BASH_SOURCE[0]}")/tfbin.sh"
+
 SSH_DIR="${SSH_DIR:-.}"
 SSH_KNOWN_HOSTS_OPT=""
 SSH_NODE_USER="${NODE_USERNAME:-}"
@@ -54,7 +57,7 @@ ssh_parse_common() {
 
 ssh_setup() {
   command -v jq >/dev/null 2>&1 || ssh_die "jq not found"
-  command -v terraform >/dev/null 2>&1 || ssh_die "terraform not found"
+  command -v "$TF_BIN" >/dev/null 2>&1 || ssh_die "$TF_BIN not found"
   [ -d "$SSH_DIR" ] || ssh_die "not a directory: $SSH_DIR"
   case "$SSH_NODE_USER" in
     *[!A-Za-z0-9._-]*) ssh_die "invalid node username: $SSH_NODE_USER" ;;
@@ -62,7 +65,7 @@ ssh_setup() {
 
   local abs
   abs=$(cd "$SSH_DIR" && pwd)
-  TF_JSON=$(cd "$SSH_DIR" && terraform output -json) || ssh_die "terraform output failed in $abs (apply first?)"
+  TF_JSON=$(cd "$SSH_DIR" && "$TF_BIN" output -json) || ssh_die "$TF_BIN output failed in $abs (apply first?)"
   ssh__state_fallback "$abs"
   if [ "$(jq length <<<"$TF_JSON")" = 0 ]; then
     ssh_die "no terraform outputs in $abs. Run from a cluster directory (examples/<provider> or clusters/<name>), or pass -C DIR."
@@ -109,7 +112,7 @@ ssh__state_fallback() {
   need=$(jq -r --arg mode "$SSH_STATE_FALLBACK" '(.jumphost.value.public_ip // null) == null
     or ($mode == "build" and (.build_status.value // null) == null)' <<<"$TF_JSON")
   [ "$need" = true ] || return 0
-  state=$(cd "$1" && terraform show -json 2>/dev/null) || return 0
+  state=$(cd "$1" && "$TF_BIN" show -json 2>/dev/null) || return 0
   access=$(jq -c 'first(.. | objects | select(.mode? == "managed" and .type? == "terraform_data"
     and .name? == "build_access") | .values.input) // empty' <<<"$state")
   [ -n "$access" ] || return 0

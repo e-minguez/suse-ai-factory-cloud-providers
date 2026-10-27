@@ -74,9 +74,14 @@ Each provider has an example root with its own README:
 
 ## Quickstart
 
-**Requirements:** Terraform 1.16.5 or later, `jq`, `ssh`
+**Requirements:** Terraform 1.16.5 or later (or OpenTofu, below), `jq`, `ssh`
 and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
 exoscale `curl` and `openssl` (signed API checks).
+
+**OpenTofu:** the scripts run `terraform` when installed, else `tofu`; `TF_BIN=tofu ./deploy.sh`
+(or `make TF=tofu`) forces OpenTofu. Checked with OpenTofu 1.13, and CI runs `fmt` and `validate` with
+it. `make test-tf` needs Terraform: the module tests use mock syntax OpenTofu lacks. OpenTofu does not
+enforce `required_version`, so the 1.16.5 floor (a Terraform crash fix) applies to Terraform only.
 
 **1. Shared values.** Copy `common-all.tfvars.example` to `common-all.tfvars` at
 the repo root and fill in what every cluster shares: admin CIDRs, SSH keys

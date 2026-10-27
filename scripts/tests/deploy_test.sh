@@ -11,8 +11,11 @@ trap 'rm -rf "$W"' EXIT
 
 EX="$W/repo/examples/p"
 mkdir -p "$W/bin" "$W/state" "$EX"
-cp "$T/fake-terraform-deploy.sh" "$W/bin/terraform"
-chmod +x "$W/bin/terraform"
+# FAKE_TF_NAME=tofu runs the same tests with the fake installed as tofu.
+TFN=${FAKE_TF_NAME:-terraform}
+export TF_BIN=$TFN
+cp "$T/fake-terraform-deploy.sh" "$W/bin/$TFN"
+chmod +x "$W/bin/$TFN"
 export PATH="$W/bin:$PATH"
 export FAKE_TF_DIR="$T/fixtures" FAKE_TF_STATE="$W/state" TF_RETRY_SLEEP=0
 unset CI DEPLOY_TTY FAKE_TF_IMAGE FAKE_TF_PLAN FAKE_TF_PLAN_FAIL FAKE_TF_PLAN_WARN FAKE_TF_APPLY_SEQ
@@ -170,7 +173,7 @@ for c in bash env cat date mkdir chmod rm tr sed grep tail dirname ls printf; do
   p=$(command -v "$c" || true)
   [ -z "$p" ] || ln -sf "$p" "$W/nojq/$c"
 done
-ln -sf "$W/bin/terraform" "$W/nojq/terraform"
+ln -sf "$W/bin/$TFN" "$W/nojq/$TFN"
 RC=0
 (cd "$EX" && PATH="$W/nojq" bash ./deploy.sh --yes) >"$W/out" 2>&1 || RC=$?
 [ "$RC" -ne 0 ] || fail "missing jq accepted"

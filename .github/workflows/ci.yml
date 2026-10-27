@@ -15,6 +15,7 @@ concurrency:
 
 env:
   TF_VERSION: "1.16.5"
+  TOFU_VERSION: "1.13.1"
 
 jobs:
   fmt-check:
@@ -47,6 +48,21 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
       - run: make validate EXAMPLES=
+
+  # OpenTofu must keep working too: formatting and validation of every root. `tofu test` is not run;
+  # the module tests use Terraform-only mock syntax (override_during, file() in override values).
+  opentofu:
+    runs-on: ubuntu-26.04
+    env:
+      TF_BIN: tofu
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+          tofu_wrapper: false
+      - run: make fmt-check
+      - run: make validate
 
   shellcheck:
     runs-on: ubuntu-26.04
