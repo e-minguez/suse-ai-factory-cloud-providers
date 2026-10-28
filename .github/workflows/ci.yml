@@ -49,8 +49,8 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
       - run: make validate EXAMPLES=
 
-  # OpenTofu must keep working too: formatting and validation of every root. `tofu test` is not run;
-  # the module tests use Terraform-only mock syntax (override_during, file() in override values).
+  # OpenTofu must keep working too: formatting, validation of every root and the module tests (mocked
+  # plan and apply). tests/*.tofutest.hcl are generated from the Terraform suites; the check fails when stale.
   opentofu:
     runs-on: ubuntu-26.04
     env:
@@ -63,6 +63,9 @@ jobs:
           tofu_wrapper: false
       - run: make fmt-check
       - run: make validate
+      - run: command -v gawk >/dev/null || sudo apt-get install -y --no-install-recommends gawk
+      - run: make tofu-tests-check
+      - run: make test-tf
 
   shellcheck:
     runs-on: ubuntu-26.04
@@ -146,6 +149,7 @@ jobs:
           [ "$(curl -s http://127.0.0.1:8080/healthz)" = ok ]
           [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" = 403 ]
           docker exec aif terraform version
+          docker exec aif tofu version
           docker exec aif aws --version
           docker exec aif evroc version
 

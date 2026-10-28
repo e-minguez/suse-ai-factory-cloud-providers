@@ -16,7 +16,7 @@ EXAMPLES ?= $(wildcard examples/*/)
 # Other Terraform roots to validate; CI runs them in their own job.
 TOOL_ROOTS ?= tools/multicluster/register
 
-.PHONY: help docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-catalog test-scripts test-go test-webui webui image cost cost-fixtures check-consistency ci clean
+.PHONY: help tofu-tests-gen tofu-tests-check docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-catalog test-scripts test-go test-webui webui image cost cost-fixtures check-consistency ci clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
@@ -68,6 +68,7 @@ test: test-tf test-catalog test-scripts test-go test-webui ## Run terraform, scr
 
 test-scripts: ## Script tests (fake terraform, tofu and ssh) and poll.sh self-test
 	bash scripts/tests/tfbin_test.sh
+	bash scripts/tests/tofu_tests_test.sh
 	bash scripts/tests/scripts_test.sh
 	FAKE_TF_NAME=tofu bash scripts/tests/scripts_test.sh
 	bash scripts/tests/deploy_test.sh
@@ -120,12 +121,8 @@ cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|vultr
 cost-fixtures: ## Run the live-tagged cost tests (network, optional credentials)
 	cd tools/cost && go test -tags live ./...
 
-test-tf: ## terraform test in every module and tools root that has a tests/ directory (skipped with OpenTofu)
-	@if [ "$$(basename "$(TF)")" = tofu ]; then \
-		echo "test-tf: skipped with OpenTofu: the tests use Terraform-only mock syntax (override_during, file() in override values); run with TF=terraform"; \
-		exit 0; \
-	fi; \
-	dirs=$$( { find modules -mindepth 2 -maxdepth 2 -type d -name tests; find tools -mindepth 3 -maxdepth 3 -type d -name tests; } 2>/dev/null); \
+test-tf: ## terraform test (tofu test with TF=tofu; it reads the generated *.tofutest.hcl) in every module and tools root that has a tests/ directory
+	@dirs=$$( { find modules -mindepth 2 -maxdepth 2 -type d -name tests; find tools -mindepth 3 -maxdepth 3 -type d -name tests; } 2>/dev/null); \
 	if [ -z "$$dirs" ]; then echo "test: no modules with a tests/ directory yet"; exit 0; fi; \
 	status=0; \
 	for t in $$dirs; do \
@@ -156,6 +153,12 @@ test-catalog: ## Plan examples/<provider> with each catalog/*/<provider>/*.tfvar
 		rm -rf "$$w"; \
 	done; \
 	exit $$status
+
+tofu-tests-gen: ## Regenerate the OpenTofu test variants (tests/*.tofutest.hcl) from the Terraform suites (needs tofu, jq, gawk)
+	TF_BIN=tofu bash scripts/tests/tofu-tests.sh --write
+
+tofu-tests-check: ## Fail if a tests/*.tofutest.hcl is missing or out of date
+	TF_BIN=tofu bash scripts/tests/tofu-tests.sh --check
 
 docs: ## Regenerate the inputs/outputs tables in modules/*/README.md (needs terraform-docs)
 	@command -v terraform-docs >/dev/null 2>&1 || { echo "docs: terraform-docs not installed (brew install terraform-docs; see https://terraform-docs.io/user-guide/installation/)" >&2; exit 1; }

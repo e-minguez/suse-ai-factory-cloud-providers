@@ -99,6 +99,7 @@ deploy_check_deps() {
     command -v "$c" >/dev/null 2>&1 || missing="$missing $c"
   done
   [ -z "$missing" ] || deploy_die "missing required tools:$missing"
+  tf_warn_old_tofu
 }
 
 # -var-file arguments for the files that exist, lowest precedence first.

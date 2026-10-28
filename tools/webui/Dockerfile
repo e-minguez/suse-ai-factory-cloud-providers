@@ -69,6 +69,51 @@ RUN set -eu; \
       rm -rf "${d}/.terraform"; \
     done
 
+# ----------------------------------------------------------------- tofu
+# Same as the terraform stage for OpenTofu: the binary for the target platform and a provider
+# mirror. OpenTofu resolves providers on registry.opentofu.org, so its mirror holds different
+# paths than Terraform's and both merge into one directory in the final image.
+FROM --platform=$BUILDPLATFORM registry.suse.com/bci/bci-base:16.0 AS tofu
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG TOFU_VERSION=1.13.1
+ARG BUILDARCH
+ARG TARGETARCH
+# OpenTofu release signing key, https://opentofu.org/docs/intro/install/ (get.opentofu.org/opentofu.asc)
+ARG OPENTOFU_SIGNER_FPR=E3E6E43D84CB852EADB0051D0C0AF313E5FD9F80
+RUN zypper --non-interactive install --no-recommends unzip gpg2 curl ca-certificates && zypper clean --all
+WORKDIR /tofu
+RUN set -eu; \
+    base="https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}"; \
+    sums="tofu_${TOFU_VERSION}_SHA256SUMS"; \
+    curl -fsSL --retry 5 --retry-all-errors -O "${base}/${sums}"; \
+    curl -fsSL --retry 5 --retry-all-errors -O "${base}/${sums}.gpgsig"; \
+    curl -fsSL --retry 5 --retry-all-errors https://get.opentofu.org/opentofu.asc -o opentofu.asc; \
+    GNUPGHOME="$(mktemp -d)"; export GNUPGHOME; \
+    gpg --batch --import opentofu.asc; \
+    status="$(gpg --batch --status-fd 1 --verify "${sums}.gpgsig" "${sums}")"; \
+    printf '%s\n' "${status}" | grep -q "^\[GNUPG:\] VALIDSIG .* ${OPENTOFU_SIGNER_FPR}\$"; \
+    for arch in "${BUILDARCH}" "${TARGETARCH}"; do \
+      zip="tofu_${TOFU_VERSION}_linux_${arch}.zip"; \
+      [ -f "${zip}" ] || curl -fsSL --retry 5 --retry-all-errors -O "${base}/${zip}"; \
+      grep " ${zip}\$" "${sums}" | sha256sum -c -; \
+    done; \
+    mkdir -p /out/build /out/target; \
+    unzip -q "tofu_${TOFU_VERSION}_linux_${BUILDARCH}.zip" tofu -d /out/build; \
+    unzip -q "tofu_${TOFU_VERSION}_linux_${TARGETARCH}.zip" tofu -d /out/target
+
+COPY modules /work/modules
+COPY examples /work/examples
+COPY tools/multicluster /work/tools/multicluster
+RUN set -eu; \
+    export TF_CLI_CONFIG_FILE=/dev/null; \
+    mkdir -p /out/plugins; \
+    for d in /work/examples/*/ /work/tools/multicluster/register; do \
+      [ -f "${d}/main.tf" ] || continue; \
+      /out/build/tofu -chdir="${d}" get >/dev/null; \
+      /out/build/tofu -chdir="${d}" providers mirror -platform="linux_${TARGETARCH}" /out/plugins; \
+      rm -rf "${d}/.terraform"; \
+    done
+
 # ----------------------------------------------------------------- clis
 # aws and evroc CLIs for the aws precheck and the leftovers checks. Nothing is
 # executed here, so the stage runs on the build platform.
@@ -151,6 +196,8 @@ LABEL org.opencontainers.image.title="suse-ai-factory-cloud-providers" \
 COPY --from=rootfs /rootfs/ /
 COPY --from=terraform /out/target/terraform /usr/local/bin/terraform
 COPY --from=terraform /out/plugins /usr/share/terraform/plugins
+COPY --from=tofu /out/target/tofu /usr/local/bin/tofu
+COPY --from=tofu /out/plugins /usr/share/terraform/plugins
 COPY tools/webui/terraformrc /etc/terraformrc
 COPY --from=build /out/webui /out/cost /usr/local/bin/
 COPY --from=clis /out/aws-cli /usr/local/aws-cli

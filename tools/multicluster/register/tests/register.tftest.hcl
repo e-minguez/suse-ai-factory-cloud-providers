@@ -6,7 +6,19 @@ mock_provider "rancher2" {
     values = {
       id = "c-m-test"
       cluster_registration_token = [{
-        manifest_url = "https://rancher.example/v3/import/tok_c-m-test.yaml"
+        manifest_url                  = "https://rancher.example/v3/import/tok_c-m-test.yaml"
+        annotations                   = null
+        cluster_id                    = null
+        command                       = null
+        id                            = null
+        insecure_command              = null
+        insecure_node_command         = null
+        insecure_windows_node_command = null
+        labels                        = null
+        name                          = null
+        node_command                  = null
+        token                         = null
+        windows_node_command          = null
       }]
     }
   }

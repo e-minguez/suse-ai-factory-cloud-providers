@@ -78,10 +78,27 @@ Each provider has an example root with its own README:
 and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
 exoscale `curl` and `openssl` (signed API checks).
 
-**OpenTofu:** the scripts run `terraform` when installed, else `tofu`; `TF_BIN=tofu ./deploy.sh`
-(or `make TF=tofu`) forces OpenTofu. Checked with OpenTofu 1.13, and CI runs `fmt` and `validate` with
-it. `make test-tf` needs Terraform: the module tests use mock syntax OpenTofu lacks. OpenTofu does not
-enforce `required_version`, so the 1.16.5 floor (a Terraform crash fix) applies to Terraform only.
+### OpenTofu
+
+The scripts run `terraform` when installed, else `tofu`; `TF_BIN=tofu ./deploy.sh` (or
+`make TF=tofu`) forces OpenTofu. Both are supported equally:
+
+- **Versions:** checked with OpenTofu 1.13 and Terraform 1.16. OpenTofu does not enforce
+  `required_version`, so the 1.16.5 floor (a Terraform crash fix) applies to Terraform only;
+  `deploy.sh` warns when `tofu` is older than 1.13.
+- **State and locks:** both tools read and write the same `terraform.tfstate` and
+  `.terraform.lock.hcl`, but keep one tool per cluster: provider addresses move between
+  `registry.terraform.io` and `registry.opentofu.org` after an apply, and a plan that runs on
+  one tool is not a promise for the other. To switch a cluster, run a plan with the new tool and
+  check that it shows no changes before applying.
+- **Web UI image:** ships both with their provider mirrors; `docker run -e TF_BIN=tofu` selects
+  OpenTofu ([docs/webui.md](docs/webui.md)).
+- **Tests:** CI runs `fmt`, `validate` and the module tests with OpenTofu. The suites use
+  Terraform-only syntax (`override_during`, `file()` in overrides), so each one that needs it has a
+  generated `tests/*.tofutest.hcl` next to it: `tofu test` reads that instead, `terraform test`
+  ignores it, and `make test-tf` works with either tool. After changing a `.tftest.hcl`, run
+  `make tofu-tests-gen` (needs `tofu`, `jq` and `gawk`; macOS: `brew install gawk`) and commit the
+  result. CI fails on a stale variant (`make tofu-tests-check`). Do not edit the generated files.
 
 **1. Shared values.** Copy `common-all.tfvars.example` to `common-all.tfvars` at
 the repo root and fill in what every cluster shares: admin CIDRs, SSH keys

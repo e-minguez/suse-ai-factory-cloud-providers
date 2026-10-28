@@ -45,7 +45,7 @@ Once a snapshot is in state, `deploy.sh` runs a single apply with
 `deploy.sh --rebuild` bumps the rebuild counter
 ([ADR 003](../decisions/003-rebuild-counter.md)) and always runs pass 1 again.
 After pass 2 it writes `pass2.auto.tfvars.json` so a later bare
-`terraform apply` keeps `image_ready = true`.
+`terraform apply` (`tofu apply`) keeps `image_ready = true`.
 
 Build hosts never hold evroc credentials: Terraform owns the detach and the
 snapshot. The image-target disks are written in full (`dd` without
@@ -209,7 +209,7 @@ not rely on a host firewall in the image.
   The demand is known: `provider_details.gpu_quota_request` (`by_pool`,
   `by_model`) shows what the webhook will compare. A denied create leaves the
   node's boot disk behind; it stays in state and is removed by lowering
-  `count` or by `terraform destroy`.
+  `count` or by `terraform destroy` (`tofu destroy`).
 - **Driver.** The manifest's precompiled driver
   (`registry.suse.com/third-party/nvidia`) is published for SLES 16.0 and does
   not load on the 16.1 kernel (`disagrees about version of symbol

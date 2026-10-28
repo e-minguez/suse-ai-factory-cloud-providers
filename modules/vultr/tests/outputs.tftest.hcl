@@ -88,6 +88,12 @@ variables {
 }
 
 override_resource {
+  target          = vultr_nat_gateway.this
+  override_during = plan
+  values          = { public_ips = ["198.51.100.7"], private_ips = ["10.20.0.1"] }
+}
+
+override_resource {
   target          = time_static.created
   override_during = plan
   values          = { rfc3339 = "2026-09-30T12:34:56Z" }
