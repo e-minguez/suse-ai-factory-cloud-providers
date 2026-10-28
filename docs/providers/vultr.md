@@ -29,7 +29,7 @@ Pass 2 also sets `image_import_port_open = false`. The jumphost tcp/80 rule that
 the snapshot import needs is a `vultr_firewall_rule`, and a resource cannot be
 created and removed in one apply. Terraform loads `*.auto.tfvars.json` on every
 later run, so the values stay pinned; use `./deploy.sh`, not a bare
-`terraform apply`, after a node is replaced. The decision and the alternatives are in
+`terraform apply` (`tofu apply` with OpenTofu), after a node is replaced. The decision and the alternatives are in
 [ADR 006](../decisions/006-vultr-two-passes.md).
 
 On a rerun, pass 1 keeps the pinned values, so a cluster without changes plans
@@ -44,10 +44,10 @@ cluster). The backends are then detached until pass 2. A missing or reset
 - The jumphost builds the raw image and serves it over HTTP on port 80 for
   `image_serve_seconds` (3600). Terraform imports it with `vultr_snapshot_from_url`
   (`use_uefi = true`). The snapshot is account-wide, so the image output has one
-  key. `terraform destroy` deletes it.
+  key. `terraform destroy` (`tofu destroy`) deletes it.
 - The import is attempted once. When the fetch fails Vultr deletes the snapshot
   record and the provider reports the 404 on every refresh. Recovery:
-  `terraform state rm 'module.ai_factory.vultr_snapshot_from_url.ai_factory[0]'`,
+  `terraform state rm 'module.ai_factory.vultr_snapshot_from_url.ai_factory[0]'` (`tofu state rm` with OpenTofu),
   then `./deploy.sh` (or `./deploy.sh --rebuild` after the serve window closed).
 - Vultr does not report UEFI back for a snapshot. A node that boots is the check.
 - Jumphost `user_data` carries the elemental config as one gzip bundle

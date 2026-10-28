@@ -11,6 +11,7 @@ import (
 )
 
 func TestGetDropsSensitive(t *testing.T) {
+	t.Setenv("TF_BIN", "")
 	bin := t.TempDir()
 	script := `#!/bin/sh
 cat <<'J'
@@ -33,6 +34,7 @@ J
 }
 
 func TestGetError(t *testing.T) {
+	t.Setenv("TF_BIN", "")
 	bin := t.TempDir()
 	_ = os.WriteFile(filepath.Join(bin, "terraform"), []byte("#!/bin/sh\necho no state >&2\nexit 1\n"), 0o755)
 	t.Setenv("PATH", bin+":"+os.Getenv("PATH"))
@@ -62,6 +64,7 @@ func TestKubeconfigEnv(t *testing.T) {
 }
 
 func TestRaw(t *testing.T) {
+	t.Setenv("TF_BIN", "")
 	bin := t.TempDir()
 	script := "#!/bin/sh\n[ \"$2 $3 $4\" = 'output -raw rancher_bootstrap_password' ] || exit 2\nprintf 'p4ss'\n"
 	_ = os.WriteFile(filepath.Join(bin, "terraform"), []byte(script), 0o755)
@@ -69,5 +72,22 @@ func TestRaw(t *testing.T) {
 	got, err := Raw(context.Background(), t.TempDir(), "rancher_bootstrap_password", nil)
 	if err != nil || got != "p4ss" {
 		t.Fatalf("%q %v", got, err)
+	}
+}
+
+func TestTFBin(t *testing.T) {
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "tofu"), []byte("#!/bin/sh\necho '{\"a\":{\"sensitive\":false,\"value\":\"x\"}}'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+":"+os.Getenv("PATH"))
+	t.Setenv("TF_BIN", "tofu")
+	got, err := Get(context.Background(), t.TempDir(), nil)
+	if err != nil || got["a"] != "x" {
+		t.Fatalf("%v %v", got, err)
+	}
+	t.Setenv("TF_BIN", "")
+	if b := tfBin(); b != "terraform" && b != "tofu" {
+		t.Fatalf("unexpected binary %q", b)
 	}
 }

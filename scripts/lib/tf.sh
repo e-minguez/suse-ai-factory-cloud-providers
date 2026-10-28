@@ -11,7 +11,7 @@
 # TF_RETRY_SLEEP.
 # Opt-in machine interface (WEBUI_SPEC.md, "Event protocol"): DEPLOY_EVENTS_FD=<n> receives JSON-lines
 # events; DEPLOY_CONFIRM_FD=<n> answers the confirmation (one line, yes|no), also without a terminal.
-# Needs bash >= 3.2, jq, terraform. Callers run with `set -euo pipefail`.
+# Needs bash >= 3.2, jq, terraform or tofu (TF_BIN, see tfbin.sh). Callers run with `set -euo pipefail`.
 
 TF_STATE_DIR="${TF_STATE_DIR:-.deploy}"
 TF_PASS_INDEX=0
@@ -40,7 +40,7 @@ def fmt: floor as $s | "\($s / 60 | floor):\(($s % 60) | tostring | if length < 
 def fmt_min: floor | if . < 60 then "\(.)s" else "\(. / 60 | floor)m" end;
 '
 
-# Renders the `terraform apply -json` stream (and raw non-JSON lines such as a crash trace).
+# Renders the `apply -json` stream (and raw non-JSON lines such as a crash trace).
 # Args: tty (0|1), quiet (0|1), totals (object category -> expected completions).
 # shellcheck disable=SC2016 # jq program, not shell
 TF_JQ_RENDER='
@@ -352,16 +352,16 @@ tf_pass() {
     tf__say "    planning..."
     rc=0
     if [ "$mode" = verbose ]; then
-      terraform plan -input=false -no-color -out="$plan" ${TF__PLAN_ARGS[@]+"${TF__PLAN_ARGS[@]}"} 2>&1 | tee "$planlog" || rc=$?
+      "$TF_BIN" plan -input=false -no-color -out="$plan" ${TF__PLAN_ARGS[@]+"${TF__PLAN_ARGS[@]}"} 2>&1 | tee "$planlog" || rc=$?
     else
-      terraform plan -input=false -no-color -out="$plan" ${TF__PLAN_ARGS[@]+"${TF__PLAN_ARGS[@]}"} >"$planlog" 2>&1 || rc=$?
+      "$TF_BIN" plan -input=false -no-color -out="$plan" ${TF__PLAN_ARGS[@]+"${TF__PLAN_ARGS[@]}"} >"$planlog" 2>&1 || rc=$?
     fi
     [ "$rc" -eq 0 ] || tf__fail "$name: plan" "$rc" "$planlog"
     # Plan-time warnings (check blocks, deprecations) before the confirmation; -v already showed them.
     [ "$mode" = verbose ] || tf__plan_warnings "$planlog"
 
     showjson=$(mktemp "$TF_STATE_DIR/.plan-show.XXXXXX")
-    if ! terraform show -json "$plan" >"$showjson" 2>>"$planlog"; then
+    if ! "$TF_BIN" show -json "$plan" >"$showjson" 2>>"$planlog"; then
       rm -f "$showjson"
       tf__fail "$name: show plan" 1 "$planlog"
     fi
@@ -400,7 +400,7 @@ tf_pass() {
     rc=0
     trap 'TF_INT=1' INT
     if [ "$mode" = verbose ]; then
-      terraform apply -input=false -no-color "$plan" 2>&1 | tee -i "$applylog" || rc=$?
+      "$TF_BIN" apply -input=false -no-color "$plan" 2>&1 | tee -i "$applylog" || rc=$?
     elif [ -n "${DEPLOY_EVENTS_FD:-}" ]; then
       # A second reader gets a copy of the stream through a fifo; its events go to the fd.
       # In TMPDIR: some bind mounts (Docker Desktop on macOS) do not support fifos.
@@ -412,7 +412,7 @@ tf_pass() {
         2>/dev/null 1>&"$DEPLOY_EVENTS_FD" || true
        cat >/dev/null) <"$fifo" &
       evpid=$!
-      terraform apply -json -input=false "$plan" 2>&1 | tee -i "$jsonl" | tee -i "$fifo" |
+      "$TF_BIN" apply -json -input=false "$plan" 2>&1 | tee -i "$jsonl" | tee -i "$fifo" |
         (trap '' INT; exec jq -R -n -j --unbuffered --argjson tty "$tty" --argjson quiet "$quiet" \
           --argjson totals "$totals" "$TF_JQ_DEFS$TF_JQ_RENDER") || rc=$?
       wait "$evpid" || true
@@ -421,7 +421,7 @@ tf_pass() {
       [ "$tty" = 1 ] && printf '\r\033[K'
       tf__humanize "$jsonl" >"$applylog"
     else
-      terraform apply -json -input=false "$plan" 2>&1 | tee -i "$jsonl" |
+      "$TF_BIN" apply -json -input=false "$plan" 2>&1 | tee -i "$jsonl" |
         (trap '' INT; exec jq -R -n -j --unbuffered --argjson tty "$tty" --argjson quiet "$quiet" \
           --argjson totals "$totals" "$TF_JQ_DEFS$TF_JQ_RENDER") || rc=$?
       [ "$tty" = 1 ] && printf '\r\033[K'

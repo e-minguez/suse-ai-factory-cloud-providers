@@ -31,4 +31,12 @@ resolve() {
 out=$(env -i PATH="$W/tofu" "$BASH" -c ". '$LIB/tfbin.sh'; declare -p TF_BIN")
 [ "$out" = 'declare -x TF_BIN="tofu"' ] || fail "TF_BIN not exported: $out"
 
+# No script may call terraform or tofu by name: a bare call ignores TF_BIN and mixes both tools in one deploy.
+ROOT="$(dirname "$(dirname "$T")")"
+pat='(^|\$\(|\(|\||&&|;|!|then|do|if) *(terraform|tofu) +(-[a-z]+(=[^ ]*)? +)*(init|plan|apply|show|output|state|console|fmt|validate|test)( |$)'
+bare=$(find "$ROOT" -name '*.sh' -not -path '*/tests/*' -not -path '*/.git/*' -not -path '*/.terraform/*' -print0 |
+  xargs -0 grep -nE "$pat" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' || true)
+[ -z "$bare" ] || fail "scripts must call \"\$TF_BIN\", not terraform or tofu by name:
+$bare"
+
 echo "tfbin_test: ok"
