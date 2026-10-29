@@ -22,7 +22,7 @@ override_data {
   target = module.ai_factory.data.http.plan_availability
   values = {
     status_code   = 200
-    response_body = "{\"available_plans\":[\"vx1-g-4c-16g-240s\",\"vx1-g-8c-32g-480s\",\"vx1-g-16c-64g-960s\",\"vc2-6c-16gb\",\"vc2-8c-32gb\",\"vcg-a40-24c-120g-48vram\"]}"
+    response_body = "{\"available_plans\":[\"vx1-g-4c-16g-240s\",\"vx1-g-8c-32g-480s\",\"vx1-g-16c-64g-960s\",\"vc2-6c-16gb\",\"vc2-8c-32gb\",\"voc-c-32c-64gb-1000s-amd\",\"vcg-a40-24c-120g-48vram\"]}"
   }
 }
 
