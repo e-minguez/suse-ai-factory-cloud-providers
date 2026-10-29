@@ -4,7 +4,7 @@ One node that runs everything: Rancher, the AI Factory operator, the NVIDIA GPU
 operator and local storage. Use it to try AI Factory or to serve models on a
 single GPU.
 
-Status: not yet verified end to end.
+Status: verified end to end on vultr (2026-10-29).
 
 ## What you get
 
