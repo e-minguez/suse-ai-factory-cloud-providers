@@ -35,7 +35,7 @@ Var files, later wins: `../../common-all.tfvars`, `../common-all.tfvars`,
 `../common-vultr.tfvars`, `terraform.tfvars`. Only variables every provider
 declares belong in `common-all.tfvars`.
 
-`deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform args>]`:
+`deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform args>]`:
 plan, list replacements and destroys, confirm, apply the saved plan; `--yes`
 skips the question, `-v`/`-q` set verbosity, `--destroy` plans a destroy, and
 arguments after `--` go to every `terraform plan`. Logs: `.deploy/logs/<ts>/`.

@@ -78,7 +78,7 @@ Never commit these files. The hashes in `root_password_hash` and
 value baked into the image (keys, hashes, `components`, `aif_release`, ...)
 builds a new image and replaces every node.
 
-`deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform plan args>]`
+`deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform plan args>]`
 
 | Flag | Effect |
 |---|---|

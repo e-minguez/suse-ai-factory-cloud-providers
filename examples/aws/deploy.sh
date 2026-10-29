@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Single-pass deploy: deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <tf args>]
+# Single-pass deploy: deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <tf args>]
 set -euo pipefail
 
 # Resolve symlinks portably (no readlink -f on macOS) before the cd: BASH_SOURCE may be relative.

@@ -24,7 +24,7 @@ operator on a SUSE Elemental image) on multiple cloud providers from one repo:
 ## Conventions
 - One naming style for every provider (`docs/conventions.md#naming`). New providers follow it; no provider-specific names for common concepts.
 - Every provider exposes the identical output set (`docs/conventions.md#outputs`); provider-only data goes in `provider_details`.
-- Every provider ships `examples/<p>/deploy.sh` (aws too, even though it is single pass), same interface: `deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <tf args>]`. It only defines passes; everything else is in `scripts/lib/tf.sh`.
+- Every provider ships `examples/<p>/deploy.sh` (aws too, even though it is single pass), same interface: `deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <tf args>]`. It only defines passes; everything else is in `scripts/lib/tf.sh`.
 - Tfvars layering: `common-all.tfvars` (credentials and values shared by every provider) → `common-<provider>.tfvars` → per-cluster `terraform.tfvars`. Later wins. `common-all.tfvars` may only contain variables every provider declares.
 - Every provider labels resources the same way (`docs/conventions.md#labels`): `elemental-{cluster,managed-by,module,created}` everywhere, plus `role` (fixed vocabulary), `pool`, `build`, `listener` where they apply; `created` = UTC `YYYYMMDD-hhmmss` of the first apply. `var.tags` cannot use the prefix. No `/` in keys: evroc rejects it.
 - `aif_release`: a value matching `^https?://` is a manifest URL; anything else is a version resolved to tag `aif-operator-<version>`.
