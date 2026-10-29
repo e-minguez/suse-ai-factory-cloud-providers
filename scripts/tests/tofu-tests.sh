@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generates and checks the OpenTofu variants (tests/*.tofutest.hcl) of the Terraform test suites
-# (modules/*/tests, tools/*/*/tests).
+# (modules/*/tests, tools/*/*/tests, examples/*/tests).
 # Usage: scripts/tests/tofu-tests.sh --write|--check [<module dir>...]   (default: every directory with tests/)
 #
 # The suites are written for Terraform. OpenTofu rejects function calls and override_during in
@@ -34,14 +34,16 @@ done
 W=$(mktemp -d "${TMPDIR:-/tmp}/tofu-tests.XXXXXX")
 trap 'rm -rf "$W"' EXIT
 mkdir "$W/scratch" "$W/empty"
-cp -a "$ROOT/modules" "$ROOT/tools" "$W/"
+cp -a "$ROOT/modules" "$ROOT/tools" "$ROOT/examples" "$W/"
+# A local terraform.tfvars, auto.tfvars, state or logs in an example must not leak into the probes.
+find "$W/examples" -mindepth 2 -maxdepth 2 \( -name "terraform.tfvars*" -o -name "*.auto.tfvars*" -o -name "terraform.tfstate*" -o -name ".deploy" \) -prune -exec rm -rf {} +
 find "$W" \( -name .terraform -o -name .terraform.lock.hcl \) -prune -exec rm -rf {} +
 
 if [ $# -gt 0 ]; then
   dirs=("$@")
 else
   dirs=()
-  while IFS= read -r line; do dirs+=("$line"); done < <(cd "$ROOT" && { find modules -mindepth 2 -maxdepth 2 -type d -name tests; find tools -mindepth 3 -maxdepth 3 -type d -name tests; } | xargs -n1 dirname | sort)
+  while IFS= read -r line; do dirs+=("$line"); done < <(cd "$ROOT" && { find modules -mindepth 2 -maxdepth 2 -type d -name tests; find examples -mindepth 2 -maxdepth 2 -type d -name tests; find tools -mindepth 3 -maxdepth 3 -type d -name tests; } | xargs -n1 dirname | sort)
 fi
 
 # probe <module dir> <test file> <run> <output path>: prints the output as JSON.

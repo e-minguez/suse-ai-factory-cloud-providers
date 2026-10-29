@@ -66,6 +66,7 @@ jobs:
       - run: command -v gawk >/dev/null || sudo apt-get install -y --no-install-recommends gawk
       - run: make tofu-tests-check
       - run: make test-tf
+      - run: make test-catalog
 
   shellcheck:
     runs-on: ubuntu-26.04

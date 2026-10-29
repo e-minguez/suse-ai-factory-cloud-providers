@@ -578,3 +578,33 @@ run "explicit_rancher_hostname_beats_ingress_domain" {
     error_message = "An explicit rancher_hostname must win over ingress_domain."
   }
 }
+
+# A GPU plan on a single control plane: its stock is often the unit the node
+# holds, so the check only runs for control-plane nodes that do not exist yet.
+run "control_plane_existing_skips_stock_check" {
+  command = plan
+
+  variables {
+    control_plane_count         = 1
+    control_plane_instance_type = "vcg-a40-24c-120g-48vram"
+  }
+
+  override_data {
+    target = data.http.agent_existing["instances"]
+    values = {
+      status_code   = 200
+      response_body = "{\"instances\":[{\"label\":\"out-vultr-cp-01\",\"plan\":\"vcg-a40-24c-120g-48vram\",\"region\":\"ams\"}]}"
+    }
+  }
+}
+
+run "control_plane_missing_runs_stock_check" {
+  command = plan
+
+  variables {
+    control_plane_count         = 1
+    control_plane_instance_type = "vcg-a40-24c-120g-48vram"
+  }
+
+  expect_failures = [data.http.plan_availability]
+}

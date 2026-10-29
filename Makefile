@@ -135,7 +135,8 @@ test-tf: ## terraform test (tofu test with TF=tofu; it reads the generated *.tof
 
 test-catalog: ## Plan examples/<provider> with each catalog/*/<provider>/*.tfvars.example (mocked, tests/catalog.tftest.hcl)
 # Runs in a copy at the same depth (examples/.catalog-<provider>), so a local
-# terraform.tfvars, *.auto.tfvars* or state in examples/<provider> does not leak in.
+# terraform.tfvars, *.auto.tfvars* or state in examples/<provider> does not leak in. With OpenTofu it
+# reads the generated tests/catalog.tofutest.hcl (make tofu-tests-gen) instead of the .tftest.hcl.
 	@status=0; \
 	for ex in examples/*/; do \
 		ex="$${ex%/}"; p="$${ex#examples/}"; \
@@ -144,10 +145,11 @@ test-catalog: ## Plan examples/<provider> with each catalog/*/<provider>/*.tfvar
 		[ -n "$$files" ] || continue; \
 		w="examples/.catalog-$$p"; rm -rf "$$w"; mkdir -p "$$w/tests"; \
 		cp "$$ex"/*.tf "$$w"/; cp "$$ex/tests/catalog.tftest.hcl" "$$w/tests/"; \
-		if ( cd "$$w" && terraform init -backend=false -input=false >/dev/null ); then \
+		[ ! -f "$$ex/tests/catalog.tofutest.hcl" ] || cp "$$ex/tests/catalog.tofutest.hcl" "$$w/tests/"; \
+		if ( cd "$$w" && $(TF) init -backend=false -input=false >/dev/null ); then \
 			for f in $$files; do \
 				echo "==> catalog $$f"; \
-				( cd "$$w" && terraform test -var-file="$(CURDIR)/$$f" ) || status=1; \
+				( cd "$$w" && $(TF) test -var-file="$(CURDIR)/$$f" ) || status=1; \
 			done; \
 		else status=1; fi; \
 		rm -rf "$$w"; \

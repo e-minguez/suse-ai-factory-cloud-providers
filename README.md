@@ -93,10 +93,10 @@ The scripts run `terraform` when installed, else `tofu`; `TF_BIN=tofu ./deploy.s
   check that it shows no changes before applying.
 - **Web UI image:** ships both with their provider mirrors; `docker run -e TF_BIN=tofu` selects
   OpenTofu ([docs/webui.md](docs/webui.md)).
-- **Tests:** CI runs `fmt`, `validate` and the module tests with OpenTofu. The suites use
+- **Tests:** CI runs `fmt`, `validate`, the module tests and the catalog tests (`make test-catalog`) with OpenTofu. The suites use
   Terraform-only syntax (`override_during`, `file()` in overrides), so each one that needs it has a
   generated `tests/*.tofutest.hcl` next to it: `tofu test` reads that instead, `terraform test`
-  ignores it, and `make test-tf` works with either tool. After changing a `.tftest.hcl`, run
+  ignores it, and `make test-tf` and `make test-catalog` work with either tool. The same goes for the example suites (`examples/*/tests`). After changing a `.tftest.hcl`, run
   `make tofu-tests-gen` (needs `tofu`, `jq` and `gawk`; macOS: `brew install gawk`) and commit the
   result. CI fails on a stale variant (`make tofu-tests-check`). Do not edit the generated files.
 
