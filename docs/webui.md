@@ -5,7 +5,7 @@ Terraform or editing tfvars by hand. It runs in a container on your workstation
 and runs the same `cluster.sh` and `deploy.sh` as the command line. Design and
 threat model: [ADR 009](decisions/009-webui-runner.md).
 
-The image bundles Terraform and OpenTofu, each with its provider mirror. Terraform is the default;
+The image bundles Terraform and OpenTofu (experimental), each with its provider mirror. Terraform is the default;
 add `-e TF_BIN=tofu` to `docker run` to run every deploy and output read with OpenTofu. Use one tool
 per cluster, see [OpenTofu](../README.md#opentofu).
 

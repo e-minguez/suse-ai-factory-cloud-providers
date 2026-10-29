@@ -74,31 +74,9 @@ Each provider has an example root with its own README:
 
 ## Quickstart
 
-**Requirements:** Terraform 1.16.5 or later (or OpenTofu, below), `jq`, `ssh`
+**Requirements:** Terraform 1.16.5 or later (or [OpenTofu](#opentofu) 1.13.1 or later, experimental), `jq`, `ssh`
 and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
 exoscale `curl` and `openssl` (signed API checks).
-
-### OpenTofu
-
-The scripts run `terraform` when installed, else `tofu`; `TF_BIN=tofu ./deploy.sh` (or
-`make TF=tofu`) forces OpenTofu. Both are supported equally:
-
-- **Versions:** checked with OpenTofu 1.13 and Terraform 1.16. OpenTofu does not enforce
-  `required_version`, so the 1.16.5 floor (a Terraform crash fix) applies to Terraform only;
-  `deploy.sh` warns when `tofu` is older than 1.13.
-- **State and locks:** both tools read and write the same `terraform.tfstate` and
-  `.terraform.lock.hcl`, but keep one tool per cluster: provider addresses move between
-  `registry.terraform.io` and `registry.opentofu.org` after an apply, and a plan that runs on
-  one tool is not a promise for the other. To switch a cluster, run a plan with the new tool and
-  check that it shows no changes before applying.
-- **Web UI image:** ships both with their provider mirrors; `docker run -e TF_BIN=tofu` selects
-  OpenTofu ([docs/webui.md](docs/webui.md)).
-- **Tests:** CI runs `fmt`, `validate`, the module tests and the catalog tests (`make test-catalog`) with OpenTofu. The suites use
-  Terraform-only syntax (`override_during`, `file()` in overrides), so each one that needs it has a
-  generated `tests/*.tofutest.hcl` next to it: `tofu test` reads that instead, `terraform test`
-  ignores it, and `make test-tf` and `make test-catalog` work with either tool. The same goes for the example suites (`examples/*/tests`). After changing a `.tftest.hcl`, run
-  `make tofu-tests-gen` (needs `tofu`, `jq` and `gawk`; macOS: `brew install gawk`) and commit the
-  result. CI fails on a stale variant (`make tofu-tests-check`). Do not edit the generated files.
 
 **1. Shared values.** Copy `common-all.tfvars.example` to `common-all.tfvars` at
 the repo root and fill in what every cluster shares: admin CIDRs, SSH keys
@@ -124,6 +102,10 @@ make cost PROVIDER=<provider> TFVARS="common-all.tfvars examples/<provider>/terr
 ```bash
 ./deploy.sh
 ```
+
+It runs `terraform` by default, or `tofu` when `terraform` is not installed. To use OpenTofu
+(experimental) instead, run `TF_BIN=tofu ./deploy.sh`; see [OpenTofu](#opentofu) and keep one tool
+per cluster.
 
 **5. Connect.** When the deploy finishes it prints the Rancher URL and the
 commands to fetch the kubeconfig and open an SSH session. It runs neither:
@@ -275,6 +257,32 @@ RKE2 agents. Storage comes from one of two components:
 With `aif-operator`, set all of them so AI Factory can pull its workloads right
 after the deployment. Plan prints a warning that names any missing ones; the
 deployment itself does not need them. Each pair is set together or not at all.
+
+### OpenTofu
+
+The scripts run `terraform` by default, or `tofu` when `terraform` is not installed; `TF_BIN=tofu ./deploy.sh` (or
+`make TF=tofu`) forces OpenTofu.
+
+> **Experimental.** OpenTofu support is new. Terraform stays the default and the reference: CI
+> runs both tools (`fmt`, `validate`, mocked plan and apply tests), but OpenTofu has seen little
+> real-deployment use. Report differences between the two tools as issues.
+
+- **Versions:** checked with OpenTofu 1.13 and Terraform 1.16. OpenTofu does not enforce
+  `required_version`, so the 1.16.5 floor (a Terraform crash fix) applies to Terraform only;
+  `deploy.sh` warns when `tofu` is older than 1.13.
+- **State and locks:** both tools read and write the same `terraform.tfstate` and
+  `.terraform.lock.hcl`, but keep one tool per cluster: provider addresses move between
+  `registry.terraform.io` and `registry.opentofu.org` after an apply, and a plan that runs on
+  one tool is not a promise for the other. To switch a cluster, run a plan with the new tool and
+  check that it shows no changes before applying.
+- **Web UI image:** ships both with their provider mirrors; `docker run -e TF_BIN=tofu` selects
+  OpenTofu ([docs/webui.md](docs/webui.md)).
+- **Tests:** CI runs `fmt`, `validate`, the module tests and the catalog tests (`make test-catalog`) with OpenTofu. The suites use
+  Terraform-only syntax (`override_during`, `file()` in overrides), so each one that needs it has a
+  generated `tests/*.tofutest.hcl` next to it: `tofu test` reads that instead, `terraform test`
+  ignores it, and `make test-tf` and `make test-catalog` work with either tool. The same goes for the example suites (`examples/*/tests`). After changing a `.tftest.hcl`, run
+  `make tofu-tests-gen` (needs `tofu`, `jq` and `gawk`; macOS: `brew install gawk`) and commit the
+  result. CI fails on a stale variant (`make tofu-tests-check`). Do not edit the generated files.
 
 ## Web UI
 

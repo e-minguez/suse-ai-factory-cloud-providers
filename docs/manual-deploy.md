@@ -4,7 +4,7 @@
 and `scripts/lib/{deploy-common,tf}.sh` add the var files, the rebuild counter,
 the plan/confirm/apply cycle and the logs. This page lists the equivalent
 `terraform` commands, for debugging or for running a single step by hand. With
-OpenTofu, replace `terraform` with `tofu`; the commands are the same.
+OpenTofu (experimental), replace `terraform` with `tofu`; the commands are the same.
 
 Run everything from `examples/<provider>` or a cluster directory that links to
 it.
