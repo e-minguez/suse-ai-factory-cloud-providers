@@ -1,0 +1,31 @@
+# Shape 05, SUSE Security cluster (NeuVector federation primary). Shape values
+# only: credentials, region, admin_cidrs and the shared tokens live in
+# clusters/common-all.tfvars and clusters/common-vultr.tfvars. The Observability
+# CA comes from clusters/sec/addons.auto.tfvars.json (README, step 4).
+
+# Drives hostnames and labels. Must differ on every cluster.
+cluster_name = "aif-sec"
+
+# HA control plane, no workers. security-management is the federation primary
+# and serves the NeuVector Manager. The agent monitors this cluster.
+control_plane_count = 3
+components = [
+  "security-management",
+  "local-path-provisioner",
+  "observability-agent",
+]
+
+# Required: obs, mgmt and gpu need the primary endpoint before this cluster
+# exists, and this cluster needs the obs CA first. NeuVector becomes
+# neuvector.sec.aif.example.com and the federation endpoint
+# fed-neuvector.sec.aif.example.com. Create the record
+# "*.sec.aif.example.com  A  <ingress IP of this cluster>" (README, step 3).
+ingress_domain = "sec.aif.example.com"
+
+# Remote SUSE Observability server (cluster obs). The CA is in addons.auto.tfvars.json.
+observability_server_url = "https://obs.o11y.aif.example.com"
+
+# Rancher SSO for the NeuVector Manager. It works once this cluster is imported
+# into the Rancher on mgmt (register, README step 6). Without register, remove
+# this line.
+security_rancher_url = "https://rancher.mgmt.aif.example.com"

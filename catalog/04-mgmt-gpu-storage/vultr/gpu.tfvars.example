@@ -1,0 +1,30 @@
+# Shape 04, downstream cluster with GPU, storage and general worker pools.
+# Shape values only: credentials, region and admin_cidrs live in
+# clusters/common-all.tfvars and clusters/common-vultr.tfvars.
+
+# Drives hostnames and labels. Must differ from the management cluster's name.
+cluster_name = "aif-gpu"
+
+# HA control plane. No rancher: this cluster is imported into the management
+# Rancher. suse-storage replaces local-path-provisioner: listing both fails
+# plan, because both set the default StorageClass.
+control_plane_count = 3
+components          = ["cert-manager", "gpu-operator", "suse-storage"]
+
+# Longhorn disks only on the storage pool (at least 3 nodes).
+suse_storage_nodes = ["storage"]
+
+# Passthrough plan, driver verified. Check stock first (see the README).
+gpu_pools = {
+  gpu = { instance_type = "vcg-a40-24c-120g-48vram", count = 1 }
+}
+
+worker_pools = {
+  # Longhorn uses the root disk: pick a plan with a large one.
+  storage = { instance_type = "vx1-g-4c-16g-240s", count = 3 }
+  # General workloads.
+  wrk = { instance_type = "vc2-6c-16gb", count = 2 }
+}
+
+# Optional. Needs a wildcard A record *.<domain> to this cluster's ingress IP.
+# ingress_domain = "gpu.aif.example.com"

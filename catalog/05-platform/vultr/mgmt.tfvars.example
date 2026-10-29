@@ -1,0 +1,32 @@
+# Shape 05, management cluster. Shape values only: credentials, region,
+# admin_cidrs and the shared tokens live in clusters/common-all.tfvars and
+# clusters/common-vultr.tfvars. The Observability CA comes from
+# clusters/mgmt/addons.auto.tfvars.json (README, step 4); do not set it here.
+
+# Drives hostnames and labels. Must differ on every cluster.
+cluster_name = "aif-mgmt"
+
+# HA control plane, no workers. cert-manager comes with rancher.
+# The plugin adds the Observability views to the Rancher UI. The agent
+# monitors this cluster. security-downstream joins the federation on sec.
+control_plane_count = 3
+components = [
+  "rancher",
+  "aif-operator",
+  "local-path-provisioner",
+  "observability-plugin",
+  "observability-agent",
+  "security-downstream",
+]
+
+# Required: obs needs the Rancher URL as a CORS origin and mgmt needs the obs
+# URL, so a fixed name breaks that cycle. Rancher becomes
+# rancher.mgmt.aif.example.com. Create the record
+# "*.mgmt.aif.example.com  A  <ingress IP of this cluster>" (README, step 3).
+ingress_domain = "mgmt.aif.example.com"
+
+# Remote SUSE Observability server (cluster obs). The CA is in addons.auto.tfvars.json.
+observability_server_url = "https://obs.o11y.aif.example.com"
+
+# NeuVector federation primary (cluster sec): host, port 443 by default.
+security_primary_endpoint = "fed-neuvector.sec.aif.example.com"

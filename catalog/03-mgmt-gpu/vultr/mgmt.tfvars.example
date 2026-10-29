@@ -1,0 +1,14 @@
+# Shape 03, management cluster. Shape values only: credentials, region and
+# admin_cidrs live in clusters/common-all.tfvars and clusters/common-vultr.tfvars.
+
+# Drives hostnames and labels. Must differ from the downstream cluster's name.
+cluster_name = "aif-mgmt"
+
+# HA control plane, no workers. Rancher and the AI Factory operator run here.
+# cert-manager comes with rancher; do not list it.
+control_plane_count = 3
+components          = ["rancher", "aif-operator", "local-path-provisioner"]
+
+# Optional. Needs a wildcard A record *.<domain> to the ingress IP; the Rancher
+# URL becomes rancher.<domain>. Default: rancher-<ingress IP>.sslip.io.
+# ingress_domain = "aif.example.com"

@@ -1,0 +1,19 @@
+# Shape 03, downstream GPU cluster. Shape values only: credentials, region and
+# admin_cidrs live in clusters/common-all.tfvars and clusters/common-vultr.tfvars.
+
+# Drives hostnames and labels. Must differ from the management cluster's name.
+cluster_name = "aif-gpu"
+
+# HA control plane. No rancher: this cluster is imported into the management
+# Rancher. cert-manager is listed so workloads can request certificates.
+control_plane_count = 3
+components          = ["cert-manager", "gpu-operator", "local-path-provisioner"]
+
+# Passthrough plan, driver verified. Check stock first (see the README).
+# Nodes get hostnames aif-gpu-gpu-NN and have no public IP.
+gpu_pools = {
+  gpu = { instance_type = "vcg-a40-24c-120g-48vram", count = 1 }
+}
+
+# Optional. Needs a wildcard A record *.<domain> to this cluster's ingress IP.
+# ingress_domain = "gpu.aif.example.com"
