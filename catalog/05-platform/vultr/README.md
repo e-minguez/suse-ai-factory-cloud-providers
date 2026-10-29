@@ -248,6 +248,17 @@ tools/multicluster/cluster.sh list
   `admin`. The Kubernetes clusters list shows four clusters: `aif-obs`, `aif-mgmt`,
   `aif-sec`, `aif-gpu`. The `kubernetes-v2` instance of each remote cluster is
   created by its own setup Job.
+
+  ![SUSE Observability: the four clusters aif-gpu, aif-mgmt, aif-obs and aif-sec, all CLEAR](images/observability-clusters.png)
+
+  Open `aif-gpu` to see its nodes, and the SUSE AI GPU Nodes view to see the
+  GPU, its driver and CUDA versions:
+
+  ![SUSE Observability: the eight nodes of aif-gpu](images/observability-gpu-nodes.png)
+
+  ![SUSE Observability, SUSE AI GPU Nodes: aif-gpu-gpu-01 with one NVIDIA A40](images/observability-suse-ai-gpu.png)
+
+  The screenshots come from the same test run as the Rancher one below.
 - `mgmt`, Rancher: open `https://rancher.mgmt.aif.example.com`. The cluster
   `aif-gpu` is listed and `Active` (and `aif-sec` and `aif-obs` if you imported
   them). The Observability extension is installed and points at the server.
