@@ -1,6 +1,6 @@
 # 03: Management and GPU downstream
 
-Status: not yet verified end to end.
+Status: covered on vultr (2026-10-29) by the shape 05 test run, not run on its own; see the provider guide.
 
 ## What you get
 

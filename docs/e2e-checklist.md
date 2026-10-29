@@ -48,22 +48,14 @@ check. Not run yet:
       `security-management`: the Observability UI and the SUSE AI extension
       load, the Rancher Observability extension shows the cluster, NeuVector
       opens in Rancher and at its own hostname, `admin` is `fedAdmin`.
-- [ ] Management + downstream federation: the downstream cluster appears in
-      **Multiple Clusters** of the primary, and `admin` there is `fedAdmin`
-      (`security-fed-init` succeeds; a later downstream still joins, so the
-      primary kept its join token).
-- [ ] Downstream agent self-registration: the downstream cluster shows up in
-      SUSE Observability (`kubernetes-v2` instance, topology, OTLP data) with
-      no cluster list on the server.
-- [ ] CronJob recovery: deploy the downstream cluster before the primary (own
-      DNS names); `security-fed-join` joins it within ~15 minutes of the
-      primary becoming ready, as long as the primary is up before the member
-      reaches its cap of 6 controller restarts (about 60-90 minutes; reset in
-      [Troubleshooting](observability-and-security.md#troubleshooting)).
-- [ ] SNI passthrough: the NeuVector controller sends SNI, so the Traefik
-      `IngressRouteTCP` on 443 reaches `fed-master`/`fed-managed`; no other
-      port is opened. `kubectl -n cattle-neuvector-system get ingressroutetcp
-      neuvector-federation` exists (applied by the security-fed-* jobs).
+Run on vultr on 2026-10-29 in the [shape 05 test](../catalog/05-platform/vultr/README.md)
+(dedicated observability and security clusters, `ingress_domain` on DuckDNS):
+federation with three members and `admin` as `fedAdmin` on the primary, remote
+agent self-registration (all four clusters in SUSE Observability), the CronJob
+recovery (`obs` was deployed before the primary `sec` and joined about
+5 minutes after it was ready, after 2 of 6 restarts) and SNI passthrough on 443
+(no other port). Still open for this area:
+
 - [ ] aws with sslip.io hostnames from the public NLB address: the address is
       stable across a node replacement and every hostname resolves and serves.
 - [ ] aws: the jumphost `user_data` fits the 16 KiB limit with every component

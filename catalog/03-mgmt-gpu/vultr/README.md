@@ -1,6 +1,6 @@
 # 03: Management and GPU downstream on Vultr
 
-Shape overview: [../README.md](../README.md). Status: not yet verified end to end.
+Shape overview: [../README.md](../README.md). Status: covered on 2026-10-29 by the [shape 05 test run](../../05-platform/vultr/README.md), not run on its own: `register --bootstrap`, the Rancher import of the GPU cluster and AI Factory targeting it were checked; the GPU cluster used Longhorn instead of local-path.
 Two clusters from `examples/vultr`, run with `tools/multicluster/cluster.sh`.
 
 ## Prerequisites

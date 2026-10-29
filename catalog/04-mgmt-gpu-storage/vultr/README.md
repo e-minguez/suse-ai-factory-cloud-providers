@@ -1,6 +1,6 @@
 # 04: Management and GPU downstream with storage on Vultr
 
-Shape overview: [../README.md](../README.md). Status: not yet verified end to end.
+Shape overview: [../README.md](../README.md). Status: covered on 2026-10-29 by the [shape 05 test run](../../05-platform/vultr/README.md), not run on its own: its `gpu` cluster used this shape's pools (`storage` with Longhorn, `wrk`, the A40), and `register`, the Rancher import and AI Factory targeting `aif-gpu` were checked.
 Two clusters from `examples/vultr`, run with `tools/multicluster/cluster.sh`.
 
 ## Prerequisites

@@ -1,6 +1,6 @@
 # 05: Platform on Vultr
 
-Shape overview: [../README.md](../README.md). Status: not yet verified end to end.
+Shape overview: [../README.md](../README.md). Status: verified end to end on 2026-10-29 (fra, aif 2.3.0, RKE2 v1.35.6, SUSE Observability 2.12.0). The test run used one control plane on `mgmt` and `sec`, three 8 vCPU nodes on `obs` (before the single-node layout) and shape 04's pools on `gpu`. Checked: Observability with all four clusters, NeuVector federation with three members, the three imports in Rancher, AI Factory targeting `aif-gpu`, the A40 and Longhorn on the `storage` pool. The single 32 vCPU `obs` node is not run yet.
 Four clusters from `examples/vultr`, run with `tools/multicluster/cluster.sh`. Replace
 `aif.example.com` with a domain you control in all files and commands.
 
@@ -244,13 +244,44 @@ tools/multicluster/cluster.sh list
   and open Multiple Clusters. The members are `aif-mgmt`, `aif-obs` and `aif-gpu`,
   each joined. A member can take about 15 minutes to join; if it does not, see
   [Troubleshooting](../../../docs/observability-and-security.md#troubleshooting).
+
+  ![NeuVector on sec: the cluster switcher lists aif-sec (primary), aif-gpu, aif-mgmt and aif-obs; admin is fedAdmin](images/neuvector-federation.png)
 - `obs`, SUSE Observability: open `https://obs.o11y.aif.example.com`, log in as
   `admin`. The Kubernetes clusters list shows four clusters: `aif-obs`, `aif-mgmt`,
   `aif-sec`, `aif-gpu`. The `kubernetes-v2` instance of each remote cluster is
   created by its own setup Job.
+
+  ![SUSE Observability: the four clusters aif-gpu, aif-mgmt, aif-obs and aif-sec, all CLEAR](images/observability-clusters.png)
+
+  Open `aif-gpu` to see its nodes, and the SUSE AI GPU Nodes view to see the
+  GPU, its driver and CUDA versions:
+
+  ![SUSE Observability: the eight nodes of aif-gpu](images/observability-gpu-nodes.png)
+
+  ![SUSE Observability, SUSE AI GPU Nodes: aif-gpu-gpu-01 with one NVIDIA A40](images/observability-suse-ai-gpu.png)
+
+  The screenshots come from the same test run as the Rancher one below.
 - `mgmt`, Rancher: open `https://rancher.mgmt.aif.example.com`. The cluster
   `aif-gpu` is listed and `Active` (and `aif-sec` and `aif-obs` if you imported
   them). The Observability extension is installed and points at the server.
+
+  ![Rancher on mgmt: aif-gpu, aif-obs and aif-sec imported and Active next to local (mgmt)](images/rancher-clusters.png)
+
+  From a test run on 2026-10-29: `local` is `mgmt`. That run used one
+  control-plane node on `mgmt` and `sec`, three 8 vCPU nodes on `obs` and the
+  storage and worker pools of shape 04 on `gpu`, so the CPU and memory columns
+  differ from this guide's plans.
+
+  With the Observability extension, each imported cluster's dashboard shows its
+  SUSE Observability health:
+
+  ![Rancher, aif-sec cluster dashboard: SUSE Observability health OBSERVED](images/rancher-sec-observed.png)
+
+- `mgmt`, AI Factory: in Rancher open SUSE AI Factory, Apps, pick an app and
+  Install. In Target Cluster, choose Fleet Bundle: the imported clusters are
+  listed, and `aif-gpu` shows its GPU.
+
+  ![SUSE AI Factory app install: target clusters aif-sec, aif-gpu (selected), aif-obs and local](images/aif-target-cluster.png)
 - `gpu`, GPU: fetch the kubeconfig to a file with mode 600.
 
   ```bash
