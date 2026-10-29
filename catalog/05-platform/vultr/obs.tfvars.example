@@ -20,9 +20,11 @@ components = [
 # 16 GB) provides. Sizing: README.
 control_plane_instance_type = "vx1-g-8c-32g-480s"
 
-# 20-nonha covers up to 20 monitored nodes; this shape has 13. A non-HA
-# profile cannot be switched to an HA one later.
-observability_sizing_profile = "20-nonha"
+# Monitored nodes count in default nodes of 4 vCPU / 16 GB: this shape is about
+# 23 (the GPU node alone about 8), so 50-nonha. For a short evaluation, "trial"
+# (3-day retention) on the default plan is enough. A non-HA profile cannot be
+# switched to an HA one later. Sizing: README.
+observability_sizing_profile = "50-nonha"
 
 # Required. The server is https://obs.o11y.aif.example.com (the subdomain is
 # o11y so the host does not read obs.obs.*). Create the record

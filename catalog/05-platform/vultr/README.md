@@ -15,6 +15,8 @@ Four clusters from `examples/vultr`, run with `tools/multicluster/cluster.sh`. R
   uses the zone `aif.example.com` and the names `*.mgmt`, `*.o11y`, `*.sec` and
   `*.gpu` in it. Use a low TTL (60 seconds): a record can change if a load
   balancer is replaced.
+  For tests without a zone, use four free DuckDNS names instead (see
+  [Using DuckDNS](#using-duckdns)).
 - A SUSE Observability license key. It goes only in `clusters/obs/terraform.tfvars`.
 - Two shared tokens, the same on all clusters. Append them to
   `clusters/common-all.tfvars` without printing them:
@@ -70,6 +72,44 @@ terminal while pass 2 runs, or after `deploy` ends. Create the record then:
 | `sec` | `*.sec  A  <sec ingress IP>` |
 | `mgmt` | `*.mgmt  A  <mgmt ingress IP>` |
 | `gpu` | `*.gpu  A  <gpu ingress IP>` |
+
+### Using DuckDNS
+
+[DuckDNS](https://www.duckdns.org) is a free dynamic DNS service. Every name
+below `<name>.duckdns.org` resolves to the address of `<name>`, so one DuckDNS
+name per cluster replaces the wildcard record. A free account has up to five
+names; this shape needs four. The nodes use public DNS for the cross-cluster
+names, so a local `/etc/hosts` entry does not work.
+
+1. Log in at <https://www.duckdns.org>, note the account token (a secret) and
+   create four names, for example `aifb-mgmt`, `aifb-o11y`, `aifb-sec` and
+   `aifb-gpu`.
+2. Put them in the four files instead of the `aif.example.com` names (run it
+   after step 3 below, when all four files exist):
+
+   ```bash
+   M=aifb-mgmt.duckdns.org O=aifb-o11y.duckdns.org S=aifb-sec.duckdns.org G=aifb-gpu.duckdns.org
+   for c in obs sec mgmt gpu; do
+     sed -i.bak -e "s/mgmt\.aif\.example\.com/$M/g" -e "s/o11y\.aif\.example\.com/$O/g" \
+       -e "s/sec\.aif\.example\.com/$S/g" -e "s/gpu\.aif\.example\.com/$G/g" "clusters/$c/terraform.tfvars"
+     rm -f "clusters/$c/terraform.tfvars.bak"
+   done
+   ```
+
+   The Observability server is then `https://obs.aifb-o11y.duckdns.org`, the
+   federation endpoint `fed-neuvector.aifb-sec.duckdns.org` and Rancher
+   `https://rancher.aifb-mgmt.duckdns.org`.
+3. After pass 1 of each cluster, point its name at the ingress IP. Read the
+   token without echoing it, so it does not end up in the shell history:
+
+   ```bash
+   read -rs DUCKDNS_TOKEN; export DUCKDNS_TOKEN
+   ip=$(terraform -chdir=clusters/obs output -raw ingress_endpoint); ip=${ip#https://}
+   curl -s "https://www.duckdns.org/update?domains=aifb-o11y&token=$DUCKDNS_TOKEN&ip=$ip"; echo   # OK
+   dig +short obs.aifb-o11y.duckdns.org                                                          # the IP
+   ```
+
+   Repeat with `sec`/`aifb-sec`, `mgmt`/`aifb-mgmt` and `gpu`/`aifb-gpu`.
 
 The deploy does not wait for DNS. `deploy.sh`, the wait scripts and the plan
 never resolve these names; they use the Vultr API and the jumphost address. The
@@ -264,7 +304,7 @@ tools/multicluster/cluster.sh destroy obs
   `clusters/.register/mgmt/downstream.list`.
 - When `mgmt` is destroyed, `clusters/.register/mgmt/` is stale. Delete the
   directory before you deploy a new `mgmt`, and use `--bootstrap` again.
-- Delete the four DNS records.
+- Delete the four DNS records (or the four DuckDNS names).
 - After a successful destroy, `deploy.sh` prints the leftovers check. It does not
   run it. Run it yourself after you export the API key:
 

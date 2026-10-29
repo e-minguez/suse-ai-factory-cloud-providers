@@ -25,6 +25,13 @@ name comes from your domain, so all of them are known before the first deploy.
 You create one wildcard DNS record per cluster while you deploy, as soon as the
 ingress IP of that cluster is known. See [Why `ingress_domain` is required](#why-ingress_domain-is-required).
 
+The records can live in a zone you control, or, for tests, in a free dynamic
+DNS service that resolves every name below your name to the same address, such
+as [DuckDNS](https://www.duckdns.org): one name per cluster, so
+`rancher.aifb-mgmt.duckdns.org` resolves to the `mgmt` ingress IP with no
+wildcard record to create. The nodes resolve these names through public DNS,
+so a local `/etc/hosts` entry is not enough.
+
 ## Diagram
 
 ```mermaid
@@ -235,15 +242,19 @@ that depend on imported clusters have not been tested on this shape.
 | Cluster | Nodes | Plan | Notes |
 |---|---|---|---|
 | `mgmt` | 3 control-plane | default | Rancher, operator, plugin and agent. |
-| `obs` | 3 control-plane | larger than default | Profile `20-nonha`: up to 20 monitored nodes; this shape has 13 (4 x 3 control-plane + 1 GPU). |
+| `obs` | 3 control-plane | larger than default | Profile `50-nonha`: about 23 monitored default nodes (see below). |
 | `sec` | 3 control-plane | default | NeuVector controllers and the agent. |
 | `gpu` | 3 control-plane + 1 GPU node | default + GPU plan | Raise the pool `count` when stock allows. |
 
-The Observability profile name is the number of monitored nodes. The server
-needs far more CPU and memory than the other components, so `obs` uses a bigger
-control-plane plan. Exact needs per profile are in the SUSE Observability
-requirements; they are not in this repository, so check them for your profile
-before you rely on the plan chosen here. `20-nonha` is not highly available: a
+The number in the Observability profile name counts default nodes of 4 vCPU and
+16 GB, not machines: a node of 24 vCPU and 120 GB counts as about 8. With the
+provider guide's plans this shape is about 23 default nodes (control planes 9,
+`obs` 6, GPU node 8), so it uses `50-nonha`: 14.2 vCPU and 32.6 GiB requested,
+475 GiB storage, 30-day retention. Exact needs per profile are in the
+[SUSE Observability requirements](https://documentation.suse.com/cloudnative/suse-observability/latest/en/setup/install-stackstate/requirements.html);
+count again when you add nodes. For a short evaluation, the `trial` profile
+(7.2 vCPU and 23.4 GiB requested, 154 GiB storage, 3-day retention) runs on
+the default plan. `50-nonha` is not highly available: a
 node failure on `obs` stops the server until the pod runs again, and with
 `local-path-provisioner` its data stays on the failed node.
 An HA profile (`150-ha`) is sized for 150 nodes. Switching between HA and non-HA
