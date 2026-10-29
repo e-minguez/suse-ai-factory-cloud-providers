@@ -221,8 +221,9 @@ Deploy order: `obs`, then `sec`, `mgmt` and `gpu`, then `register`. After `obs`
 the other three do not depend on each other, so you may deploy them in
 parallel. `sec` runs an agent, so it also needs the CA from `obs`. With own DNS
 names the federation order is free: a member that is deployed before the primary
-usually joins within about 15 minutes after the primary is up (not yet
-verified). The retries are capped at 6 controller restarts, roughly 60 to 90
+usually joins within about 15 minutes after the primary is up (about 5 minutes
+in the 2026-10-29 test). Deploy the primary within about an hour of its members:
+the retries are capped at 6 controller restarts, roughly 60 to 90
 minutes after the member starts; see
 [Troubleshooting](../../docs/observability-and-security.md#troubleshooting) for
 the reset.
@@ -314,6 +315,11 @@ and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
 
 ## Grow and variants
 
+- Any change that rebuilds `obs` (profile, plan, components, an Observability
+  version bump, `deploy.sh --rebuild`) starts its database fresh, and `mgmt`,
+  `sec` and `gpu` stop reporting until their tokens are
+  [reconnected by hand](../../docs/observability-and-security.md#reconnect-remote-clusters-after-a-server-rebuild).
+  The CA stays, so their `addons.auto.tfvars.json` files stay valid.
 - Several `obs` nodes: `control_plane_count = 3` with `suse-storage` instead of
   `local-path-provisioner`, so volumes are replicated and not tied to the node
   where they were created (`suse_storage_nodes` default: the control planes).

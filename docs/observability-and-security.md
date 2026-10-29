@@ -498,9 +498,9 @@ not change. What does change:
 - The agent tokens and the `kubernetes-v2` registrations of the remote clusters
   lived in the old server database. Their token Jobs are gone (the Job is
   deleted 60 seconds after it ends, and Elemental applies image manifests once).
-  The remote clusters stop reporting until the token Job runs again. Likely
-  fix: `deploy.sh --rebuild` on each remote cluster. This is inferred from the
-  code and needs an e2e check.
+  **Every remote cluster stops reporting**, without an error: its agent keeps
+  running with a token the new server rejects. Reconnect each one by hand, see
+  [Reconnect remote clusters](#reconnect-remote-clusters-after-a-server-rebuild).
 - The same applies when the ingress certificate is re-issued (about every 790
   days) and the server cluster is rebuilt for it.
 - A replaced NeuVector primary starts a new federation. Members may need to
@@ -508,6 +508,39 @@ not change. What does change:
   [Troubleshooting](#troubleshooting)).
 - The Rancher extension Secret `configuration` is created again by the new
   cluster's Job, so the extension recovers by itself.
+
+Plan a server rebuild like an outage of monitoring for all remote clusters:
+changes to the profile, the plan, the components, a version bump in
+`addons.tf` and `deploy.sh --rebuild` on the server cluster all trigger it.
+
+### Reconnect remote clusters after a server rebuild
+
+Give each remote cluster a new token and register it again. The remote clusters
+keep their nodes. Do not use `deploy.sh --rebuild` on them for this: it
+replaces all their nodes and loses their `local-path` data. The procedure
+follows the standard SUSE Observability flow and what the token Job writes; it
+is not yet verified end to end.
+
+1. In the new server UI, install the Kubernetes StackPack (`kubernetes-v2`) for
+   the remote cluster, with its `cluster_name` as the cluster name, and create a
+   service token for it (the StackPack page offers it).
+2. With that cluster's kubeconfig, write the token into the two Secrets the
+   token Job writes, then restart the agent and the collector so they read it:
+
+   ```bash
+   read -rs TOKEN; export TOKEN       # paste the service token, Enter
+   kubectl -n open-telemetry create secret generic open-telemetry-collector \
+     --from-literal=API_KEY="$TOKEN" --dry-run=client -o yaml | kubectl apply -f -
+   kubectl -n suse-observability-agent create secret generic suse-observability-agent-token \
+     --from-literal=STS_API_KEY="$TOKEN" --dry-run=client -o yaml | kubectl apply -f -
+   kubectl -n suse-observability-agent rollout restart deploy,ds
+   kubectl -n open-telemetry rollout restart deploy
+   ```
+
+3. Check that the cluster reports again in the server UI, as in [Verify](#verify).
+
+Repeat for every remote cluster. The server cluster's own agent and a local
+Rancher extension need nothing: their manifests are part of the new image.
 
 ## Sizing and licensing
 
@@ -571,7 +604,8 @@ Plan for more than the profile:
   on a three-node server cluster made the apply build a new snapshot,
   rebuilt the jumphost and replaced the three control planes. The load balancers
   and the CA stayed. The new nodes start with empty `local-path` volumes, so
-  the Observability database starts empty too. See
+  the Observability database starts empty too, and remote clusters must be
+  [reconnected](#reconnect-remote-clusters-after-a-server-rebuild). See
   [Rebuild of the server cluster](#rebuild-of-the-server-cluster).
 
 ## Verify
@@ -674,7 +708,8 @@ In the UI, open the Manager at the NeuVector Manager host (see
 | `503` from `/api/server/info` after the first start | The server pods are still starting. | Wait and check `kubectl -n suse-observability get pods`. |
 | Pods `Pending` with `Insufficient cpu` (Kafka first) | The nodes cannot fit the profile plus RKE2, Traefik, NeuVector and the agent. | Use a bigger plan or more nodes, or a smaller profile. See [Sizing](#sizing-and-licensing). Both are image inputs. |
 | A `Pending` pod with a `local-path` volume (`didn't match PersistentVolume's node affinity`, `Insufficient cpu`) while another node is idle | The volume was pinned to a node that filled up, typically one that existed before the other nodes joined. | If the pod never ran, its volume is empty: delete the PVC and the pod (`kubectl -n suse-observability delete pvc <pvc> --wait=false; kubectl -n suse-observability delete pod <pod>`); the StatefulSet creates both again and the scheduler picks a node with room. Otherwise free CPU on that node. Long term: one large node or `suse-storage`. |
-| `generate-cluster-token` waits for a long time, or no Secret `suse-observability-agent-token` appears | The Job loops with `curl -f --cacert` and the header `X-API-Key` until the server API answers, and has no deadline. Causes: DNS record missing or wrong, server not ready, `ingress_cidrs` on the server cluster blocks this cluster's egress address, a stale CA (an old `addons.auto.tfvars.json` after the server cluster was destroyed and deployed again), or an `observability_bootstrap_token` that differs from the server's. A failed attempt is retried twice (`backoffLimit: 2`). The Job is deleted 60 seconds after it ends (`ttlSecondsAfterFinished: 60`), and Elemental applies image manifests once, so nothing creates it again. | Check `kubectl -n suse-observability-agent logs job/generate-cluster-token`, the DNS record of the server host, `egress_ips`, the CA and the token. Then regenerate the CA file ([hand-off](#handing-the-ca-to-other-clusters)) if it is stale. A new Job needs the manifest applied again: `deploy.sh --rebuild` on that cluster should do it (not verified). |
+| `generate-cluster-token` waits for a long time, or no Secret `suse-observability-agent-token` appears | The Job loops with `curl -f --cacert` and the header `X-API-Key` until the server API answers, and has no deadline. Causes: DNS record missing or wrong, server not ready, `ingress_cidrs` on the server cluster blocks this cluster's egress address, a stale CA (an old `addons.auto.tfvars.json` after the server cluster was destroyed and deployed again), or an `observability_bootstrap_token` that differs from the server's. A failed attempt is retried twice (`backoffLimit: 2`). The Job is deleted 60 seconds after it ends (`ttlSecondsAfterFinished: 60`), and Elemental applies image manifests once, so nothing creates it again. | Check `kubectl -n suse-observability-agent logs job/generate-cluster-token`, the DNS record of the server host, `egress_ips`, the CA and the token. Then regenerate the CA file ([hand-off](#handing-the-ca-to-other-clusters)) if it is stale. If the Job is already gone, give the cluster a token by hand: [Reconnect remote clusters](#reconnect-remote-clusters-after-a-server-rebuild). |
+| A remote cluster shows no data after the server cluster was rebuilt, while its agent pods run | The new server has a new database: the agent token and the `kubernetes-v2` registration are gone, and the token Job does not run again. | [Reconnect remote clusters](#reconnect-remote-clusters-after-a-server-rebuild), on every remote cluster. |
 | Member missing in **Multiple Clusters** | The primary was not reachable yet, the DNS record of the member is missing, or `ingress_cidrs` blocks one direction. The CronJob `security-fed-join` runs every 5 minutes. When the member is not joined and its oldest controller pod is older than 10 minutes, it deletes all controller pods (a restart) and counts it in the annotation `suse-security/restarts` of the ConfigMap `security-fed-route`. Each restart takes 10 to 15 minutes, and the cap is 6 restarts (`MAX=6`), so the retries stop roughly 60 to 90 minutes after the member's controllers start. Then the job fails with `not joined after 6 controller restarts` and does nothing more. | Fix DNS or `ingress_cidrs`. After the cap, reset the counter: `kubectl -n cattle-neuvector-system annotate cm security-fed-route suse-security/restarts=0 --overwrite`. The next run then restarts the controllers again. Read the job log first. |
 | **Multiple Clusters** is hidden in the Manager | `admin` lost the `fedAdmin` role. | See the `fedAdmin` entry in [workarounds](workarounds.md). Do not do a rolling restart of the primary controllers. |
 | A join fails with `failed to decrypt data` | The primary lost its fixed join token: a rolling restart of its controllers, or an edit of the values, dropped it from memory ([ADR 010](decisions/010-security-observability.md#in-cluster-race-handling)). | Delete all controller pods of the primary at once: `kubectl -n cattle-neuvector-system delete pods -l app=neuvector-controller-pod`. The members join again within the cap above. |
@@ -712,6 +747,9 @@ All chart and image versions are in one table, `addon_versions` in
   unknown minor fails at plan; add it to the table.
 - Bump the Observability server and agent together. 2.12.0 is the first server
   version that works with the SUSE AI integration (2.11.x has a regression).
+- A bump of an `observability_*` version is an image input: the server cluster
+  starts fresh and every remote cluster stops reporting until you
+  [reconnect it](#reconnect-remote-clusters-after-a-server-rebuild).
 - The collector image tag (`ghcr.io/suse/suse-ai-opentelemetry-collector`,
   currently `0.156.0`) and the setup image tag (`tools_image`, currently `3.9.2`)
   are set outside this table: the first in `observability-agent.yaml.tftpl`, the
@@ -741,6 +779,12 @@ Temporary workarounds: [workarounds](workarounds.md).
 - The nodes must reach these hosts: `charts.rancher.com` (Observability server and agent charts), `charts.rancher.io` (NeuVector charts), `github.com/rancher/ui-plugin-charts` (Rancher extensions), `registry.rancher.com` (NeuVector images), `registry.opensuse.org` (setup tools image), `ghcr.io` (collector image) and the Application Collection registry (`appco_registry`, default `dp.apps.rancher.io`: the SUSE AI extension and the collector chart).
 - Each change of a component or its values rebuilds the image and replaces the
   nodes of that cluster.
+- Remote agents do not recover by themselves after a rebuild of the server
+  cluster; their tokens are reconnected by hand
+  ([procedure](#reconnect-remote-clusters-after-a-server-rebuild)). The
+  NeuVector federation join stops after 6 controller restarts; deploy the
+  primary within about an hour of its members, or reset the counter
+  ([Troubleshooting](#troubleshooting)).
 - Security and Observability state (CA keys, passwords, tokens, license key) is stored
   in Terraform state and in the image: treat state as secret
   ([security](security.md#suse-security-and-suse-observability),
