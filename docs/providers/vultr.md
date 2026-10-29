@@ -209,24 +209,24 @@ stock check and `agent_node_cidrs` value; only `nodes[*].role` differs (`worker`
 list.
 
 The module queries it once at plan time, without `?type=`
-(`data.http.plan_availability`), for the control plane, the jumphost and every worker or
+(`data.http.plan_availability`), for the jumphost and for the control plane and every worker or
 GPU pool that has something to create; a missing plan fails the plan and names the
 pool. The untyped answer is the union of every family (`vc2`, `vx1`, `vbm`,
 `vcg`, `vdm`; confirmed against blr's `vcg-a40-24c` and sea's `vcg-b200`). A typed
 query needs the plan's `type` field, which the id prefix does not give, so there
 is no `plan_type` input. Stock can still drain before apply.
 
-Skipped pools:
+Skipped control plane and pools:
 
 - `count = 0`: a pool can be parked while its plan is out of stock.
-- Pools whose nodes all exist. Stock is often one unit, held by the cluster's own
-  node, so re-checking it would fail every later plan of a healthy cluster.
-  Existence comes from the API (`data.http.agent_existing`, which covers worker and GPU pools, `GET /v2/instances` and
+- A control plane or pool whose nodes all exist. Stock is often one unit, held by the cluster's own
+  node (a GPU plan on a single control plane, or a GPU pool), so re-checking it would fail every later plan of a healthy cluster.
+  Existence comes from the API (`data.http.agent_existing`, which covers the control plane and the worker and GPU pools, `GET /v2/instances` and
   `/v2/bare-metals`, one page of 500), matching label (the hostname), plan and
   region. The node resources depend on the check, so reading their state would be
   a cycle, and the API answer also holds after a state loss. A node beyond the
   first page looks missing, which runs the check. Adding a node or changing a
-  pool's plan re-enables the check for that pool.
+  pool's plan re-enables the check for that pool; the same applies to the control plane.
 
 Manual check for one region:
 
