@@ -102,9 +102,8 @@ These apply to every shape and are not implemented today:
 more than one cluster (03, 04, 05) uses the default `10.20.0.0/20` in its own
 VPC. Nothing in the repository depends on the ranges being different: the
 clusters talk to each other only through public load balancer addresses and DNS
-names, and the VPC range is used only inside one cluster. It is not verified
-whether Vultr accepts two VPCs with the same subnet in one region. If the plan
-or apply is rejected for this reason, report it.
+names, and the VPC range is used only inside one cluster. Vultr accepts
+several VPCs with the same subnet in one region (checked 2026-10-29).
 
 ## Testing
 
