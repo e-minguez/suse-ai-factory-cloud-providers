@@ -40,7 +40,7 @@ locals {
   )
 
   next_steps_access = [
-    "Kubeconfig     : ${local.helper["kubeconfig"]} -o ~/.kube/${var.cluster_name}.yaml   (admin credential, mode 600)",
+    "Kubeconfig     : ${local.helper["kubeconfig"]} --wait -o ~/.kube/${var.cluster_name}.yaml   (admin credential, mode 600; --wait retries until the node serves it)",
     "SSH            : ${local.helper["ssh"]} <node>   nodes: terraform -chdir=${local.cluster_dir} output nodes",
   ]
 

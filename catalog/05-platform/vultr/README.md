@@ -211,7 +211,7 @@ tools/multicluster/cluster.sh list
 
   ```bash
   mkdir -p ~/.kube
-  clusters/gpu/kubeconfig.sh -o ~/.kube/aif-gpu.yaml
+  clusters/gpu/kubeconfig.sh --wait -o ~/.kube/aif-gpu.yaml
   KUBECONFIG=~/.kube/aif-gpu.yaml kubectl get pods -n gpu-operator
   KUBECONFIG=~/.kube/aif-gpu.yaml kubectl get nodes \
     -o custom-columns='NODE:.metadata.name,GPU:.status.allocatable.nvidia\.com/gpu'

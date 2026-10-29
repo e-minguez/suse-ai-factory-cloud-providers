@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fetch the RKE2 admin kubeconfig from the init node. Never run automatically.
 #
-# Usage: kubeconfig.sh [-C DIR] [--known-hosts FILE] [-u USER] [-o FILE] [--force]
+# Usage: kubeconfig.sh [-C DIR] [--known-hosts FILE] [-u USER] [-o FILE] [--force] [--wait [SECONDS]]
 #
 # Run from a cluster directory (examples/<provider> or clusters/<name>), or pass
 # -C DIR from anywhere. deploy.sh prints the full command.
@@ -10,6 +10,10 @@
 # overwrite without --force. The file is an admin credential: store it carefully.
 # Reads /etc/rancher/rke2/rke2.yaml as the init node ssh_user (-u overrides;
 # group-readable, no root needed) and rewrites server: to https://<api_host>:6443.
+#
+# --wait retries until the init node serves rke2.yaml (still booting right after
+# a deploy), for SECONDS (default 900). Missing outputs or an existing file
+# still fail at once.
 set -euo pipefail
 
 # Real path (macOS has no readlink -f). Through a clusters/<name>/ symlink, -C defaults to that directory.
@@ -25,6 +29,9 @@ HERE="$(cd "$(dirname "$HERE")" && pwd)"
 
 out=""
 force=0
+wait=0
+# Seconds between --wait attempts; the tests shorten it.
+interval=${KUBECONFIG_WAIT_INTERVAL:-15}
 while [ $# -gt 0 ]; do
   ssh_parse_common "$@"
   if [ "$SSH_SHIFT" -gt 0 ]; then
@@ -38,6 +45,14 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --force) force=1 && shift ;;
+    --wait)
+      wait=900
+      shift
+      if [ $# -gt 0 ] && [[ "$1" =~ ^[0-9]+$ ]]; then
+        wait=$1
+        shift
+      fi
+      ;;
     -h | --help)
       awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
       exit 0
@@ -60,8 +75,19 @@ case "$api_host" in
   *[!A-Za-z0-9._:-]*) ssh_die "unsafe api_host: $api_host" ;;
 esac
 
-raw=$(ssh_run "$init_node" cat /etc/rancher/rke2/rke2.yaml) || ssh_die "cannot read rke2.yaml on $init_node"
-[ -n "$raw" ] || ssh_die "rke2.yaml is empty on $init_node"
+deadline=$((SECONDS + wait))
+while :; do
+  rc=0
+  raw=$(ssh_run "$init_node" cat /etc/rancher/rke2/rke2.yaml 2>"$SSH_TMP/err") || rc=$?
+  [ "$rc" -ne 0 ] || [ -z "$raw" ] || break
+  if [ "$SECONDS" -ge "$deadline" ]; then
+    cat "$SSH_TMP/err" >&2
+    [ "$rc" -eq 0 ] || ssh_die "cannot read rke2.yaml on $init_node"
+    ssh_die "rke2.yaml is empty on $init_node"
+  fi
+  echo "waiting for rke2.yaml on $init_node ($((deadline - SECONDS))s left)" >&2
+  sleep "$interval"
+done
 
 # shellcheck disable=SC2001 # anchored regex, not a plain substitution
 kubeconfig=$(sed "s|^\([[:space:]]*server:\).*|\1 https://${api_host}:6443|" <<<"$raw")

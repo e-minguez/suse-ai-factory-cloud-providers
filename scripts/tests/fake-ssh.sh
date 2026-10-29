@@ -9,6 +9,12 @@ fi
 case "$*" in
   *rke2.yaml*)
     [ -z "${FAKE_SSH_FAIL:-}" ] || exit 255
+    # FAKE_SSH_FAIL_TIMES=N: refuse the first N reads (node still booting).
+    if [ -n "${FAKE_SSH_FAIL_TIMES:-}" ]; then
+      n=$(($(cat "$FAKE_SSH_FAIL_COUNT" 2>/dev/null || echo 0) + 1))
+      echo "$n" >"$FAKE_SSH_FAIL_COUNT"
+      [ "$n" -gt "$FAKE_SSH_FAIL_TIMES" ] || { echo "channel 0: open failed: connect failed: Connection refused" >&2; exit 255; }
+    fi
     cat <<'Y'
 apiVersion: v1
 clusters:

@@ -41,7 +41,7 @@ Variables in `box.tfvars.example`: `cluster_name`, `components`, `control_plane_
 
 ```bash
 mkdir -p ~/.kube
-clusters/box/kubeconfig.sh -o ~/.kube/aif-box.yaml    # admin credential, mode 600, no overwrite without --force
+clusters/box/kubeconfig.sh --wait -o ~/.kube/aif-box.yaml    # admin credential, mode 600, no overwrite without --force
 export KUBECONFIG=~/.kube/aif-box.yaml
 kubectl get nodes                                  # one node, Ready
 kubectl get pods -A                                # all Running or Completed

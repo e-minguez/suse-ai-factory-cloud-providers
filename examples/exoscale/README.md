@@ -114,7 +114,7 @@ plan, list replacements and destroys, confirm, apply the saved plan. Logs:
 ## After the deploy
 
 ```bash
-../../scripts/kubeconfig.sh -o ~/.kube/exoscale.yaml    # admin credential, mode 600
+../../scripts/kubeconfig.sh --wait -o ~/.kube/exoscale.yaml    # admin credential, mode 600
 ../../scripts/ssh.sh jumphost                           # the only SSH entry
 ../../scripts/ssh.sh <node>                             # through the jumphost; then `su -`
 ../../scripts/build-logs.sh [--host NAME] [--no-follow]

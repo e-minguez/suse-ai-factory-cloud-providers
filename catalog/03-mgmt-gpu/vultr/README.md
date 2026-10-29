@@ -88,7 +88,7 @@ terraform -chdir=clusters/mgmt output -raw rancher_url
 
   ```bash
   mkdir -p ~/.kube
-  clusters/gpu/kubeconfig.sh -o ~/.kube/aif-gpu.yaml
+  clusters/gpu/kubeconfig.sh --wait -o ~/.kube/aif-gpu.yaml
   KUBECONFIG=~/.kube/aif-gpu.yaml kubectl get nodes
   KUBECONFIG=~/.kube/aif-gpu.yaml kubectl get pods -n gpu-operator
   ```
