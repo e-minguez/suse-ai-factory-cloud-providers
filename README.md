@@ -362,6 +362,43 @@ docs/         architecture, conventions, ADRs, workarounds, security, scaling, p
 consistency, generated-docs, lint and test checks. After changing variables or
 outputs, run `make docs`.
 
+### Required checks
+
+`main` is protected by the repository ruleset `protect-main`: changes arrive
+through pull requests, squash-merged once the required checks pass. The
+required checks are the CI job names (for a matrix job, one check per entry,
+for example `validate (vultr)`) plus `conventional-title`. They are kept in the
+ruleset, not in the repository, so a pull request that adds or renames a CI job
+needs a repository admin to update the ruleset after the merge. Until then the
+new job runs but does not block merges.
+
+List the current required checks:
+
+```bash
+R=e-minguez/suse-ai-factory-cloud-providers
+id=$(gh api repos/$R/rulesets --jq '.[] | select(.name == "protect-main") | .id')
+gh api repos/$R/rulesets/$id \
+  --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context'
+```
+
+Add a check (admin only), here the `opentofu` job. It reuses the app ID of the
+existing checks, so only GitHub Actions can satisfy it, and running it twice
+adds nothing:
+
+```bash
+gh api repos/$R/rulesets/$id | jq --arg c opentofu '
+  {name, target, enforcement, conditions, bypass_actors,
+   rules: [.rules[] | if .type == "required_status_checks" then
+     .parameters.required_status_checks += [{context: $c} +
+       (.parameters.required_status_checks[0] | if .integration_id then {integration_id} else {} end)]
+     | .parameters.required_status_checks |= unique_by(.context)
+   else . end]}' > /tmp/protect-main.json
+gh api -X PUT repos/$R/rulesets/$id --input /tmp/protect-main.json --jq '.name'
+```
+
+Run the list command again to confirm. The check name must match a job that
+has run at least once on a pull request, or every pull request waits for it.
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
