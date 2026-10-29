@@ -251,7 +251,7 @@ deploy_wait_cluster() {
   local kc="${DEPLOY_KUBECONFIG:-$DEPLOY_LIB_DIR/../kubeconfig.sh}"
   local timeout=${DEPLOY_WAIT_TIMEOUT:-1800} notice=${DEPLOY_WAIT_NOTICE:-120} interval=${DEPLOY_WAIT_INTERVAL:-15}
   local t0 now next err
-  terraform output -json nodes 2>/dev/null | jq -e '[.[]? | select(.init == true)] != []' >/dev/null || {
+  "$TF_BIN" output -json nodes 2>/dev/null | jq -e '[.[]? | select(.init == true)] != []' >/dev/null || {
     tf__say "note: --wait: no init node in the outputs, nothing to wait for."
     return 0
   }
