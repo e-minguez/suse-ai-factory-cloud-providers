@@ -191,7 +191,9 @@ CA exists only after `obs` is deployed, and all three others need it.
    ```
 
    Keep `observability_ca_pem` out of the `terraform.tfvars` files: values there
-   win over the auto file. Regenerate the files when `obs` is replaced.
+   win over the auto file. Regenerate the files when `obs` is destroyed and
+   deployed again (a new CA). A rebuild of `obs` keeps the CA but needs the
+   [token reconnect](../../../docs/observability-and-security.md#reconnect-remote-clusters-after-a-server-rebuild).
 
 5. Deploy `sec`, `mgmt` and `gpu`. They do not depend on each other, so you can
    run them one after the other or in parallel terminals. Check the cost first.
