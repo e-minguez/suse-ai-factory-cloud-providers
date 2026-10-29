@@ -54,7 +54,7 @@ After the apply it prints how to fetch access, with absolute paths and `-C`, so
 the commands work from anywhere. It runs none of these itself. From this directory:
 
 ```bash
-../../scripts/kubeconfig.sh -o ~/.kube/<cluster>.yaml   # admin credential, mode 600
+../../scripts/kubeconfig.sh --wait -o ~/.kube/<cluster>.yaml   # admin credential, mode 600
 ../../scripts/ssh.sh jumphost                           # or a hostname from `terraform output nodes`
 ../../scripts/build-logs.sh                             # follow the image build (pass 1)
 ```

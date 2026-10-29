@@ -140,6 +140,36 @@ FAKE_SSH_FAIL=1 "$S/kubeconfig.sh" -o "$out" 2>/dev/null || rc=$?
 [ ! -e "$out" ] || fail "file created on failure"
 [ "$(count_kube)" -eq 0 ] || fail "temp file left on failure"
 
+# --wait: retries while the node refuses, then writes the file
+rm -f "$out" "$W/fails"
+err=$(FAKE_SSH_FAIL_TIMES=2 FAKE_SSH_FAIL_COUNT="$W/fails" KUBECONFIG_WAIT_INTERVAL=0 "$S/kubeconfig.sh" --wait 30 -o "$out" 2>&1) || fail "--wait did not recover: $err"
+[ "$(cat "$W/fails")" = 3 ] || fail "--wait made $(cat "$W/fails") attempts, want 3"
+has "$err" "waiting for rke2.yaml on t-cp-01"
+hasnt "$err" "Connection refused"
+has "$(cat "$out")" "server: https://rke2-203.0.113.10.sslip.io:6443"
+
+# --wait gives up after SECONDS and shows the last ssh error; no file
+rm -f "$out" "$W/fails"
+rc=0
+err=$(FAKE_SSH_FAIL_TIMES=1000 FAKE_SSH_FAIL_COUNT="$W/fails" KUBECONFIG_WAIT_INTERVAL=1 "$S/kubeconfig.sh" --wait 2 -o "$out" 2>&1) || rc=$?
+[ "$rc" -ne 0 ] || fail "--wait timeout not propagated"
+has "$err" "Connection refused"
+has "$err" "cannot read rke2.yaml on t-cp-01"
+[ ! -e "$out" ] || fail "file created after --wait timeout"
+
+# without --wait a refused read fails at once
+rm -f "$W/fails"
+rc=0
+FAKE_SSH_FAIL_TIMES=1 FAKE_SSH_FAIL_COUNT="$W/fails" "$S/kubeconfig.sh" >/dev/null 2>&1 || rc=$?
+[ "$rc" -ne 0 ] && [ "$(cat "$W/fails")" = 1 ] || fail "retried without --wait"
+
+# --wait does not retry a file that already exists
+touch "$out"
+rc=0
+"$S/kubeconfig.sh" --wait -o "$out" 2>/dev/null || rc=$?
+[ "$rc" -ne 0 ] || fail "--wait overwrote an existing file"
+rm -f "$out"
+
 # no init node
 noinit="$W/noinit.json"
 jq '.nodes.value |= map_values(.init = false)' "$FAKE_TF_JSON" >"$noinit"

@@ -102,7 +102,7 @@ from anywhere.
 ```bash
 terraform output next_steps
 
-../../scripts/kubeconfig.sh -o ~/.kube/<cluster_name>.yaml   # admin credential, mode 600
+../../scripts/kubeconfig.sh --wait -o ~/.kube/<cluster_name>.yaml   # admin credential, mode 600
 ../../scripts/ssh.sh jumphost                                # build host and SSH bastion
 ../../scripts/ssh.sh <node>                                  # names: terraform output nodes
 ../../scripts/build-logs.sh                                  # follow the image build, also during the apply

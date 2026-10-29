@@ -107,7 +107,7 @@ make cost PROVIDER=<provider> TFVARS="common-all.tfvars examples/<provider>/terr
 commands to fetch the kubeconfig and open an SSH session. It runs neither:
 
 ```bash
-scripts/kubeconfig.sh -C examples/<provider> -o ~/.kube/<cluster>.yaml   # mode 600
+scripts/kubeconfig.sh -C examples/<provider> --wait -o ~/.kube/<cluster>.yaml   # mode 600
 scripts/ssh.sh -C examples/<provider> <hostname|jumphost>
 scripts/build-logs.sh -C examples/<provider>                             # follow the image build
 ```

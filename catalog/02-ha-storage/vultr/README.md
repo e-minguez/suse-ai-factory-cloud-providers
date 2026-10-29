@@ -41,7 +41,7 @@ Pool keys become hostnames `aif-ha-<pool>-NN`. `cp` is reserved and a worker poo
 
 ```bash
 mkdir -p ~/.kube
-clusters/ha/kubeconfig.sh -o ~/.kube/aif-ha.yaml     # admin credential, mode 600, no overwrite without --force
+clusters/ha/kubeconfig.sh --wait -o ~/.kube/aif-ha.yaml     # admin credential, mode 600, no overwrite without --force
 export KUBECONFIG=~/.kube/aif-ha.yaml
 kubectl get nodes                                 # 3 control plane, 1 gpu, 2 general, 3 storage; all Ready
 kubectl get pods -A                               # all Running or Completed

@@ -60,7 +60,7 @@ From this directory (`next_steps` prints the same commands with absolute paths
 and `-C`, usable from anywhere):
 
 ```bash
-../../scripts/kubeconfig.sh -o ~/.kube/vultr.yaml    # admin credential, mode 600, no overwrite without --force
+../../scripts/kubeconfig.sh --wait -o ~/.kube/vultr.yaml    # admin credential, mode 600, no overwrite without --force
 ../../scripts/ssh.sh jumphost                        # or a name from `terraform output nodes`
 ../../scripts/ssh.sh <cluster>-cp-01                # then `su -` (node_username, no sudo)
 ../../scripts/build-logs.sh [--host NAME] [--no-follow]
