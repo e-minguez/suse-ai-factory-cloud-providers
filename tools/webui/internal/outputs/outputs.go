@@ -1,4 +1,4 @@
-// Package outputs reads non-sensitive terraform outputs and the cluster
+// Package outputs reads non-sensitive terraform (or tofu) outputs and the cluster
 // kubeconfig (fetched on demand, never stored).
 package outputs
 
@@ -18,7 +18,20 @@ import (
 
 const timeout = 90 * time.Second
 
-// Get runs `terraform -chdir=<clusterDir> output -json` and returns
+// tfBin is the binary scripts/lib/tfbin.sh picks: $TF_BIN, else terraform, else tofu.
+func tfBin() string {
+	if b := os.Getenv("TF_BIN"); b != "" {
+		return b
+	}
+	if _, err := exec.LookPath("terraform"); err != nil {
+		if _, err := exec.LookPath("tofu"); err == nil {
+			return "tofu"
+		}
+	}
+	return "terraform"
+}
+
+// Get runs `terraform -chdir=<clusterDir> output -json` (tofu with TF_BIN=tofu) and returns
 // name -> value without sensitive outputs.
 // env is the child environment (see workspace.ChildEnv); nil means
 // workspace.ChildEnv(nil).
@@ -26,7 +39,7 @@ func Get(ctx context.Context, clusterDir string, env []string) (map[string]any, 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var out, errb bytes.Buffer
-	cmd := exec.CommandContext(ctx, "terraform", "-chdir="+clusterDir, "output", "-json")
+	cmd := exec.CommandContext(ctx, tfBin(), "-chdir="+clusterDir, "output", "-json")
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	cmd.Env = append(childEnv(env), "TF_IN_AUTOMATION=1", "TF_INPUT=0")
 	if err := cmd.Run(); err != nil {
@@ -90,7 +103,7 @@ func Raw(ctx context.Context, clusterDir, name string, env []string) (string, er
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var out, errb bytes.Buffer
-	cmd := exec.CommandContext(ctx, "terraform", "-chdir="+clusterDir, "output", "-raw", name)
+	cmd := exec.CommandContext(ctx, tfBin(), "-chdir="+clusterDir, "output", "-raw", name)
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	cmd.Env = append(childEnv(env), "TF_IN_AUTOMATION=1", "TF_INPUT=0")
 	if err := cmd.Run(); err != nil {

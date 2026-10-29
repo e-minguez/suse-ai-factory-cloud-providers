@@ -49,7 +49,7 @@ fi
 [ $# -ge 1 ] || ssh_die "usage: ssh.sh <hostname|jumphost> [cmd...]"
 target=$1
 shift
-grep -qxF "Host $target" "$SSH_CONFIG" || ssh_die "unknown host '$target' (see: terraform output nodes)"
+grep -qxF "Host $target" "$SSH_CONFIG" || ssh_die "unknown host '$target' (see: $TF_BIN output nodes)"
 
 rc=0
 ssh_run "$target" "$@" || rc=$?

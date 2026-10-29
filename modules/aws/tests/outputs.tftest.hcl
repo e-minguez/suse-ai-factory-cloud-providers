@@ -55,7 +55,7 @@ mock_provider "aws" {
   override_data {
     target = data.aws_network_interface.public_nlb
     values = {
-      association = [{ public_ip = "203.0.113.10" }]
+      association = [{ allocation_id = null, association_id = null, carrier_ip = null, customer_owned_ip = null, ip_owner_id = null, public_dns_name = null, public_ip = "203.0.113.10" }]
     }
   }
 

@@ -11,7 +11,7 @@ and outputs: [`modules/evroc/README.md`](../../modules/evroc/README.md).
 
 ## Prerequisites
 
-- Terraform 1.16.5 or later.
+- Terraform 1.16.5 or later (or OpenTofu, experimental).
 - `jq` and `ssh`. `curl` is used by the build-status commands below.
 - `evroc login`, which writes `~/.evroc/config.yaml`. The provider block is
   empty and reads credentials, region and project from that file. `deploy.sh`

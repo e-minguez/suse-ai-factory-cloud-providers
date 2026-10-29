@@ -82,7 +82,7 @@ if [ "$rc" -ne 0 ]; then
   {
     echo "ERROR: $FAIL_MSG"
     echo "The resource is in state with an id that may no longer exist. Before re-running apply:"
-    echo "  terraform state rm 'module.ai_factory.vultr_snapshot_from_url.ai_factory[0]'"
+    echo "  ${TF_BIN:-terraform} state rm 'module.ai_factory.vultr_snapshot_from_url.ai_factory[0]'"
   } >&2
   exit 1
 fi

@@ -22,10 +22,10 @@ override_data {
   values = {
     profiles = ["c1a.m", "a1a.m", "a1a.xl", "gn-l40s.s"]
     details = [
-      { name = "c1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = "", gpu_quantity = 0 },
-      { name = "a1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = "", gpu_quantity = 0 },
-      { name = "a1a.xl", vcpus = 16, memory_amount = 64, memory_unit = "GB", gpu_model = "", gpu_quantity = 0 },
-      { name = "gn-l40s.s", vcpus = 16, memory_amount = 64, memory_unit = "GB", gpu_model = "AD102GL_L40S", gpu_quantity = 1 },
+      { name = "c1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = null, processor_architecture = null },
+      { name = "a1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = null, processor_architecture = null },
+      { name = "a1a.xl", vcpus = 16, memory_amount = 64, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = null, processor_architecture = null },
+      { name = "gn-l40s.s", vcpus = 16, memory_amount = 64, memory_unit = "GB", gpu_model = "AD102GL_L40S", gpu_quantity = 1, gpu_local_disk_gb = null, processor_architecture = null },
     ]
   }
 }
@@ -367,8 +367,8 @@ run "worker_flavor_null_gpu_quantity_accepted" {
     values = {
       profiles = ["c1a.m", "a1a.m"]
       details = [
-        { name = "c1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = null, gpu_quantity = null },
-        { name = "a1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = null, gpu_quantity = null },
+        { name = "c1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = null, gpu_quantity = null, gpu_local_disk_gb = null, processor_architecture = null },
+        { name = "a1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = null, gpu_quantity = null, gpu_local_disk_gb = null, processor_architecture = null },
       ]
     }
   }

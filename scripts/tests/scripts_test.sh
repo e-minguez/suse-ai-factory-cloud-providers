@@ -9,9 +9,12 @@ W=$(mktemp -d "${TMPDIR:-/tmp}/scripts-test.XXXXXX")
 trap 'rm -rf "$W"' EXIT
 
 mkdir "$W/bin" "$W/tmp" "$W/ex"
-cp "$T/fake-terraform.sh" "$W/bin/terraform"
+# FAKE_TF_NAME=tofu runs the same tests with the fake installed as tofu.
+TFN=${FAKE_TF_NAME:-terraform}
+export TF_BIN=$TFN
+cp "$T/fake-terraform.sh" "$W/bin/$TFN"
 cp "$T/fake-ssh.sh" "$W/bin/ssh"
-chmod +x "$W/bin/terraform" "$W/bin/ssh"
+chmod +x "$W/bin/$TFN" "$W/bin/ssh"
 export PATH="$W/bin:$PATH"
 export TMPDIR="$W/tmp"
 export FAKE_TF_JSON="$T/sample-outputs.json"

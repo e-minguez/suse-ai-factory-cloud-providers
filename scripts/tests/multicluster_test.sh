@@ -13,7 +13,7 @@ trap 'rm -rf "$W"' EXIT
 R="$W/repo"
 mkdir -p "$R/tools/multicluster/register" "$R/tools/cost" "$R/scripts/lib" "$R/modules" "$W/bin" "$W/out"
 cp "$REPO/tools/multicluster/cluster.sh" "$R/tools/multicluster/"
-cp "$REPO/scripts/lib/ssh.sh" "$R/scripts/lib/"
+cp "$REPO/scripts/lib/ssh.sh" "$REPO/scripts/lib/tfbin.sh" "$R/scripts/lib/"
 for p in aws vultr evroc exoscale; do
   mkdir -p "$R/examples/$p"
   for f in main.tf variables.tf outputs.tf versions.tf; do echo "# $p" >"$R/examples/$p/$f"; done
@@ -36,6 +36,7 @@ printf '%s|%s\n' "$PWD" "$*" >>"$FAKE_GO_LOG"
 G
 chmod +x "$W/bin/"*
 export PATH="$W/bin:$PATH"
+unset TF_BIN # the fake is installed as terraform
 export TMPDIR="$W"
 export FAKE_OUT="$W/out" FAKE_TF_LOG="$W/tf.log" FAKE_SSH_LOG="$W/ssh.log" FAKE_SSH_STDIN="$W/ssh.stdin"
 export FAKE_CURL_LOG="$W/curl.log" FAKE_DEPLOY_LOG="$W/deploy.log" FAKE_GO_LOG="$W/go.log" FAKE_REG_OUT="$W/reg.json"

@@ -6,6 +6,7 @@
 #    same type and default in each, except provider-specific defaults.
 # 4. Output names match docs/conventions.md and examples/<p>/outputs.tf are identical.
 # 5. Every provider module sets the four managed label keys.
+# 6. Scripts that are run directly (local-exec, shebang outside templates and scripts/lib) are executable.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -87,6 +88,27 @@ for p in "${providers[@]}"; do
     grep -qF "\"elemental-$k\"" modules/"$p"/*.tf || err "modules/$p does not set the elemental-$k label"
   done
 done
+
+# 6. Scripts that are run directly must be executable (git mode 100755). A rewritten file easily loses
+#    the bit and the failure only shows at apply time (exit 126, Permission denied). Sourced libraries
+#    (scripts/lib) and files shipped to the nodes (templates) are not run from the repository.
+is_executable() { # file: git mode when tracked, file mode otherwise
+  local m
+  m=$(git ls-files -s -- "$1" 2>/dev/null | cut -c1-6 || true)
+  if [[ -n "$m" ]]; then [[ "$m" == 100755 ]]; else [[ -x "$1" ]]; fi
+}
+while read -r f; do
+  [[ -f "$f" ]] || { err "$f is run by a local-exec but does not exist"; continue; }
+  is_executable "$f" || err "$f is run by a local-exec and must be executable (git update-index --chmod=+x $f)"
+done < <(grep -rnoE 'command *= *"\$\{path\.module\}/[^"]+"' modules --include='*.tf' |
+  sed -E 's#^(modules/[^/]+)/[^:]*:[0-9]+:command *= *"\$\{path\.module\}/([^"]+)"#\1/\2#' | sort -u)
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  while read -r f; do
+    case "$f" in */templates/* | scripts/lib/*) continue ;; esac
+    [[ -f "$f" ]] && [[ "$(head -c 2 "$f")" == "#!" ]] || continue
+    is_executable "$f" || err "$f has a shebang and must be executable (git update-index --chmod=+x $f)"
+  done < <(git ls-files)
+fi
 
 if [[ $fail -eq 0 ]]; then echo "check-consistency: ok (${providers[*]})"; fi
 exit $fail

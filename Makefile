@@ -1,9 +1,12 @@
 # SUSE AI Factory: cloud providers
 #
-# Terraform targets walk TF_DIRS; shell lint only sees files git would track.
+# Terraform/OpenTofu targets walk TF_DIRS; shell lint only sees files git would track.
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+
+# Terraform or OpenTofu: TF_BIN (or `make TF=tofu`), else terraform when installed, else tofu.
+TF ?= $(or $(TF_BIN),$(if $(shell command -v terraform 2>/dev/null),terraform,tofu))
 
 TF_DIRS := modules examples tools/multicluster
 # modules/common only holds the variable file symlinked into each provider module.
@@ -13,7 +16,7 @@ EXAMPLES ?= $(wildcard examples/*/)
 # Other Terraform roots to validate; CI runs them in their own job.
 TOOL_ROOTS ?= tools/multicluster/register
 
-.PHONY: help docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-catalog test-scripts test-go test-webui webui image cost cost-fixtures check-consistency ci clean
+.PHONY: help tofu-tests-gen tofu-tests-check docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-catalog test-scripts test-go test-webui webui image cost cost-fixtures check-consistency ci clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
@@ -21,24 +24,24 @@ help: ## Show this help
 fmt: ## Reformat all Terraform files (modules/, examples/, tools/multicluster/)
 	@for d in $(TF_DIRS); do \
 		[ -d "$$d" ] || continue; \
-		terraform fmt -recursive "$$d"; \
+		$(TF) fmt -recursive "$$d"; \
 	done
 
 fmt-check: ## Check Terraform formatting without writing changes
 	@status=0; \
 	for d in $(TF_DIRS); do \
 		[ -d "$$d" ] || continue; \
-		terraform fmt -recursive -check -diff "$$d" || status=1; \
+		$(TF) fmt -recursive -check -diff "$$d" || status=1; \
 	done; \
 	exit $$status
 
-validate: ## terraform init -backend=false + validate for every examples/<provider> and tools root (EXAMPLES=, TOOL_ROOTS= to narrow)
+validate: ## init -backend=false + validate for every examples/<provider> and tools root (EXAMPLES=, TOOL_ROOTS= to narrow)
 	@status=0; \
 	for d in $(EXAMPLES) $(TOOL_ROOTS); do \
 		d="$${d%/}"; \
 		[ -f "$$d/main.tf" ] || continue; \
 		echo "==> validate $$d"; \
-		( cd "$$d" && terraform init -backend=false -input=false >/dev/null && terraform validate ) || status=1; \
+		( cd "$$d" && $(TF) init -backend=false -input=false >/dev/null && $(TF) validate ) || status=1; \
 		rm -rf "$$d/.terraform" "$$d/.terraform.lock.hcl"; \
 	done; \
 	exit $$status
@@ -63,9 +66,13 @@ lint-sh: ## shellcheck (skipped if not installed) on every tracked *.sh
 
 test: test-tf test-catalog test-scripts test-go test-webui ## Run terraform, script and Go tests
 
-test-scripts: ## Script tests (fake terraform and ssh) and poll.sh self-test
+test-scripts: ## Script tests (fake terraform, tofu and ssh) and poll.sh self-test
+	bash scripts/tests/tfbin_test.sh
+	bash scripts/tests/tofu_tests_test.sh
 	bash scripts/tests/scripts_test.sh
+	FAKE_TF_NAME=tofu bash scripts/tests/scripts_test.sh
 	bash scripts/tests/deploy_test.sh
+	FAKE_TF_NAME=tofu bash scripts/tests/deploy_test.sh
 	bash scripts/tests/vultr_deploy_test.sh
 	bash scripts/tests/evroc_deploy_test.sh
 	bash scripts/tests/exoscale_deploy_test.sh
@@ -114,21 +121,22 @@ cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|vultr
 cost-fixtures: ## Run the live-tagged cost tests (network, optional credentials)
 	cd tools/cost && go test -tags live ./...
 
-test-tf: ## terraform test in every module and tools root that has a tests/ directory
+test-tf: ## terraform test (tofu test with TF=tofu; it reads the generated *.tofutest.hcl) in every module and tools root that has a tests/ directory
 	@dirs=$$( { find modules -mindepth 2 -maxdepth 2 -type d -name tests; find tools -mindepth 3 -maxdepth 3 -type d -name tests; } 2>/dev/null); \
 	if [ -z "$$dirs" ]; then echo "test: no modules with a tests/ directory yet"; exit 0; fi; \
 	status=0; \
 	for t in $$dirs; do \
 		mod=$$(dirname "$$t"); \
 		echo "==> terraform test $$mod"; \
-		( cd "$$mod" && terraform init -backend=false -input=false >/dev/null && terraform test ) || status=1; \
+		( cd "$$mod" && $(TF) init -backend=false -input=false >/dev/null && $(TF) test ) || status=1; \
 		rm -rf "$$mod/.terraform" "$$mod/.terraform.lock.hcl"; \
 	done; \
 	exit $$status
 
 test-catalog: ## Plan examples/<provider> with each catalog/*/<provider>/*.tfvars.example (mocked, tests/catalog.tftest.hcl)
 # Runs in a copy at the same depth (examples/.catalog-<provider>), so a local
-# terraform.tfvars, *.auto.tfvars* or state in examples/<provider> does not leak in.
+# terraform.tfvars, *.auto.tfvars* or state in examples/<provider> does not leak in. With OpenTofu it
+# reads the generated tests/catalog.tofutest.hcl (make tofu-tests-gen) instead of the .tftest.hcl.
 	@status=0; \
 	for ex in examples/*/; do \
 		ex="$${ex%/}"; p="$${ex#examples/}"; \
@@ -137,15 +145,22 @@ test-catalog: ## Plan examples/<provider> with each catalog/*/<provider>/*.tfvar
 		[ -n "$$files" ] || continue; \
 		w="examples/.catalog-$$p"; rm -rf "$$w"; mkdir -p "$$w/tests"; \
 		cp "$$ex"/*.tf "$$w"/; cp "$$ex/tests/catalog.tftest.hcl" "$$w/tests/"; \
-		if ( cd "$$w" && terraform init -backend=false -input=false >/dev/null ); then \
+		[ ! -f "$$ex/tests/catalog.tofutest.hcl" ] || cp "$$ex/tests/catalog.tofutest.hcl" "$$w/tests/"; \
+		if ( cd "$$w" && $(TF) init -backend=false -input=false >/dev/null ); then \
 			for f in $$files; do \
 				echo "==> catalog $$f"; \
-				( cd "$$w" && terraform test -var-file="$(CURDIR)/$$f" ) || status=1; \
+				( cd "$$w" && $(TF) test -var-file="$(CURDIR)/$$f" ) || status=1; \
 			done; \
 		else status=1; fi; \
 		rm -rf "$$w"; \
 	done; \
 	exit $$status
+
+tofu-tests-gen: ## Regenerate the OpenTofu test variants (tests/*.tofutest.hcl) from the Terraform suites (needs tofu, jq, gawk)
+	TF_BIN=tofu bash scripts/tests/tofu-tests.sh --write
+
+tofu-tests-check: ## Fail if a tests/*.tofutest.hcl is missing or out of date
+	TF_BIN=tofu bash scripts/tests/tofu-tests.sh --check
 
 docs: ## Regenerate the inputs/outputs tables in modules/*/README.md (needs terraform-docs)
 	@command -v terraform-docs >/dev/null 2>&1 || { echo "docs: terraform-docs not installed (brew install terraform-docs; see https://terraform-docs.io/user-guide/installation/)" >&2; exit 1; }

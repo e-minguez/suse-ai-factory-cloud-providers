@@ -55,6 +55,13 @@ override_data {
   }
 }
 
+# OpenTofu mocks computed lists as empty and the module indexes private_ips[0].
+override_resource {
+  target          = module.ai_factory.vultr_nat_gateway.this
+  override_during = plan
+  values          = { public_ips = ["198.51.100.7"], private_ips = ["10.20.0.1"] }
+}
+
 override_resource {
   target          = module.ai_factory.vultr_load_balancer.api
   override_during = plan

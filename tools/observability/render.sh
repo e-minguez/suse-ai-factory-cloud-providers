@@ -10,8 +10,11 @@
 #   APPCO_DOCKERCONFIGJSON_BASE64  or APPCO_USERNAME + APPCO_PASSWORD
 #                                  (+ APPCO_REGISTRY, default dp.apps.rancher.io)
 # Fails when a placeholder is left. The output can hold credentials: pipe it to
-# kubectl, never to a file. Needs terraform, jq, base64 and sed.
+# kubectl, never to a file. Needs terraform or tofu, jq, base64 and sed.
 set -euo pipefail
+
+# shellcheck source=../../scripts/lib/tfbin.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib" && pwd)/tfbin.sh"
 
 die() { echo "render.sh: $*" >&2; exit 1; }
 
@@ -45,7 +48,7 @@ val() {
   fi
 }
 
-tf_json=$(terraform -chdir="$dir" output -json) || die "terraform output failed in $dir"
+tf_json=$("$TF_BIN" -chdir="$dir" output -json) || die "$TF_BIN output failed in $dir"
 cluster_name=$(jq -r '.cluster_name.value // empty' <<<"$tf_json")
 
 # Escape a value for the replacement part of a sed s||| expression.

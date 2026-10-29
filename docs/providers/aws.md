@@ -12,7 +12,7 @@ and replacing the node.
 
 Diagrams: [architecture](../architecture.md#aws-one-pass).
 
-`deploy.sh` runs a single `terraform apply`. The RKE2 API address
+`deploy.sh` runs a single `terraform apply` (`tofu apply` with OpenTofu). The RKE2 API address
 (`network.apiVIP`) is baked into the image, so it must be known before any
 resource exists. The internal NLB gets a static private address chosen at plan
 time (host 10 of the first private subnet, `local.api_vip`), and target group
@@ -61,7 +61,7 @@ The jumphost uploads the raw image to a private, SSE-S3 encrypted S3 bucket
 - The raw image expires from S3 one day after upload unless
   `keep_build_artifacts = true`. Nodes read nothing from S3; the jumphost gets
   its script and config inline in `user_data`.
-- The AMI and its snapshot are Terraform resources: `terraform destroy`
+- The AMI and its snapshot are Terraform resources: `terraform destroy` (`tofu destroy`)
   removes them. `image_id` skips the build and must not name an AMI this
   module registered, because destroy or the apply that sets it deregisters
   that AMI. Copy it first (`aws ec2 copy-image`).
@@ -232,7 +232,7 @@ The data sources also call `iam:GetRole` (vmimport role) and
 `iam:GetInstanceProfile` (jumphost profile), which `AWSPowerUserAccess` does
 not include. Allow them on the vmimport role ARN and on
 `arn:aws:iam::ACCOUNT_ID:instance-profile/aif-precreated-jumphost`.
-`terraform destroy` does not remove the pre-created roles; delete them
+`terraform destroy` (`tofu destroy`) does not remove the pre-created roles; delete them
 separately when the cluster is gone.
 
 ## user_data limit
