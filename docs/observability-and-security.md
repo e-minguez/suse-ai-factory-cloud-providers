@@ -448,7 +448,7 @@ outputs of the other clusters and your own CIDRs.
 | Token Job `generate-cluster-token` (remote) | server cluster | `<server host>:443` | Waits for `/api/server/info`, creates the cluster token, installs `kubernetes-v2` for the cluster. On the server cluster the same Job runs against the in-cluster router and does not install `kubernetes-v2`. |
 | Plugin Job `generate-sts-config` | server | `<server URL>` or the in-cluster router | Creates a read-only token and the Secret `configuration`. |
 | Browser (Rancher extension) | server cluster | `<server host>:443` | The extension calls the API. The server allows the Rancher URL as an origin (`observability_allowed_origins`; the local Rancher is automatic), and the browser trusts the CA. |
-| NeuVector member | primary | `security_primary_endpoint`, port 443 | Join with the join token. Traefik routes by SNI `fed-<primary host>` to the controller on port 11443 (the SNI behaviour is not yet verified, see [docs/e2e-checklist.md](e2e-checklist.md#suse-security-and-suse-observability)). |
+| NeuVector member | primary | `security_primary_endpoint`, port 443 | Join with the join token. Traefik routes by SNI `fed-<primary host>` to the controller on port 11443 (verified on vultr on 2026-10-29: no other port is needed). |
 | NeuVector primary | each member | `fed-<member Manager host>:443` | The primary connects back. Traefik routes by SNI to the member's controller on port 10443. |
 | `cattle-cluster-agent` on an imported cluster | Rancher | `rancher_hostname:443` | Import (`cluster.sh register`). Rancher never connects to the nodes. |
 | NeuVector | Rancher | `security_rancher_url` | Rancher SSO. The cluster must be imported under its `cluster_name`. |
@@ -464,8 +464,8 @@ primary must reach the member. `ingress_cidrs` on both clusters must allow it.
   the endpoint.
 - With own DNS names or `ingress_domain`, the primary can be deployed later. A
   member deployed earlier joins by itself, usually within about 15 minutes of the
-  primary becoming ready (not yet verified, see
-  [docs/e2e-checklist.md](e2e-checklist.md#suse-security-and-suse-observability)).
+  primary becoming ready (in a vultr run on 2026-10-29: about 5 minutes, after 2
+  of 6 restarts).
   The retries are capped: see the
   [troubleshooting entry](#troubleshooting) for the window and the reset.
 - `register` comes last. It needs Rancher up and its DNS record.

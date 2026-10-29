@@ -2,7 +2,7 @@
 
 Four clusters with central monitoring and security.
 
-Status: not yet verified end to end.
+Status: verified end to end on vultr (2026-10-29), with a smaller test layout; see the provider guide.
 
 ## What you get
 

@@ -1,6 +1,6 @@
 # 02: HA cluster with storage on Vultr
 
-Shape overview: [../README.md](../README.md). Status: not yet verified end to end.
+Shape overview: [../README.md](../README.md). Status: partly covered on 2026-10-29: the [shape 05 test run](../../05-platform/vultr/README.md) ran `suse-storage` with `suse_storage_nodes = ["storage"]` on a 3-node pool next to a GPU and a worker pool (disks only on `storage`, 3 replicas); Rancher and AI Factory in the same cluster as SUSE Storage were not run.
 
 ## Prerequisites
 

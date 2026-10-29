@@ -2,7 +2,7 @@
 
 A highly available cluster with replicated storage. Three control-plane nodes, a GPU pool, a general worker pool and a 3-node `storage` pool that stores the SUSE Storage (Longhorn) disks.
 
-Status: not yet verified end to end.
+Status: partly covered on vultr (2026-10-29): SUSE Storage on a dedicated pool next to GPU and worker pools ran in the shape 05 test; Rancher and AI Factory in the same cluster as SUSE Storage did not.
 
 ## What you get
 
