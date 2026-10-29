@@ -21,10 +21,11 @@ locals {
   # of stock.
   agent_pools_active = { for k, p in local.agent_pools : k => p if p.count > 0 }
 
-  # Endpoint behind each active pool's servers.
-  agent_existing_endpoints = toset([
-    for p in values(local.agent_pools_active) : p.kind == "bare_metal" ? "bare-metals" : "instances"
-  ])
+  # Endpoint behind each active pool's servers, plus instances for the control plane.
+  agent_existing_endpoints = toset(concat(
+    var.control_plane_count > 0 ? ["instances"] : [],
+    [for p in values(local.agent_pools_active) : p.kind == "bare_metal" ? "bare-metals" : "instances"],
+  ))
 }
 
 # Servers that already exist (label, plan, region), so the stock check only
@@ -61,6 +62,13 @@ locals {
     ]
   ]))
 
+  # Control-plane hostnames the next apply would create: a GPU plan on a single
+  # control plane is often the region's only unit, held by the node itself.
+  control_plane_missing = [
+    for n in local.control_plane_nodes : n.hostname
+    if !contains(local.agent_existing, "${n.hostname}|${n.plan}")
+  ]
+
   # Per active pool, the hostnames the next apply would create.
   agent_pool_missing = {
     for k, p in local.agent_pools_active : k => [
@@ -69,12 +77,10 @@ locals {
     ]
   }
 
-  # Control plane, jumphost and every pool that has something to create.
+  # Jumphost, plus the control plane and every pool that has something to create.
   requested_plans = merge(
-    {
-      "control plane" = local.control_plane_plan
-      "jumphost"      = local.jumphost_plan
-    },
+    { "jumphost" = local.jumphost_plan },
+    length(local.control_plane_missing) > 0 ? { "control plane (creates ${join(", ", local.control_plane_missing)})" = local.control_plane_plan } : {},
     {
       for k, p in local.agent_pools_active :
       "${p.role == "gpu" ? "GPU" : "worker"} pool \"${k}\" (creates ${join(", ", local.agent_pool_missing[k])})" => p.instance_type
