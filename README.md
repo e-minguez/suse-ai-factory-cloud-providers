@@ -214,6 +214,12 @@ Alternatively set `ingress_domain` and create one wildcard record `*.<domain>`
 Rancher, Observability and NeuVector become `rancher.<domain>`, `obs.<domain>`
 and `neuvector.<domain>`. Explicit hostname variables win; `api_host` is not
 affected.
+For tests without a zone of your own, a free dynamic DNS name such as
+[DuckDNS](https://www.duckdns.org) can serve as `ingress_domain` on evroc,
+exoscale and vultr: every name below `<name>.duckdns.org` resolves to the
+address of `<name>`, so it acts as the wildcard record. It holds an IP address
+only, so it does not fit the aws NLB DNS names. Steps:
+[catalog/05-platform/vultr](catalog/05-platform/vultr/README.md#using-duckdns).
 
 ### Single-node clusters
 
