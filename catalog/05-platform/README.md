@@ -262,6 +262,26 @@ node failure on `obs` stops the server until the pod runs again, and with
 An HA profile (`150-ha`) is sized for 150 nodes. Switching between HA and non-HA
 later is not supported.
 
+Profiles accepted by `observability_sizing_profile`, with the totals from the
+SUSE Observability requirements (whole server, before spare capacity for
+rolling updates):
+
+| Profile | Default nodes | vCPU requested | Memory requested | Storage | Retention | Min. nodes |
+|---|---|---|---|---|---|---|
+| `trial` | 10 | 7.2 | 23.4 GiB | 154 GiB | 3 days | 1 |
+| `10-nonha` | 10 | 7.2 | 23.4 GiB | 335 GiB | 30 days | 1 |
+| `20-nonha` | 20 | 9.5 | 27.2 GiB | 375 GiB | 30 days | 1 |
+| `50-nonha` | 50 | 14.2 | 32.6 GiB | 475 GiB | 30 days | 1 |
+| `100-nonha` | 100 | 24.1 | 45.7 GiB | 525 GiB | 30 days | 1 |
+| `150-ha` | 150 | 49.8 | 130.7 GiB | 2595 GiB | 30 days | 3 (8 vCPU, 16 GB each) |
+| `250-ha`, `500-ha`, `4000-ha` | 250, 500, 4000 | see the requirements | | | | 3 |
+
+The profile is a size, not a license type: the `trial` profile differs from
+`10-nonha` only in retention and storage. Which profiles a license key covers
+depends on the key; check with SUSE if it is a trial key. Add what the other
+components on `obs` request (RKE2, Traefik, NeuVector, the agent) before you
+pick the plan.
+
 Each cluster also has a jumphost, an API load balancer, an ingress load balancer
 and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
 
