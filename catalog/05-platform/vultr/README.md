@@ -44,7 +44,7 @@ Four clusters from `examples/vultr`, run with `tools/multicluster/cluster.sh`. R
   ```
 
   All regions: `VULTR_API_KEY=... tools/vultr/passthrough-stock.sh`. The plan
-  `vx1-g-8c-32g-480s` (the `obs` nodes) must be in stock too; plan checks it.
+  `voc-c-32c-64gb-1000s-amd` (the `obs` node) must be in stock too; plan checks it.
 - Go, for the cost estimate.
 - Network: all four clusters use the default `vpc_cidr` of `examples/vultr`. See
   [one VPC range for all clusters](../../README.md#vultr-one-vpc-range-for-all-clusters).
@@ -283,13 +283,13 @@ cluster has its own NeuVector admin password. `join_token` is the shared one.
 Run `tools/multicluster/cluster.sh cost <name>` for each cluster before you
 deploy. The estimate is not a quote. Each of the four clusters has:
 
-- a jumphost, three control-plane nodes (`obs`: the larger plan
-  `vx1-g-8c-32g-480s`) and, on `gpu`, the GPU node
+- a jumphost, three control-plane nodes (`obs`: one node on the larger plan
+  `voc-c-32c-64gb-1000s-amd`) and, on `gpu`, the GPU node
 - an API load balancer and an ingress load balancer
 - a NAT gateway
 - the image snapshot
 
-Four clusters mean four sets of these. The GPU plan and the `obs` nodes are the
+Four clusters mean four sets of these. The GPU plan and the `obs` node are the
 main costs.
 
 ## Destroy
@@ -323,14 +323,17 @@ tools/multicluster/cluster.sh destroy obs
 
 ## Variants on Vultr
 
-- An HA Observability profile (`observability_sizing_profile = "150-ha"`) needs a
-  bigger plan on `obs`, for example `vx1-g-16c-64g-960s`. Not tested here.
+- `obs` on `vx1-g-16c-64g-960s` (16 vCPU): enough for `20-nonha` (9.5 vCPU) or
+  `trial`, not for `50-nonha`, which needs about 16.5 vCPU with RKE2 and the agent.
+- An HA Observability profile (`observability_sizing_profile = "150-ha"`) needs
+  at least three `obs` nodes and 49.8 vCPU in total, so three nodes of 24 vCPU or
+  more, with `suse-storage`. Not tested here.
 
 ## Troubleshooting
 
 - Plan fails with "Plans not available in region": no stock for a plan, or an
   invalid `vultr_api_key`. Check stock as above. This also applies to
-  `vx1-g-8c-32g-480s`.
+  `voc-c-32c-64gb-1000s-amd`.
 - The plan of `sec`, `mgmt` or `gpu` fails on `observability_ca_pem` or
   `observability_server_url`: step 4 was skipped, or the values are also set in
   `terraform.tfvars`.
