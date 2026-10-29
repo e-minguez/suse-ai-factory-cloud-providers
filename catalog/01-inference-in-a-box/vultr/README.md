@@ -1,6 +1,6 @@
 # 01: Inference in a box on Vultr
 
-Shape overview: [../README.md](../README.md). Status: not yet verified end to end.
+Shape overview: [../README.md](../README.md). Status: verified end to end on 2026-10-29 (fra, `vcg-a40-24c-120g-48vram`, aif 2.3.0, RKE2 v1.35.6): GPU allocatable, AI Factory operator and Rancher up, local-path volume bound, a second deploy plans no changes.
 
 ## Prerequisites
 
