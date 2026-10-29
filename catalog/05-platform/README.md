@@ -221,7 +221,11 @@ Deploy order: `obs`, then `sec`, `mgmt` and `gpu`, then `register`. After `obs`
 the other three do not depend on each other, so you may deploy them in
 parallel. `sec` runs an agent, so it also needs the CA from `obs`. With own DNS
 names the federation order is free: a member that is deployed before the primary
-joins within about 15 minutes after the primary is up.
+usually joins within about 15 minutes after the primary is up (not yet
+verified). The retries are capped at 6 controller restarts, roughly 60 to 90
+minutes after the member starts; see
+[Troubleshooting](../../docs/observability-and-security.md#troubleshooting) for
+the reset.
 
 ### Register decision
 
@@ -261,6 +265,12 @@ node failure on `obs` stops the server until the pod runs again, and with
 `local-path-provisioner` its data stays on the failed node.
 An HA profile (`150-ha`) is sized for 150 nodes. Switching between HA and non-HA
 later is not supported.
+
+Every profile, with its requested resources, storage and retention, and the
+license note, is in
+[Sizing and licensing](../../docs/observability-and-security.md#sizing-and-licensing).
+Add what the other components on `obs` request (RKE2, Traefik, NeuVector, the
+agent) before you pick the plan.
 
 Each cluster also has a jumphost, an API load balancer, an ingress load balancer
 and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.

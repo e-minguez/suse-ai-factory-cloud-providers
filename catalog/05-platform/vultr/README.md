@@ -121,7 +121,10 @@ the name:
   `obs` answers, so they finish by themselves once the record, the ingress and
   the server exist.
 - The `security-fed-join` CronJob of a member that starts before the primary
-  joins within about 15 minutes after the primary is reachable.
+  usually joins within about 15 minutes after the primary is reachable (not yet
+  verified). The retries are capped at 6 controller restarts; see
+  [Troubleshooting](../../../docs/observability-and-security.md#troubleshooting)
+  for the window and the reset.
 - `register` and all browser access need the record of the cluster they use.
 
 Create each record as soon as you can read its IP. A rebuilt or replaced ingress
@@ -239,7 +242,8 @@ tools/multicluster/cluster.sh list
   Rancher uses its own certificate; accept it once.
 - `sec`, NeuVector: open `https://neuvector.sec.aif.example.com`, log in as `admin`
   and open Multiple Clusters. The members are `aif-mgmt`, `aif-obs` and `aif-gpu`,
-  each joined. A member can take about 15 minutes to join.
+  each joined. A member can take about 15 minutes to join; if it does not, see
+  [Troubleshooting](../../../docs/observability-and-security.md#troubleshooting).
 - `obs`, SUSE Observability: open `https://obs.o11y.aif.example.com`, log in as
   `admin`. The Kubernetes clusters list shows four clusters: `aif-obs`, `aif-mgmt`,
   `aif-sec`, `aif-gpu`. The `kubernetes-v2` instance of each remote cluster is

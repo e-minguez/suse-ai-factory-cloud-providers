@@ -94,15 +94,15 @@ tools/multicluster/cluster.sh register --bootstrap mgmt gpu-a
 
 ## SUSE Security and SUSE Observability across clusters
 
+User guide: [docs/observability-and-security.md](../../docs/observability-and-security.md)
+(topologies, variables, hostnames, TLS, wiring, sizing, troubleshooting). Reasons:
 [ADR 010](../../docs/decisions/010-security-observability.md). `register` is
 **not** required: the components take every cross-cluster value from variables,
 so they work with clusters that are not imported into Rancher.
 
-Components: the management cluster runs `security-management` and
-`observability-server` (plus `observability-plugin` with Rancher); each
-downstream cluster runs `security-downstream` and `observability-agent`. Both
-need Traefik; the server needs a storage component, `observability_license_key`
-and the Application Collection credentials.
+The management cluster runs `security-management` and `observability-server`
+(plus `observability-plugin` with Rancher); each downstream cluster runs
+`security-downstream` and `observability-agent`.
 
 ```hcl
 # clusters/common-all.tfvars: shared tokens, identical on every cluster
@@ -126,7 +126,9 @@ components = ["cert-manager", "gpu-operator", "local-path-provisioner",
 Generate the downstream cluster's cross-cluster values from the management
 cluster's outputs instead of copying them by hand. Terraform loads every
 `*.auto.tfvars.json` in the cluster directory on its own, so `deploy.sh` picks
-the file up without a `-var-file` (it is not listed in its `var-files` line):
+the file up without a `-var-file` (it is not listed in its `var-files` line).
+Details and the precedence rules:
+[Handing the CA to other clusters](../../docs/observability-and-security.md#handing-the-ca-to-other-clusters).
 
 ```bash
 terraform -chdir=clusters/mgmt output -json | jq '{
@@ -150,47 +152,13 @@ tools/multicluster/cluster.sh register --bootstrap mgmt gpu-a
   management cluster remember the choice; without a token and without
   `--bootstrap`, `register` stops and says so. A rebuilt management cluster is a
   fresh Rancher: delete `clusters/.register/mgmt/` and use `--bootstrap` again.
-- Browsers must trust the cluster CA for the NeuVector and Observability UIs
-  and the Rancher Observability extension: see
-  [Trusting the cluster CA](../../docs/security.md#trusting-the-cluster-ca-in-the-browser).
-
-- Run it after the management cluster is deployed, and again whenever it is
-  rebuilt: the endpoint and the CA change with every new management cluster.
-- Values in `terraform.tfvars` (and the common files) win over the auto file;
-  leave these four variables out of them.
+- Run the generation after the management cluster is deployed, and again whenever
+  it is rebuilt: the endpoint and the CA change with every new management cluster.
 - The plan fails at a precondition when `security-downstream` lacks
   `security_primary_endpoint`, so a plan that passes it has read the file.
 - Without Rancher on the management cluster `rancher_url` is null, which leaves
   NeuVector Rancher SSO off. With it, import the downstream cluster under its
   `cluster_name` (`cluster.sh register` does) so Rancher SSO matches it.
-
-- Read the values with `terraform -chdir=clusters/mgmt output -json security`
-  and `... output -json observability`. `observability.ca_pem` is a certificate,
-  not a secret. `security_join_token` and `observability_bootstrap_token` in
-  `common-all.tfvars` give both sides the same value; if you leave them null the
-  management cluster generates them, and the downstream cluster cannot learn
-  them without you copying `security_credentials` and `observability_credentials`.
-- The server or primary cluster comes first when the hostnames are sslip.io
-  ones (they contain the ingress address). With own DNS names
-  (`security_hostname`, `observability_hostname`) the order is free: the
-  `security-fed-join` CronJob joins a downstream cluster deployed earlier.
-  `ingress_domain` (`obs.<domain>`, `neuvector.<domain>`) counts as own DNS
-  names and needs only the wildcard record `*.<domain>`.
-  Custom hostnames need DNS records, all pointing at the ingress address, for
-  `fed-<security_hostname>`, `otlp-<observability_hostname>` and
-  `otlp-http-<observability_hostname>` too.
-- A plugin (`observability-plugin`) on a remote Rancher needs that Rancher URL,
-  with the trailing slash (`https://rancher.example.com/`), in the server's
-  `observability_allowed_origins`.
-- Federation uses port 443 (Traefik SNI passthrough). Each side needs the
-  other in `ingress_cidrs`: the management cluster admits the downstream
-  `egress_ips`, and the downstream cluster admits the management ones. The
-  downstream agent and collector also reach the Observability ingresses
-  (UI/API, OTLP gRPC and HTTP) on the management cluster over 443.
-- A downstream cluster registers itself in SUSE Observability from its own
-  setup Job; the server needs no cluster list.
-- `components` and the TLS inputs are image inputs: changing them rebuilds the
-  image and replaces the nodes of that cluster.
 
 ## Register
 

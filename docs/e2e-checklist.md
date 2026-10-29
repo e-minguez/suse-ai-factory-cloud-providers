@@ -57,7 +57,9 @@ check. Not run yet:
       no cluster list on the server.
 - [ ] CronJob recovery: deploy the downstream cluster before the primary (own
       DNS names); `security-fed-join` joins it within ~15 minutes of the
-      primary becoming ready.
+      primary becoming ready, as long as the primary is up before the member
+      reaches its cap of 6 controller restarts (about 60-90 minutes; reset in
+      [Troubleshooting](observability-and-security.md#troubleshooting)).
 - [ ] SNI passthrough: the NeuVector controller sends SNI, so the Traefik
       `IngressRouteTCP` on 443 reaches `fed-master`/`fed-managed`; no other
       port is opened. `kubectl -n cattle-neuvector-system get ingressroutetcp

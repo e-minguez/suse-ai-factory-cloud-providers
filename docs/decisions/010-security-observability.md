@@ -1,7 +1,7 @@
 # 010 - SUSE Security and SUSE Observability components
 
 ## Status
-Accepted.
+Accepted. User guide: [SUSE Observability and SUSE Security](../observability-and-security.md).
 
 ## Context
 SUSE AI Factory deployments pair the management cluster with GPU downstream
