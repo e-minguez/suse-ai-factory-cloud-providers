@@ -128,9 +128,9 @@ Nothing restarts the primary for that reason.
   name keeps multi-zone failover. `api_host` is unchanged.
 - Versions are pinned in one locals table in `elemental-config`. The NeuVector
   chart major follows the Rancher minor from the release manifest (2.13: 108,
-  2.14: 109, 2.15: 110); an unknown minor fails at plan. SUSE Observability is
-  pinned to 2.10.3 with agent 1.5.40 because 2.11.x has a regression in the SUSE
-  AI integration ([workarounds](../workarounds.md)).
+  2.14: 109, 2.15: 110); an unknown minor fails at plan. SUSE Observability
+  starts at 2.12.0 with agent 1.7.19: 2.11.x has a regression in the SUSE AI
+  integration, fixed in 2.12.0.
 - The setup Jobs use `registry.opensuse.org/home/eminguez/containers/leap16/sts-tools`
   (`sts`, `kubectl`, `curl`, `jq`). Its source is a personal OBS project, not a
   SUSE-supported image.

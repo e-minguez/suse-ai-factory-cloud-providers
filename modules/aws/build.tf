@@ -9,9 +9,6 @@ data "aws_ami" "jumphost" {
 
   most_recent = true
   owners      = ["679593333241"] # aws-marketplace, openSUSE project's publisher
-  # Workaround (docs/workarounds.md): current Leap 16 images carry a
-  # deprecation time; deprecated images still launch.
-  include_deprecated = true
 
   filter {
     name   = "name"

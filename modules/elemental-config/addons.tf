@@ -27,8 +27,8 @@ locals {
   # Chart and image versions, the single place to bump.
   addon_versions = {
     neuvector_ui_ext     = "2.2.1"
-    observability_server = "2.10.3"
-    observability_agent  = "1.5.40"
+    observability_server = "2.12.0"
+    observability_agent  = "1.7.19"
     observability_ext    = "2.2.0"
     otel_collector       = "0.175.1"
     observability_plugin = "2.4.2"

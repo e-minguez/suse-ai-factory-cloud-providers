@@ -277,9 +277,6 @@ Marketplace listing. Behaviour:
   code, so any family works there.
 - The lookup filters on `architecture = x86_64` because the same publish run
   ships an arm64 image under the same name prefix.
-- The current Leap 16 images carry a deprecation time, so the lookup sets
-  `include_deprecated = true`; deprecated images still launch. Temporary, see
-  [workarounds.md](../workarounds.md).
 - `jumphost_image` (module variable) replaces the lookup with a specific AMI
   ID, for example a non-Marketplace image or an ID taken from
   <https://susepubliccloudinfo.suse.com/v1/amazon/REGION/images/active.json>.
