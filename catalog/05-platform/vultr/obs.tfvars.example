@@ -1,0 +1,42 @@
+# Shape 05, SUSE Observability cluster. Shape values only: credentials, region,
+# admin_cidrs and the shared tokens live in clusters/common-all.tfvars and
+# clusters/common-vultr.tfvars. The license key is per cluster and secret: this
+# file becomes clusters/obs/terraform.tfvars, which is gitignored.
+
+# Drives hostnames and labels. Must differ on every cluster.
+cluster_name = "aif-obs"
+
+# HA control plane, no workers. The server adds its own agent. The server needs
+# a storage component; local-path-provisioner stores volumes on the node of
+# the pod. security-downstream joins the federation on sec.
+control_plane_count = 3
+components = [
+  "observability-server",
+  "local-path-provisioner",
+  "security-downstream",
+]
+
+# 8 vCPU / 32 GB nodes: the server needs more than the default plan (4 vCPU /
+# 16 GB) provides. Sizing: README.
+control_plane_instance_type = "vx1-g-8c-32g-480s"
+
+# 20-nonha covers up to 20 monitored nodes; this shape has 13. A non-HA
+# profile cannot be switched to an HA one later.
+observability_sizing_profile = "20-nonha"
+
+# Required. The server is https://obs.o11y.aif.example.com (the subdomain is
+# o11y so the host does not read obs.obs.*). Create the record
+# "*.o11y.aif.example.com  A  <ingress IP of this cluster>" (README, step 2).
+# This also serves otlp-obs.o11y.* and otlp-http-obs.o11y.*.
+ingress_domain = "o11y.aif.example.com"
+
+# Per-cluster secret. Replace the placeholder with the real key; never commit
+# it. Plan fails while the placeholder (<...>) is still here.
+observability_license_key = "<your-license-key>"
+
+# CORS origin of the Rancher on mgmt (the plugin runs in the browser). Keep the
+# trailing slash.
+observability_allowed_origins = ["https://rancher.mgmt.aif.example.com/"]
+
+# NeuVector federation primary (cluster sec): host, port 443 by default.
+security_primary_endpoint = "fed-neuvector.sec.aif.example.com"

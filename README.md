@@ -194,6 +194,8 @@ tools/multicluster/cluster.sh register <mgmt> <downstream...>
 
 Details: [tools/multicluster/README.md](tools/multicluster/README.md), including how to wire SUSE Security and SUSE Observability across clusters (it does not need `register`).
 
+Ready-made shapes, from a single GPU node to a four-cluster platform, with diagrams, steps and variable files: [catalog/README.md](catalog/README.md).
+
 ## Configuration notes
 
 ### Hostnames
@@ -307,6 +309,7 @@ Details in [docs/security.md](docs/security.md).
 ```
 modules/      shared modules (elemental-config, image-factory, rke2-ports) and one module per provider
 examples/     single-cluster root per provider, each with a deploy.sh
+catalog/      documented cluster shapes: diagrams, steps and tfvars per provider
 scripts/      deploy.sh library, kubeconfig, ssh and build-log helpers
 tools/        webui, multicluster, leftovers, orphans, cost, vultr GPU stock
 docs/         architecture, conventions, ADRs, workarounds, security, scaling, provider notes

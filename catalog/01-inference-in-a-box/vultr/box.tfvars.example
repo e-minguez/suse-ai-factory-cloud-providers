@@ -1,0 +1,17 @@
+# Shape 01, inference in a box. Shared values (credentials, region, admin_cidrs,
+# password hashes, ssh keys, aif_release) go in clusters/common-*.tfvars.
+
+cluster_name = "aif-box"
+
+# Rancher, AI Factory and the GPU stack on one node. Changing components
+# rebuilds the image and replaces every node.
+components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# One node that is control plane and GPU worker. No gpu_pools, no worker_pools.
+control_plane_count = 1
+
+# Passthrough GPU plan. Check stock first: plan fails if it is not available.
+control_plane_instance_type = "vcg-a40-24c-120g-48vram"
+
+# Optional. Default is sslip.io names of the ingress address.
+# ingress_domain = "aif.example.com"  # A record: *.<domain> -> ingress IP

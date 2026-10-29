@@ -13,7 +13,7 @@ EXAMPLES ?= $(wildcard examples/*/)
 # Other Terraform roots to validate; CI runs them in their own job.
 TOOL_ROOTS ?= tools/multicluster/register
 
-.PHONY: help docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-scripts test-go test-webui webui image cost cost-fixtures check-consistency ci clean
+.PHONY: help docs docs-check fmt fmt-check validate lint lint-tf lint-sh test test-tf test-catalog test-scripts test-go test-webui webui image cost cost-fixtures check-consistency ci clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
@@ -61,7 +61,7 @@ lint-sh: ## shellcheck (skipped if not installed) on every tracked *.sh
 	if [ -z "$$files" ]; then echo "lint-sh: no shell scripts"; exit 0; fi; \
 	shellcheck $$files
 
-test: test-tf test-scripts test-go test-webui ## Run terraform, script and Go tests
+test: test-tf test-catalog test-scripts test-go test-webui ## Run terraform, script and Go tests
 
 test-scripts: ## Script tests (fake terraform and ssh) and poll.sh self-test
 	bash scripts/tests/scripts_test.sh
@@ -123,6 +123,27 @@ test-tf: ## terraform test in every module and tools root that has a tests/ dire
 		echo "==> terraform test $$mod"; \
 		( cd "$$mod" && terraform init -backend=false -input=false >/dev/null && terraform test ) || status=1; \
 		rm -rf "$$mod/.terraform" "$$mod/.terraform.lock.hcl"; \
+	done; \
+	exit $$status
+
+test-catalog: ## Plan examples/<provider> with each catalog/*/<provider>/*.tfvars.example (mocked, tests/catalog.tftest.hcl)
+# Runs in a copy at the same depth (examples/.catalog-<provider>), so a local
+# terraform.tfvars, *.auto.tfvars* or state in examples/<provider> does not leak in.
+	@status=0; \
+	for ex in examples/*/; do \
+		ex="$${ex%/}"; p="$${ex#examples/}"; \
+		[ -f "$$ex/tests/catalog.tftest.hcl" ] || continue; \
+		files=$$(ls catalog/*/"$$p"/*.tfvars.example 2>/dev/null); \
+		[ -n "$$files" ] || continue; \
+		w="examples/.catalog-$$p"; rm -rf "$$w"; mkdir -p "$$w/tests"; \
+		cp "$$ex"/*.tf "$$w"/; cp "$$ex/tests/catalog.tftest.hcl" "$$w/tests/"; \
+		if ( cd "$$w" && terraform init -backend=false -input=false >/dev/null ); then \
+			for f in $$files; do \
+				echo "==> catalog $$f"; \
+				( cd "$$w" && terraform test -var-file="$(CURDIR)/$$f" ) || status=1; \
+			done; \
+		else status=1; fi; \
+		rm -rf "$$w"; \
 	done; \
 	exit $$status
 

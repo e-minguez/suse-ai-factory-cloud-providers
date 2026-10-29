@@ -48,6 +48,8 @@ provider with the same var files, in the same order; extra arguments such as
 Plain `terraform` commands in a cluster directory need the same var files;
 see [Running with plain Terraform](../../docs/manual-deploy.md#var-files).
 
+Worked examples with diagrams and per-cluster variable files: [catalog/](../../catalog/README.md).
+
 ## Management and downstream clusters
 
 `components` is a per-cluster variable, so each cluster sets its own list in
