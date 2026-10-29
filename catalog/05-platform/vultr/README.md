@@ -251,6 +251,13 @@ tools/multicluster/cluster.sh list
 - `mgmt`, Rancher: open `https://rancher.mgmt.aif.example.com`. The cluster
   `aif-gpu` is listed and `Active` (and `aif-sec` and `aif-obs` if you imported
   them). The Observability extension is installed and points at the server.
+
+  ![Rancher on mgmt: aif-gpu, aif-obs and aif-sec imported and Active next to local (mgmt)](images/rancher-clusters.png)
+
+  From a test run on 2026-10-29: `local` is `mgmt`. That run used one
+  control-plane node on `mgmt` and `sec`, three 8 vCPU nodes on `obs` and the
+  storage and worker pools of shape 04 on `gpu`, so the CPU and memory columns
+  differ from this guide's plans.
 - `gpu`, GPU: fetch the kubeconfig to a file with mode 600.
 
   ```bash
