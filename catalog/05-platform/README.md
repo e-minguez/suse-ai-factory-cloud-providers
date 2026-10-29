@@ -253,8 +253,10 @@ provider guide's plans this shape is about 23 default nodes (control planes 9,
 475 GiB storage, 30-day retention. Exact needs per profile are in the
 [SUSE Observability requirements](https://documentation.suse.com/cloudnative/suse-observability/latest/en/setup/install-stackstate/requirements.html);
 count again when you add nodes. For a short evaluation, the `trial` profile
-(7.2 vCPU and 23.4 GiB requested, 154 GiB storage, 3-day retention) runs on
-the default plan. `50-nonha` is not highly available: a
+(7.2 vCPU and 23.4 GiB requested, 154 GiB storage, 3-day retention) is
+enough, but keep the bigger plan: RKE2, Traefik, NeuVector and the agent on
+`obs` also request CPU, and three 4 vCPU nodes leave Kafka unschedulable
+(`Insufficient cpu`). `50-nonha` is not highly available: a
 node failure on `obs` stops the server until the pod runs again, and with
 `local-path-provisioner` its data stays on the failed node.
 An HA profile (`150-ha`) is sized for 150 nodes. Switching between HA and non-HA

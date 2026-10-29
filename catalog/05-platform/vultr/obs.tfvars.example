@@ -22,7 +22,7 @@ control_plane_instance_type = "vx1-g-8c-32g-480s"
 
 # Monitored nodes count in default nodes of 4 vCPU / 16 GB: this shape is about
 # 23 (the GPU node alone about 8), so 50-nonha. For a short evaluation, "trial"
-# (3-day retention) on the default plan is enough. A non-HA profile cannot be
+# (3-day retention) is enough; keep the 8 vCPU plan, 4 vCPU nodes are too small. A non-HA profile cannot be
 # switched to an HA one later. Sizing: README.
 observability_sizing_profile = "50-nonha"
 
