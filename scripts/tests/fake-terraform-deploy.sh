@@ -2,7 +2,7 @@
 # Fake terraform for deploy tests. Env: FAKE_TF_DIR (fixtures), FAKE_TF_STATE (scratch dir),
 # FAKE_TF_PLAN (plan fixture name), FAKE_TF_PLAN_SEQ ("a.json b.json" consumed one per `show`,
 # the last repeats), FAKE_TF_PLAN_FAIL,
-# FAKE_TF_PLAN_WARN, FAKE_TF_IMAGE (JSON answered for `output -json image`), FAKE_TF_APPLY_SEQ ("fixture:rc ..." consumed one per apply call), FAKE_TF_NEXT_STEPS,
+# FAKE_TF_PLAN_WARN, FAKE_TF_IMAGE (JSON answered for `output -json image`), FAKE_TF_APPLY_SEQ ("fixture:rc ..." consumed one per apply call), FAKE_TF_NEXT_STEPS, FAKE_TF_NODES (JSON answered for `output -json nodes`, default {}),
 # FAKE_TF_STATE_LIST (lines answered for `state list`), FAKE_TF_STATE_LIST_FILE (same, from a file,
 # written line by line, so an early-exiting reader gets SIGPIPE as with real terraform).
 echo "$*" >>"$FAKE_TF_STATE/calls.log"
@@ -61,6 +61,11 @@ case "$cmd" in
     if [ "${1:-}" = -json ] && [ "${2:-}" = image ]; then
       [ -n "${FAKE_TF_IMAGE:-}" ] || exit 1
       printf '%s\n' "$FAKE_TF_IMAGE"
+      exit 0
+    fi
+    if [ "${1:-}" = -json ] && [ "${2:-}" = nodes ]; then
+      nodes_default='{}'
+      printf '%s\n' "${FAKE_TF_NODES:-$nodes_default}"
       exit 0
     fi
     if [ "${1:-}" = -json ] && [ "${2:-}" = provider_details ]; then

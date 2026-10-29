@@ -148,14 +148,17 @@ initrd hook.
 
 ## Deploy script
 
-`examples/<p>/deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <tf args>]`
+`examples/<p>/deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <tf args>]`
 only defines passes; `scripts/lib/tf.sh` and `scripts/lib/deploy-common.sh` do
 the rest. Each pass runs `plan -out`, shows replacements and destroys, asks for
 confirmation (unless `--yes`), then applies the saved plan with `apply -json`,
 rendered by `jq`. `-v` streams plain Terraform output, `-q` prints step headers,
 diagnostics and the summary, and without a TTY it prints one line per finished
 resource group. On failure it prints the diagnostics, the last 30 log lines and
-the log path. Logs are in `.deploy/logs/<ts>/`. It needs `terraform`, `jq` and
+the log path. Logs are in `.deploy/logs/<ts>/`. `--wait` then runs `scripts/kubeconfig.sh` (output
+to `/dev/null`) until the init node serves its kubeconfig, with a progress line every
+`DEPLOY_WAIT_NOTICE` seconds (default 120) and a `DEPLOY_WAIT_TIMEOUT` (default 1800);
+the ssh errors go to `wait.log` in the log directory. It needs `terraform`, `jq` and
 `ssh`. A new provider starts from `examples/aws/deploy.sh`, the smallest.
 
 ## Following a build

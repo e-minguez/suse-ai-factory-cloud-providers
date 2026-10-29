@@ -2,7 +2,7 @@
 # Two-pass deploy: the control plane pool bootstraps with one init member,
 # then switches to the join configuration and scales up. See
 # docs/providers/exoscale.md#passes and docs/decisions/008-exoscale-module.md.
-#   deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <tf args>]
+#   deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <tf args>]
 set -euo pipefail
 
 # Real path of this script, so it also works from a symlink in tools/multicluster.

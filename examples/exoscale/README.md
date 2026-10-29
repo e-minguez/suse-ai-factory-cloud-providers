@@ -90,7 +90,7 @@ a quote; [tools/cost](../../tools/cost/README.md)):
 make -C ../.. cost PROVIDER=exoscale TFVARS="common-all.tfvars examples/exoscale/terraform.tfvars"
 ```
 
-`deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform args>]`:
+`deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform args>]`:
 plan, list replacements and destroys, confirm, apply the saved plan. Logs:
 `.deploy/logs/<ts>/`.
 

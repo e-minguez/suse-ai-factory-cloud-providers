@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploys the evroc cluster in passes: image, then nodes, then build-disk reclaim.
-# Usage: deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform plan args>]
+# Usage: deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform plan args>]
 # Also works through a symlink from a clusters/<name>/ directory.
 set -euo pipefail
 

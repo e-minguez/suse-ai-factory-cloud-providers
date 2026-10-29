@@ -128,13 +128,16 @@ instead of merging with it ([conventions](docs/conventions.md#variable-files)).
 ### `deploy.sh`
 
 ```
-deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform args>]
+deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform args>]
 ```
 
 Same interface on every provider. `--rebuild` bumps a persisted counter that
 feeds the image `build_hash`, so a new image is built and the nodes are replaced
 ([ADR 003](docs/decisions/003-rebuild-counter.md)). `--destroy` shows the destroy
 plan, asks, and then prints the read-only leftover check for the provider.
+`--wait` keeps going after the apply until the init node serves its kubeconfig
+(fetched to `/dev/null` every 15 s, a progress line every 2 minutes, 30 minute
+limit), so `Total time` covers a running RKE2 control plane; it exits 1 on timeout.
 
 ## Deployment flow
 

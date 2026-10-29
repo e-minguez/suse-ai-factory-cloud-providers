@@ -43,7 +43,7 @@ evroc login
 declares; evroc-only settings (`zones`, `project`, ...) go in
 `common-evroc.tfvars` or `terraform.tfvars`.
 
-Interface: `deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform plan args>]`.
+Interface: `deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform plan args>]`.
 Each pass is planned, summarised (adds, changes, replacements, destroys) and
 confirmed before it is applied; `--yes` skips the question and is required
 without a terminal. `-v` streams the full Terraform output, `-q` prints only

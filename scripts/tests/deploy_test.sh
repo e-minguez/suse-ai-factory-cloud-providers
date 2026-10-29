@@ -160,7 +160,7 @@ run_deploy --bogus
 has "$OUT" "unknown argument: --bogus"
 run_deploy --help
 [ "$RC" -eq 0 ] || fail "--help rc"
-has "$OUT" "Usage: deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform args>]"
+has "$OUT" "Usage: deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform args>]"
 [ "$(calls plan)" -eq 0 ] || fail "--help ran terraform"
 
 # --- missing dependency
@@ -175,6 +175,56 @@ RC=0
 (cd "$EX" && PATH="$W/nojq" bash ./deploy.sh --yes) >"$W/out" 2>&1 || RC=$?
 [ "$RC" -ne 0 ] || fail "missing jq accepted"
 has "$(cat "$W/out")" "missing required tools: jq ssh"
+
+# --- --wait: retries the kubeconfig fetch (output discarded), progress lines, Total time last
+reset
+cat >"$W/bin/fake-kubeconfig" <<'K'
+#!/usr/bin/env bash
+n=$(($(cat "$FAKE_KC_COUNT" 2>/dev/null || echo 0) + 1))
+echo "$n" >"$FAKE_KC_COUNT"
+[ "$n" -gt "${FAKE_KC_FAIL:-0}" ] || { echo "channel 0: open failed: connect failed: Connection refused" >&2; echo "error: cannot read rke2.yaml on t-cp-01" >&2; exit 1; }
+echo "SECRET-KUBECONFIG"
+K
+chmod +x "$W/bin/fake-kubeconfig"
+export DEPLOY_KUBECONFIG="$W/bin/fake-kubeconfig" FAKE_KC_COUNT="$W/state/kc.count" DEPLOY_WAIT_INTERVAL=0
+FAKE_TF_NODES='{"t-cp-01":{"init":true},"t-cp-02":{"init":false}}' FAKE_KC_FAIL=2 DEPLOY_WAIT_NOTICE=0 run_deploy --yes --wait
+[ "$RC" -eq 0 ] || fail "--wait rc=$RC"
+[ "$(cat "$FAKE_KC_COUNT")" = 3 ] || fail "--wait made $(cat "$FAKE_KC_COUNT") attempts, want 3"
+has "$OUT" "==> Waiting for the cluster"
+has "$OUT" "cluster is still being provisioned"
+has "$OUT" "cluster ready, kubeconfig available"
+hasnt "$OUT" "SECRET-KUBECONFIG"
+hasnt "$OUT" "Connection refused"
+[ "$(tail -n 1 <<<"$OUT" | cut -c1-10)" = "Total time" ] || fail "Total time is not the last line"
+[ "$(grep -n 'cluster ready' <<<"$OUT" | cut -d: -f1)" -lt "$(grep -n 'Kubernetes API' <<<"$OUT" | cut -d: -f1)" ] || fail "next steps before the wait"
+
+# --- --wait timeout: rc 1, last error shown, next steps and Total time still printed
+reset
+rm -f "$FAKE_KC_COUNT"
+FAKE_TF_NODES='{"t-cp-01":{"init":true}}' FAKE_KC_FAIL=1000 DEPLOY_WAIT_TIMEOUT=0 run_deploy --yes --wait
+[ "$RC" -eq 1 ] || fail "--wait timeout rc=$RC"
+has "$OUT" "cluster not ready after"
+has "$OUT" "cannot read rke2.yaml on t-cp-01"
+has "$OUT" "Kubernetes API"
+has "$OUT" "Total time"
+
+# --- --wait without an init node (deploy_nodes = false): nothing to wait for
+reset
+rm -f "$FAKE_KC_COUNT"
+run_deploy --yes --wait
+[ "$RC" -eq 0 ] || fail "--wait no-nodes rc=$RC"
+has "$OUT" "no init node in the outputs"
+[ ! -e "$FAKE_KC_COUNT" ] || fail "kubeconfig fetched without an init node"
+
+# --- no --wait: no fetch; --wait with --destroy refused
+reset
+FAKE_TF_NODES='{"t-cp-01":{"init":true}}' run_deploy --yes
+[ "$RC" -eq 0 ] && [ ! -e "$FAKE_KC_COUNT" ] || fail "kubeconfig fetched without --wait"
+hasnt "$OUT" "Waiting for the cluster"
+run_deploy --yes --wait --destroy
+[ "$RC" -ne 0 ] || fail "--wait --destroy accepted"
+has "$OUT" "--wait cannot be combined with --destroy"
+unset DEPLOY_KUBECONFIG FAKE_KC_COUNT DEPLOY_WAIT_INTERVAL
 
 # --- examples/aws/deploy.sh: single pass, also via a symlinked cluster dir
 reset

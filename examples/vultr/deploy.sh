@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Two-pass deploy: the load balancer backends depend on nodes built from an
 # image that needs the load balancer's IP. See docs/providers/vultr.md.
-#   deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <tf args>]
+#   deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <tf args>]
 set -euo pipefail
 
 # Real path of this script, so it also works from a symlink in tools/multicluster.

@@ -12,7 +12,10 @@
 #
 # Optional env (see tf.sh): DEPLOY_EVENTS_FD, DEPLOY_CONFIRM_FD.
 #
-# Sets: DEPLOY_REBUILD, DEPLOY_YES, DEPLOY_DESTROY, DEPLOY_VERBOSITY, DEPLOY_TF_ARGS,
+# Optional env for --wait: DEPLOY_WAIT_TIMEOUT (s, default 1800), DEPLOY_WAIT_NOTICE (s between
+# progress lines, default 120), DEPLOY_WAIT_INTERVAL (s between attempts, default 15).
+#
+# Sets: DEPLOY_REBUILD, DEPLOY_YES, DEPLOY_DESTROY, DEPLOY_WAIT, DEPLOY_VERBOSITY, DEPLOY_TF_ARGS,
 # DEPLOY_VAR_FILES, DEPLOY_TTY, DEPLOY_CI.
 
 set -o pipefail
@@ -25,16 +28,18 @@ DEPLOY_REBUILD=0
 DEPLOY_REBUILD_FILE=rebuild.auto.tfvars.json
 DEPLOY_YES=0
 DEPLOY_DESTROY=0
+DEPLOY_WAIT=0
 DEPLOY_VERBOSITY=normal
 DEPLOY_TF_ARGS=()
 DEPLOY_VAR_FILES=()
 
 deploy_usage() {
   cat <<'EOF'
-Usage: deploy.sh [--rebuild] [--yes] [-v|-q] [--destroy] [-- <terraform args>]
+Usage: deploy.sh [--rebuild] [--yes] [--wait] [-v|-q] [--destroy] [-- <terraform args>]
 
   --rebuild   bump the image rebuild counter (rebuild.auto.tfvars.json) to force a new image
   --yes       do not ask for confirmation (required without a terminal)
+  --wait      after the apply, wait until the init node serves its kubeconfig (RKE2 up)
   -v          stream the full Terraform output
   -q          print only step headers, diagnostics and the summary
   --destroy   plan and apply a destroy
@@ -57,6 +62,7 @@ deploy_parse_args() {
       --rebuild) DEPLOY_REBUILD=1 ;;
       --yes | -y) DEPLOY_YES=1 ;;
       --destroy) DEPLOY_DESTROY=1 ;;
+      --wait) DEPLOY_WAIT=1 ;;
       -v | --verbose | -q | --quiet)
         case "$1" in -v | --verbose) verbosity_set=verbose ;; *) verbosity_set=quiet ;; esac
         if [ "$DEPLOY_VERBOSITY" != normal ] && [ "$DEPLOY_VERBOSITY" != "$verbosity_set" ]; then
@@ -80,6 +86,9 @@ deploy_parse_args() {
     esac
     shift
   done
+  if [ "$DEPLOY_WAIT" = 1 ] && [ "$DEPLOY_DESTROY" = 1 ]; then
+    deploy_die "--wait cannot be combined with --destroy"
+  fi
 }
 
 deploy_check_deps() {
@@ -232,6 +241,38 @@ deploy_keep_rebuild() {
   tf__say "note: restored image_rebuild=$s from state ($DEPLOY_REBUILD_FILE)."
 }
 
+# --wait: fetch the kubeconfig to /dev/null until the init node serves it (it boots
+# after the apply). A progress line every DEPLOY_WAIT_NOTICE seconds; returns 1 on
+# timeout with the last error. No init node (deploy_nodes = false): nothing to wait for.
+deploy_wait_cluster() {
+  local kc="${DEPLOY_KUBECONFIG:-$DEPLOY_LIB_DIR/../kubeconfig.sh}"
+  local timeout=${DEPLOY_WAIT_TIMEOUT:-1800} notice=${DEPLOY_WAIT_NOTICE:-120} interval=${DEPLOY_WAIT_INTERVAL:-15}
+  local t0 now next err
+  terraform output -json nodes 2>/dev/null | jq -e '[.[]? | select(.init == true)] != []' >/dev/null || {
+    tf__say "note: --wait: no init node in the outputs, nothing to wait for."
+    return 0
+  }
+  echo
+  echo "==> Waiting for the cluster"
+  tf__logdir
+  err="$DEPLOY_LOG_DIR/wait.log"
+  t0=$(date +%s)
+  next=$((t0 + notice))
+  until "$kc" -C . >/dev/null 2>"$err"; do
+    now=$(date +%s)
+    if [ $((now - t0)) -ge "$timeout" ]; then
+      echo "    ✗ cluster not ready after $(tf__fmt_duration $((now - t0))): $(tail -n 1 "$err")" >&2
+      return 1
+    fi
+    if [ "$now" -ge "$next" ]; then
+      tf__say "    … cluster is still being provisioned ($(tf__fmt_duration $((now - t0))) elapsed)"
+      next=$((now + notice))
+    fi
+    sleep "$interval"
+  done
+  echo "    ✓ cluster ready, kubeconfig available ($(tf__fmt_duration $(($(date +%s) - t0))))"
+}
+
 deploy_print_next_steps() {
   local out
   out=$(terraform output -raw next_steps 2>/dev/null) || return 0
@@ -300,6 +341,9 @@ deploy_main() {
   declare -F deploy_passes >/dev/null || deploy_die "deploy_passes is not defined"
   if [ "$DEPLOY_REBUILD" = 1 ]; then deploy_bump_rebuild; else deploy_keep_rebuild; fi
   deploy_passes
+  local wait_rc=0
+  if [ "$DEPLOY_WAIT" = 1 ]; then deploy_wait_cluster || wait_rc=1; fi
   deploy_print_next_steps
   deploy_print_total_time
+  return "$wait_rc"
 }
