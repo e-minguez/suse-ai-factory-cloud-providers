@@ -6,8 +6,8 @@ Status: not yet verified end to end.
 
 ## What you get
 
-Four clusters. Each has three control-plane nodes, its own network and its own
-load balancers. Every cluster is monitored and secured.
+Four clusters. Each has three control-plane nodes (`obs`: one large node, see
+[Sizing](#sizing)), its own network and its own load balancers. Every cluster is monitored and secured.
 
 - `mgmt`: no workers. Rancher, the AI Factory operator and the Rancher
   extension for SUSE Observability.
@@ -89,8 +89,8 @@ managed endpoint of each member.
 
 ## Components
 
-Every cluster lists the components below. Shared by all: three control-plane
-nodes and the Traefik ingress.
+Every cluster lists the components below. Shared by all: the Traefik ingress;
+three control-plane nodes everywhere except `obs` (one).
 
 ### mgmt
 
@@ -246,23 +246,30 @@ that depend on imported clusters have not been tested on this shape.
 | Cluster | Nodes | Plan | Notes |
 |---|---|---|---|
 | `mgmt` | 3 control-plane | default | Rancher, operator, plugin and agent. |
-| `obs` | 3 control-plane | larger than default | Profile `50-nonha`: about 23 monitored default nodes (see below). |
+| `obs` | 1 control-plane | 32 vCPU, 64 GB, 1000 GB disk | Profile `50-nonha`: about 25 monitored default nodes (see below). One node on purpose. |
 | `sec` | 3 control-plane | default | NeuVector controllers and the agent. |
 | `gpu` | 3 control-plane + 1 GPU node | default + GPU plan | Raise the pool `count` when stock allows. |
 
 The number in the Observability profile name counts default nodes of 4 vCPU and
 16 GB, not machines: a node of 24 vCPU and 120 GB counts as about 8. With the
-provider guide's plans this shape is about 23 default nodes (control planes 9,
-`obs` 6, GPU node 8), so it uses `50-nonha`: 14.2 vCPU and 32.6 GiB requested,
+provider guide's plans this shape is about 25 default nodes (control planes 9,
+`obs` 8, GPU node 8), so it uses `50-nonha`: 14.2 vCPU and 32.6 GiB requested,
 475 GiB storage, 30-day retention. Exact needs per profile are in the
 [SUSE Observability requirements](https://documentation.suse.com/cloudnative/suse-observability/latest/en/setup/install-stackstate/requirements.html);
 count again when you add nodes. For a short evaluation, the `trial` profile
 (7.2 vCPU and 23.4 GiB requested, 154 GiB storage, 3-day retention) is
-enough, but keep the bigger plan: RKE2, Traefik, NeuVector and the agent on
-`obs` also request CPU, and three 4 vCPU nodes leave Kafka unschedulable
-(`Insufficient cpu`). `50-nonha` is not highly available: a
-node failure on `obs` stops the server until the pod runs again, and with
-`local-path-provisioner` its data stays on the failed node.
+enough. RKE2, the agent and the collector on `obs` add about 2.3 vCPU to the
+profile, so `50-nonha` needs more than 16 vCPU on one node.
+
+`obs` is a single node on purpose. A non-HA profile needs only one, and
+`local-path-provisioner` pins each volume to the node of its first pod. With
+several nodes, the chart starts on the first control plane before the others
+join, so most volumes land on the first one or two nodes; a pod whose node is
+full stays `Pending` (`Insufficient cpu`, `didn't match PersistentVolume's node
+affinity`) while a later node stays idle. See
+[Troubleshooting](../../docs/observability-and-security.md#troubleshooting).
+`50-nonha` is not highly available: if the `obs` node fails, the server stops
+and its data is on that node.
 An HA profile (`150-ha`) is sized for 150 nodes. Switching between HA and non-HA
 later is not supported.
 
@@ -283,8 +290,9 @@ and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
   nodes.
 - Longhorn (`suse-storage`), if you use it, stores data on the root disk of its
   nodes.
-- `local-path-provisioner` volumes belong to one node. The three control-plane
-  nodes are HA for Kubernetes, not for the data on `obs`.
+- `local-path-provisioner` volumes belong to one node. `obs` is a single node,
+  so it is not HA. For several `obs` nodes, use `suse-storage` instead (volumes
+  not tied to a node; see Grow and variants).
 - The setup Jobs use the image `registry.opensuse.org/home/eminguez/containers/leap16/sts-tools`.
   It comes from a personal OBS project, not from a SUSE-supported source
   ([ADR 010](../../docs/decisions/010-security-observability.md)).
@@ -306,10 +314,11 @@ and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
 
 ## Grow and variants
 
-- `suse-storage` on `obs` instead of `local-path-provisioner`: replicated
-  volumes on the three control-plane nodes (`suse_storage_nodes` default). Replace
-  the component in `components`; the two cannot be listed together. Longhorn
-  uses the root disk, so choose a plan with enough disk.
+- Several `obs` nodes: `control_plane_count = 3` with `suse-storage` instead of
+  `local-path-provisioner`, so volumes are replicated and not tied to the node
+  where they were created (`suse_storage_nodes` default: the control planes).
+  The two components cannot be listed together. Longhorn uses the root disk,
+  so choose a plan with enough disk. Not tested here.
 - An HA Observability profile: `observability_sizing_profile = "150-ha"` with a
   bigger plan (see the provider guide). Not tested here.
 - More GPU clusters: create another cluster with a new name, the same components

@@ -541,27 +541,30 @@ with the plans of its vultr guide. A node of 4 vCPU and 16 GB counts 1:
 | `mgmt`, `sec` | 3 control planes each, 4 vCPU and 16 GB | 6 |
 | `gpu` (control planes) | 3 control planes, 4 vCPU and 16 GB | 3 |
 | `gpu` (GPU node) | 1 GPU node, 24 vCPU and 120 GB | about 8 |
-| `obs` | 3 control planes, 8 vCPU and 32 GB (2 each) | 6 |
+| `obs` | 1 control plane, 32 vCPU and 64 GB | about 8 |
 
-The total is about 23, which needs `50-nonha` (`20-nonha` stops at 20). Count
+The total is about 25, which needs `50-nonha` (`20-nonha` stops at 20). Count
 again when you add nodes.
 
-Does `50-nonha` fit on `obs`? CPU: 3 x 8 = 24 vCPU against 14.2 requested by
-the server plus about 4.5 for RKE2, Traefik, NeuVector and the agent, about 19
-in all, so about 5 vCPU stay free. Memory: 96 GB against 32.6 GiB plus the rest.
-Storage: 475 GiB of `local-path` volumes on the root disks of nodes of 480 GB.
-Volumes are not spread by size, so check the root disk of each node, not only
-the sum.
+Does `50-nonha` fit on `obs`? Measured on a running `obs` cluster, RKE2 and its
+system pods request about 1.6 vCPU per control plane, the agent and the
+collector about 0.65, NeuVector nothing. On one node: 14.2 + 2.3 = about 16.5
+vCPU, so 16 vCPU is too small and 32 vCPU leaves about 15 free. Memory: 64 GB
+against about 42 GB requested. Storage: 475 GiB of `local-path` volumes on a
+1000 GB root disk.
 
 Plan for more than the profile:
 
 - The server is not alone on its cluster. RKE2, Traefik, NeuVector and the agent
   request CPU too. In a real case, three 4 vCPU nodes were fully requested with
-  the `trial` profile and Kafka stayed Pending with `Insufficient cpu`. Use nodes
-  of 8 vCPU or more, or add nodes.
-- With `local-path-provisioner`, a volume is stored on the node of its pod. A
-  Pending pod can wait for a full node. Node replacement discards the volumes
-  of that node.
+  the `trial` profile and Kafka stayed Pending with `Insufficient cpu`.
+- With `local-path-provisioner`, a volume is pinned to the node of its first pod.
+  The chart starts on the first control plane before the others join, so on a
+  multi-node cluster most volumes land on the first one or two nodes and later
+  nodes stay idle; in a real case Kafka and HBase stayed Pending on full nodes
+  while the third node had 6.5 vCPU free. For a non-HA profile use one large
+  node; for several nodes use `suse-storage`. Node replacement discards the
+  volumes of that node.
 - HA and non-HA cannot be switched later: choose before the first deploy.
 - `observability_sizing_profile` is an image input. Changing it rebuilds the image
   and replaces every node of the server cluster. In a real run, a profile change
@@ -670,7 +673,7 @@ In the UI, open the Manager at the NeuVector Manager host (see
 |---|---|---|
 | `503` from `/api/server/info` after the first start | The server pods are still starting. | Wait and check `kubectl -n suse-observability get pods`. |
 | Pods `Pending` with `Insufficient cpu` (Kafka first) | The nodes cannot fit the profile plus RKE2, Traefik, NeuVector and the agent. | Use a bigger plan or more nodes, or a smaller profile. See [Sizing](#sizing-and-licensing). Both are image inputs. |
-| A `Pending` pod with a `local-path` volume | The volume is pinned to a node that has no room. | Free CPU on that node or add capacity. The volume cannot move. |
+| A `Pending` pod with a `local-path` volume (`didn't match PersistentVolume's node affinity`, `Insufficient cpu`) while another node is idle | The volume was pinned to a node that filled up, typically one that existed before the other nodes joined. | If the pod never ran, its volume is empty: delete the PVC and the pod (`kubectl -n suse-observability delete pvc <pvc> --wait=false; kubectl -n suse-observability delete pod <pod>`); the StatefulSet creates both again and the scheduler picks a node with room. Otherwise free CPU on that node. Long term: one large node or `suse-storage`. |
 | `generate-cluster-token` waits for a long time, or no Secret `suse-observability-agent-token` appears | The Job loops with `curl -f --cacert` and the header `X-API-Key` until the server API answers, and has no deadline. Causes: DNS record missing or wrong, server not ready, `ingress_cidrs` on the server cluster blocks this cluster's egress address, a stale CA (an old `addons.auto.tfvars.json` after the server cluster was destroyed and deployed again), or an `observability_bootstrap_token` that differs from the server's. A failed attempt is retried twice (`backoffLimit: 2`). The Job is deleted 60 seconds after it ends (`ttlSecondsAfterFinished: 60`), and Elemental applies image manifests once, so nothing creates it again. | Check `kubectl -n suse-observability-agent logs job/generate-cluster-token`, the DNS record of the server host, `egress_ips`, the CA and the token. Then regenerate the CA file ([hand-off](#handing-the-ca-to-other-clusters)) if it is stale. A new Job needs the manifest applied again: `deploy.sh --rebuild` on that cluster should do it (not verified). |
 | Member missing in **Multiple Clusters** | The primary was not reachable yet, the DNS record of the member is missing, or `ingress_cidrs` blocks one direction. The CronJob `security-fed-join` runs every 5 minutes. When the member is not joined and its oldest controller pod is older than 10 minutes, it deletes all controller pods (a restart) and counts it in the annotation `suse-security/restarts` of the ConfigMap `security-fed-route`. Each restart takes 10 to 15 minutes, and the cap is 6 restarts (`MAX=6`), so the retries stop roughly 60 to 90 minutes after the member's controllers start. Then the job fails with `not joined after 6 controller restarts` and does nothing more. | Fix DNS or `ingress_cidrs`. After the cap, reset the counter: `kubectl -n cattle-neuvector-system annotate cm security-fed-route suse-security/restarts=0 --overwrite`. The next run then restarts the controllers again. Read the job log first. |
 | **Multiple Clusters** is hidden in the Manager | `admin` lost the `fedAdmin` role. | See the `fedAdmin` entry in [workarounds](workarounds.md). Do not do a rolling restart of the primary controllers. |

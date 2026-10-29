@@ -6,23 +6,25 @@
 # Drives hostnames and labels. Must differ on every cluster.
 cluster_name = "aif-obs"
 
-# HA control plane, no workers. The server adds its own agent. The server needs
-# a storage component; local-path-provisioner stores volumes on the node of
-# the pod. security-downstream joins the federation on sec.
-control_plane_count = 3
+# One large node: a non-HA profile needs no more, and local-path pins each
+# volume to the node of its first pod (with several nodes the chart starts
+# before the others join and fills the first ones). The server adds its own
+# agent. security-downstream joins the federation on sec.
+control_plane_count = 1
 components = [
   "observability-server",
   "local-path-provisioner",
   "security-downstream",
 ]
 
-# 8 vCPU / 32 GB nodes: the server needs more than the default plan (4 vCPU /
-# 16 GB) provides. Sizing: README.
-control_plane_instance_type = "vx1-g-8c-32g-480s"
+# 32 vCPU / 64 GB / 1000 GB: 50-nonha requests 14.2 vCPU, 32.6 GiB and 475 GiB;
+# RKE2, the agent and the collector add about 2.3 vCPU, so 16 vCPU is too small.
+# Sizing: README.
+control_plane_instance_type = "voc-c-32c-64gb-1000s-amd"
 
 # Monitored nodes count in default nodes of 4 vCPU / 16 GB: this shape is about
-# 23 (the GPU node alone about 8), so 50-nonha. For a short evaluation, "trial"
-# (3-day retention) is enough; keep the 8 vCPU plan, 4 vCPU nodes are too small. A non-HA profile cannot be
+# 25 (this node and the GPU node about 8 each), so 50-nonha. For a short
+# evaluation, "trial" (3-day retention) is enough. A non-HA profile cannot be
 # switched to an HA one later. Sizing: README.
 observability_sizing_profile = "50-nonha"
 
