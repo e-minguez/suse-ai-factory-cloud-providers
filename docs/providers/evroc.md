@@ -159,6 +159,12 @@ apply. Provisioning time varies by zone. The module sets
 `timeouts { create = "30m", delete = "20m" }` on every disk
 (`local.disk_create_timeout`, `local.disk_delete_timeout`).
 
+Measured sync latency (`dd bs=2k count=500 oflag=dsync`, 2026-10-30): about
+4 ms per sync on the jumphost and 7 ms on a node disk cloned from the snapshot,
+close to etcd's 10 ms guidance. During the first boot of a single control
+plane, image pulls on the same disk delayed one etcd sync to 1.6 s and rke2
+exited; the recovery is in [workarounds.md](../workarounds.md).
+
 Some image-backed disk imports in a zone can stay in
 `Ready=False, reason: ImportScheduled` indefinitely (`lastTransitionTime` equal
 to `creationTimestamp`). Nothing in Terraform recovers from it. Limit `zones`

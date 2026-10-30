@@ -1,6 +1,6 @@
 # 03: Management and GPU downstream
 
-Status: covered on vultr (2026-10-29) by the shape 05 test run, not run on its own; see the provider guide.
+Status: covered on vultr (2026-10-29) by the shape 05 test run, not run on its own; verified end to end on evroc (2026-10-30). See the provider guides.
 
 ## What you get
 
@@ -79,10 +79,10 @@ only needs them from `mgmt`.
 | Cluster | Nodes | Notes |
 |---|---|---|
 | `mgmt` | 3 control-plane | Default control-plane size. Add `control_plane_instance_type` for a bigger plan. |
-| `gpu` | 3 control-plane + GPU pool | Start with 1 GPU node; raise `count` when stock allows. |
+| `gpu` | 3 control-plane + GPU pool | Start with 1 GPU node; raise `count` when stock and quota allow. |
 
-Each cluster also has a jumphost, an API load balancer, an ingress load
-balancer and a NAT gateway. The estimate for your values:
+Each cluster also has a jumphost and load balancing for the API and the
+ingress; the provider guide lists the billed objects. The estimate for your values:
 `tools/multicluster/cluster.sh cost <name>`.
 
 ## Limits
@@ -93,7 +93,7 @@ balancer and a NAT gateway. The estimate for your values:
   nodes, and the control-plane nodes accept workloads as usual.
 - `local-path-provisioner` volumes are tied to one node. For replicated storage
   see [shape 04](../04-mgmt-gpu-storage/README.md).
-- Each cluster is one location. There is no multi-zone setup.
+- Zones depend on the provider: on vultr each cluster is one location with no zones; on evroc the control planes spread over zones a, b and c and GPU nodes run in zone a. See the provider guide.
 - The cluster names `aif-mgmt` and `aif-gpu` in the examples are only
   examples. Names must be unique inside your account.
 
@@ -110,5 +110,6 @@ balancer and a NAT gateway. The estimate for your values:
 ## Provider guides
 
 - [Vultr](vultr/README.md)
+- [evroc](evroc/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).

@@ -1,0 +1,95 @@
+# Plans examples/evroc with one catalog tfvars file (make test-catalog passes it
+# with -var-file), so a validation or precondition change that breaks a shape
+# fails CI. evroc mocked; no cloud calls. Credentials below stand in for
+# clusters/common-*.tfvars; the CA stands in for addons.auto.tfvars.json.
+
+mock_provider "evroc" {
+  override_during = plan
+}
+mock_provider "http" {}
+
+override_data {
+  target = module.ai_factory.module.config.data.http.aif_release_manifest
+  values = {
+    status_code   = 200
+    response_body = file("../../modules/elemental-config/tests/fixtures/release_manifest.yaml")
+  }
+}
+
+# Every profile used by a catalog file must be listed here (values from
+# `evroc compute computeprofile list -o yaml`, 2026-10-30).
+override_data {
+  target = module.ai_factory.data.evroc_compute_profiles.this
+  values = {
+    profiles = ["a1a.m", "a1a.l", "c1a.m", "c1a.l", "c1a.2xl", "m1a.m", "gn-l40s.s"]
+    details = [
+      { name = "a1a.m", vcpus = 4, memory_amount = 16, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = 0, processor_architecture = "amd64" },
+      { name = "a1a.l", vcpus = 8, memory_amount = 32, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = 0, processor_architecture = "amd64" },
+      { name = "c1a.m", vcpus = 4, memory_amount = 8, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = 0, processor_architecture = "amd64" },
+      { name = "c1a.l", vcpus = 8, memory_amount = 16, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = 0, processor_architecture = "amd64" },
+      { name = "c1a.2xl", vcpus = 32, memory_amount = 64, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = 0, processor_architecture = "amd64" },
+      { name = "m1a.m", vcpus = 4, memory_amount = 32, memory_unit = "GB", gpu_model = "", gpu_quantity = 0, gpu_local_disk_gb = 0, processor_architecture = "amd64" },
+      { name = "gn-l40s.s", vcpus = 15, memory_amount = 190, memory_unit = "GB", gpu_model = "nvidia.com/AD102GL_L40S", gpu_quantity = 1, gpu_local_disk_gb = 3800, processor_architecture = "amd64" },
+    ]
+  }
+}
+
+# A raised organization quota: most shapes do not fit the default (catalog/README.md).
+override_data {
+  target = module.ai_factory.data.evroc_organization_quota.this
+  values = {
+    compute_vcpus         = 1000
+    compute_memory        = "4000GB"
+    networking_public_ips = 100
+    usage_vcpus           = 0
+    usage_memory          = "0GB"
+    usage_public_ips      = 0
+  }
+}
+
+override_resource {
+  target = module.ai_factory.evroc_public_ip.cluster
+  values = { ip_address = "203.0.113.10" }
+}
+
+override_resource {
+  target = module.ai_factory.evroc_public_ip.jumphost
+  values = { ip_address = "203.0.113.11" }
+}
+
+override_resource {
+  target = module.ai_factory.evroc_virtual_machine.jumphost
+  values = {
+    private_ipv4_address = "10.20.0.5"
+    public_ipv4_address  = "203.0.113.11"
+  }
+}
+
+override_resource {
+  target = module.ai_factory.time_static.created
+  values = { rfc3339 = "2026-09-30T12:34:56Z" }
+}
+
+variables {
+  region                        = "se-sto"
+  admin_cidrs                   = ["198.51.100.0/24"]
+  root_password_hash            = "$6$DUMMYSALT$ROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASH0"
+  node_user_password_hash       = "$6$DUMMYSALT$NODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASH0"
+  ssh_authorized_keys           = ["ssh-ed25519 AAAADUMMY test"]
+  appco_username                = "DUMMY-APPCO-USER"
+  appco_password                = "DUMMY-APPCO-PASSWORD"
+  suse_registry_username        = "DUMMY-REGCODE"
+  suse_registry_password        = "DUMMY-REGISTRY-PASSWORD"
+  nvidia_api_key                = "DUMMY-NVIDIA-API-KEY"
+  security_join_token           = "00000000-0000-4000-8000-000000000000"
+  observability_bootstrap_token = "DUMMY-BOOTSTRAP-TOKEN"
+  observability_ca_pem          = "-----BEGIN CERTIFICATE-----\nDUMMY\n-----END CERTIFICATE-----\n"
+  observability_license_key     = "DUMMY-LICENSE"
+  # Adopted snapshots for every zone, so the plan also covers the nodes.
+  image_ready = true
+  image_ids   = { a = "SNAP-a", b = "SNAP-b", c = "SNAP-c" }
+}
+
+run "shape_plans" {
+  command = plan
+}

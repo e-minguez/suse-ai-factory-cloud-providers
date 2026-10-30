@@ -1,0 +1,50 @@
+# Shape 05, SUSE Observability cluster. Shape values only: credentials, region,
+# admin_cidrs and the shared tokens live in clusters/common-all.tfvars and
+# clusters/common-evroc.tfvars (optional). The license key is per cluster and
+# secret: this file becomes clusters/obs/terraform.tfvars, which is gitignored.
+
+# Drives hostnames and labels. Must differ on every cluster.
+cluster_name = "aif-obs"
+
+# One large node: a non-HA profile needs no more, and local-path pins each
+# volume to the node of its first pod (with several nodes the chart starts
+# before the others join and fills the first ones). The server adds its own
+# agent. security-downstream joins the federation on sec.
+control_plane_count = 1
+components = [
+  "observability-server",
+  "local-path-provisioner",
+  "security-downstream",
+]
+
+# A single node needs one zone: the image is built once, not three times.
+zones = ["a"]
+
+# 32 vCPU / 64 GB / 1000 GB: 50-nonha requests 14.2 vCPU, 32.6 GiB and 475 GiB
+# (on local-path); RKE2, the agent and the collector add about 2.3 vCPU, so
+# 16 vCPU is too small. Sizing: README.
+control_plane_instance_type = "c1a.2xl"
+control_plane_disk_size_gb  = 1000
+
+# Monitored nodes count in default nodes of 4 vCPU / 16 GB: this shape is about
+# 29 (control planes 9, this node 8, the 190 GB GPU node about 12), so
+# 50-nonha. For a short evaluation, "trial" (3-day retention) is enough. A
+# non-HA profile cannot be switched to an HA one later. Sizing: README.
+observability_sizing_profile = "50-nonha"
+
+# Required. The server is https://obs.o11y.aif.example.com (the subdomain is
+# o11y so the host does not read obs.obs.*). Create the record
+# "*.o11y.aif.example.com  A  <API VIP of this cluster>" (README, step 2).
+# This also serves otlp-obs.o11y.* and otlp-http-obs.o11y.*.
+ingress_domain = "o11y.aif.example.com"
+
+# Per-cluster secret. Replace the placeholder with the real key; never commit
+# it. Plan fails while the placeholder (<...>) is still here.
+observability_license_key = "<your-license-key>"
+
+# CORS origin of the Rancher on mgmt (the plugin runs in the browser). Keep the
+# trailing slash.
+observability_allowed_origins = ["https://rancher.mgmt.aif.example.com/"]
+
+# NeuVector federation primary (cluster sec): host, port 443 by default.
+security_primary_endpoint = "fed-neuvector.sec.aif.example.com"
