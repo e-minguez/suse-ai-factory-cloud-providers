@@ -1,0 +1,39 @@
+# Shape 05, GPU cluster. Shape values only: credentials, region, admin_cidrs and
+# the shared tokens live in clusters/common-all.tfvars and clusters/common-evroc.tfvars
+# (optional). The Observability CA comes from clusters/gpu/addons.auto.tfvars.json
+# (README, step 4).
+
+# Drives hostnames and labels. Must differ on every cluster.
+cluster_name = "aif-gpu"
+
+# HA control plane (default profile c1a.m) and one GPU pool. No rancher: this
+# cluster is imported into the Rancher on mgmt (register, README step 6).
+control_plane_count = 3
+components = [
+  "cert-manager",
+  "gpu-operator",
+  "local-path-provisioner",
+  "security-downstream",
+  "observability-agent",
+]
+
+# One L40S (48 GB), passthrough. Only zone "a" admits GPU VMs and an unpinned
+# pool uses the first zone, so leave `zones` at its default. The default project
+# has one L40S of GPU quota (README, Prerequisites). Nodes have no public IP.
+gpu_pools = {
+  gpu = { instance_type = "gn-l40s.s", count = 1 }
+}
+
+# Shape choice, same as on the other clusters: the NeuVector federation endpoint
+# becomes fed-neuvector.gpu.aif.example.com, and the primary on sec connects to
+# it. Nothing needs this name before gpu is deployed, but a fixed name keeps the
+# DNS records alike.
+# Create the record "*.gpu.aif.example.com  A  <API VIP of this cluster>"
+# (README, step 5).
+ingress_domain = "gpu.aif.example.com"
+
+# Remote SUSE Observability server (cluster obs). The CA is in addons.auto.tfvars.json.
+observability_server_url = "https://obs.o11y.aif.example.com"
+
+# NeuVector federation primary (cluster sec): host, port 443 by default.
+security_primary_endpoint = "fed-neuvector.sec.aif.example.com"

@@ -1,0 +1,33 @@
+# Shape 02, HA with storage. Shared values (region, project, admin_cidrs,
+# password hashes, ssh keys, aif_release) go in clusters/common-*.tfvars.
+
+cluster_name = "aif-ha"
+
+# suse-storage replaces local-path-provisioner: listing both fails plan.
+# Changing components rebuilds the image and replaces every node.
+components = ["rancher", "gpu-operator", "suse-storage", "aif-operator"]
+
+# zones is not set: the default ["a", "b", "c"] puts one control plane in each
+# zone. Pools without "zone" all land in zone "a" (also the only GPU zone).
+
+# Three control-plane nodes (etcd quorum).
+control_plane_count         = 3
+control_plane_instance_type = "a1a.m"
+
+# Pool keys become hostnames <cluster_name>-<pool>-NN. "cp" is reserved and
+# a worker pool cannot be named "gpu".
+gpu_pools = {
+  gpu = { instance_type = "gn-l40s.s", count = 1 }
+}
+
+# Disk size sets the Longhorn capacity per node. spread = separate hosts.
+worker_pools = {
+  general = { instance_type = "a1a.m", count = 2 }
+  storage = { instance_type = "a1a.m", count = 3, disk_size_gb = 500, placement = "spread" }
+}
+
+# Longhorn disks only on the storage pool (3 or more nodes).
+suse_storage_nodes = ["storage"]
+
+# Optional. Default is sslip.io names of the API VIP address.
+# ingress_domain = "aif.example.com"  # A record: *.<domain> -> API VIP

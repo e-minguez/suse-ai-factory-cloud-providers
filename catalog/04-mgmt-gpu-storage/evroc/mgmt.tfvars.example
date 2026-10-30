@@ -1,0 +1,15 @@
+# Shape 04, management cluster. Shape values only: region and project live in
+# clusters/common-evroc.tfvars (optional); credentials come from `evroc login`.
+
+# Drives hostnames and labels. Must differ from the downstream cluster's name.
+cluster_name = "aif-mgmt"
+
+# HA control plane (one node per zone), no workers. Rancher and the AI Factory
+# operator run here. cert-manager comes with rancher; do not list it.
+control_plane_count = 3
+components          = ["rancher", "aif-operator", "local-path-provisioner"]
+
+# Optional. Needs a wildcard A record *.<domain> to the API VIP (the cluster's
+# public IP); the Rancher URL becomes rancher.<domain>.
+# Default: rancher-<API VIP>.sslip.io.
+# ingress_domain = "aif.example.com"

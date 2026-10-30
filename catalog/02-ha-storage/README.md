@@ -2,7 +2,7 @@
 
 A highly available cluster with replicated storage. Three control-plane nodes, a GPU pool, a general worker pool and a 3-node `storage` pool that stores the SUSE Storage (Longhorn) disks.
 
-Status: partly covered on vultr (2026-10-29): SUSE Storage on a dedicated pool next to GPU and worker pools ran in the shape 05 test; Rancher and AI Factory in the same cluster as SUSE Storage did not.
+Status: partly covered on vultr (2026-10-29): SUSE Storage on a dedicated pool next to GPU and worker pools ran in the shape 05 test; Rancher and AI Factory in the same cluster as SUSE Storage did not. Not run end to end on evroc yet.
 
 ## What you get
 
@@ -11,7 +11,7 @@ Status: partly covered on vultr (2026-10-29): SUSE Storage on a dedicated pool n
 - GPU operator and one GPU node.
 - Two general worker nodes.
 - Three `storage` nodes. Longhorn keeps replicated volumes on them, and the default StorageClass is Longhorn.
-- A jumphost, an API load balancer and an ingress load balancer.
+- A jumphost and load balancing for the API and the ingress (one or two load balancers, depending on the provider).
 
 ## Diagram
 
@@ -74,7 +74,7 @@ Do not add `local-path-provisioner`: both components set the default StorageClas
 - Longhorn uses the node root disk. There is no separate data volume.
 - Replacing or removing a storage node needs care: drain it and check that no volume has its only healthy replica there ([scaling](../../docs/scaling.md#storage)).
 - `components` is an image input. Changing it rebuilds the image and replaces every node.
-- The cluster is one location with no zones.
+- Zones depend on the provider: on vultr the cluster is one location with no zones; on evroc the control planes spread over zones a, b and c and GPU nodes run in zone a. See the provider guide.
 
 ## Grow and variants
 
@@ -88,3 +88,4 @@ Do not add `local-path-provisioner`: both components set the default StorageClas
 ## Provider guides
 
 - [Vultr](vultr/README.md)
+- [evroc](evroc/README.md)

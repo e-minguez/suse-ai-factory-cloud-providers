@@ -1,0 +1,24 @@
+# Shape 01, inference in a box. Shared values (region, project, admin_cidrs,
+# password hashes, ssh keys, aif_release) go in clusters/common-*.tfvars.
+
+cluster_name = "aif-box"
+
+# Rancher, AI Factory and the GPU stack on one node. Changing components
+# rebuilds the image and replaces every node.
+components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# GPU VMs run in zone "a" only. One zone also means one image build.
+zones = ["a"]
+
+# One node that is control plane and GPU worker. No gpu_pools, no worker_pools.
+control_plane_count = 1
+
+# GPU flavor on the control plane: 1x L40S 48 GB, 15 vCPU, 190 GB RAM.
+# Needs GPU quota for one L40S; the plan cannot see that quota.
+control_plane_instance_type = "gn-l40s.s"
+
+# The root disk holds the models and the local-path volumes.
+control_plane_disk_size_gb = 500
+
+# Optional. Default is sslip.io names of the API VIP address.
+# ingress_domain = "aif.example.com"  # A record: *.<domain> -> API VIP

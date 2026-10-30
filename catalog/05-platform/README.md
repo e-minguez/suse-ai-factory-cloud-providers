@@ -2,7 +2,7 @@
 
 Four clusters with central monitoring and security.
 
-Status: verified end to end on vultr (2026-10-29), with a smaller test layout; see the provider guide.
+Status: verified end to end on vultr (2026-10-29), with a smaller test layout; not run end to end on evroc yet. See the provider guides.
 
 ## What you get
 
@@ -249,12 +249,13 @@ that depend on imported clusters have not been tested on this shape.
 | `mgmt` | 3 control-plane | default | Rancher, operator, plugin and agent. |
 | `obs` | 1 control-plane | 32 vCPU, 64 GB, 1000 GB disk | Profile `50-nonha`: about 25 monitored default nodes (see below). One node on purpose. |
 | `sec` | 3 control-plane | default | NeuVector controllers and the agent. |
-| `gpu` | 3 control-plane + 1 GPU node | default + GPU plan | Raise the pool `count` when stock allows. |
+| `gpu` | 3 control-plane + 1 GPU node | default + GPU plan | Raise the pool `count` when stock and quota allow. |
 
 The number in the Observability profile name counts default nodes of 4 vCPU and
 16 GB, not machines: a node of 24 vCPU and 120 GB counts as about 8. With the
-provider guide's plans this shape is about 25 default nodes (control planes 9,
-`obs` 8, GPU node 8), so it uses `50-nonha`: 14.2 vCPU and 32.6 GiB requested,
+plans of the provider guides this shape is about 25 to 30 default nodes
+(control planes 9, `obs` 8, GPU node 8 on vultr and about 12 on evroc, where
+it has 190 GB), so it uses `50-nonha`: 14.2 vCPU and 32.6 GiB requested,
 475 GiB storage, 30-day retention. Exact needs per profile are in the
 [SUSE Observability requirements](https://documentation.suse.com/cloudnative/suse-observability/latest/en/setup/install-stackstate/requirements.html);
 count again when you add nodes. For a short evaluation, the `trial` profile
@@ -280,8 +281,8 @@ license note, is in
 Add what the other components on `obs` request (RKE2, Traefik, NeuVector, the
 agent) before you pick the plan.
 
-Each cluster also has a jumphost, an API load balancer, an ingress load balancer
-and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
+Each cluster also has a jumphost and load balancing for the API and the
+ingress; the provider guide lists the billed objects. Estimate: `tools/multicluster/cluster.sh cost <name>`.
 
 ## Limits
 
@@ -301,7 +302,9 @@ and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
   and `sec` and the Rancher extension need it
   ([docs/security.md](../../docs/security.md#trusting-the-cluster-ca-in-the-browser)).
   Rancher uses its own certificate.
-- Restricting `ingress_cidrs` has a start-up problem: the `egress_ips` of a
+- Restricting `ingress_cidrs` works only where nodes have known egress
+  addresses (vultr: the NAT gateway; on evroc they are not exposed, so keep the
+  default). It has a start-up problem: the `egress_ips` of a
   cluster are known only after its first deploy. Keep the default for the first
   deploy and restrict it afterwards: every cluster admits the egress IPs of all
   the others plus your admin and user CIDRs, and `mgmt` admits `gpu` (and `sec`,
@@ -311,7 +314,7 @@ and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
 - The CA and the NeuVector backend certificate are not renewed. The ingress
   certificate is renewed by an apply within 30 days of expiry, which rebuilds the
   image of that cluster.
-- Each cluster is one location. There is no multi-zone setup.
+- Zones depend on the provider: on vultr each cluster is one location with no zones; on evroc the control planes spread over zones a, b and c and GPU nodes run in zone a. See the provider guide.
 
 ## Grow and variants
 
@@ -337,5 +340,6 @@ and a NAT gateway. Estimate: `tools/multicluster/cluster.sh cost <name>`.
 ## Provider guides
 
 - [Vultr](vultr/README.md)
+- [evroc](evroc/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).

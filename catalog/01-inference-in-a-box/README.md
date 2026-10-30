@@ -4,7 +4,7 @@ One node that runs everything: Rancher, the AI Factory operator, the NVIDIA GPU
 operator and local storage. Use it to try AI Factory or to serve models on a
 single GPU.
 
-Status: verified end to end on vultr (2026-10-29).
+Status: verified end to end on vultr (2026-10-29) and on evroc (2026-10-30, after one manual recovery of the control plane; see the evroc guide).
 
 ## What you get
 
@@ -12,7 +12,7 @@ Status: verified end to end on vultr (2026-10-29).
 - Rancher with the AI Factory operator.
 - GPU operator, so pods can request `nvidia.com/gpu`.
 - Local volumes through local-path-provisioner (the default StorageClass).
-- A jumphost, an API load balancer and an ingress load balancer. They stay even with one node, so the cluster can grow later.
+- A jumphost and load balancing for the API and the ingress (one or two load balancers, depending on the provider). They stay even with one node, so the cluster can grow later.
 
 No high availability. If the node is down, the cluster is down.
 
@@ -59,8 +59,8 @@ flowchart LR
 
 - Single node: no HA, and a node replacement loses the local volumes.
 - The node is both control plane and GPU worker, so cluster services and your workloads share it.
-- Plans and stock are per region. GPU stock varies by region.
-- The cluster is one location with no zones.
+- Plans, stock and quota depend on the provider and the region. See the provider guide.
+- The single node sits in one zone. On evroc that is zone a, the GPU zone.
 - `components` is an image input. Changing it rebuilds the image and replaces the node.
 
 ## Grow and variants
@@ -73,3 +73,4 @@ flowchart LR
 ## Provider guides
 
 - [Vultr](vultr/README.md)
+- [evroc](evroc/README.md)

@@ -1,6 +1,6 @@
 # 04: Management and GPU downstream with storage
 
-Status: covered on vultr (2026-10-29) by the shape 05 test run, not run on its own; see the provider guide.
+Status: covered on vultr (2026-10-29) by the shape 05 test run, not run on its own; not run end to end on evroc yet. See the provider guides.
 
 ## What you get
 
@@ -92,7 +92,7 @@ only needs them from `mgmt`.
 |---|---|---|
 | `mgmt` | 3 control-plane | Default control-plane size. |
 | `gpu` | 3 control-plane | Default control-plane size. |
-| `gpu` pool `gpu` | 1 GPU node | A passthrough GPU plan. Raise `count` when stock allows. |
+| `gpu` pool `gpu` | 1 GPU node | A passthrough GPU plan. Raise `count` when stock and quota allow. |
 | `gpu` pool `storage` | 3 nodes | Pick a plan with a large root disk: Longhorn uses it, so the disk size sets the capacity. |
 | `gpu` pool `wrk` | 2 nodes | Size for your workloads. |
 
@@ -113,7 +113,7 @@ estimate for your values: `tools/multicluster/cluster.sh cost <name>`.
   on the existing nodes ([scaling](../../docs/scaling.md#storage)).
 - Shrinking a pool or removing it destroys nodes without a drain. Drain them
   and check Longhorn replicas first.
-- Each cluster is one location. There is no multi-zone setup.
+- Zones depend on the provider: on vultr each cluster is one location with no zones; on evroc the control planes spread over zones a, b and c and GPU nodes run in zone a. See the provider guide.
 
 ## Grow and variants
 
@@ -129,5 +129,6 @@ estimate for your values: `tools/multicluster/cluster.sh cost <name>`.
 ## Provider guides
 
 - [Vultr](vultr/README.md)
+- [evroc](evroc/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).
