@@ -385,3 +385,82 @@ run "worker_flavor_null_gpu_quantity_accepted" {
     }
   }
 }
+
+# A GPU flavor on a single control plane (catalog shape 01): GPU VMs draw no
+# vCPU or memory quota, so the peak is the jumphost alone (4 vCPU, 16 GB), and
+# the node shows in the GPU demand as pool "cp".
+run "gpu_control_plane_not_in_compute_quota" {
+  command = plan
+
+  variables {
+    image_ready                 = true
+    zones                       = ["a"]
+    control_plane_count         = 1
+    control_plane_instance_type = "gn-l40s.s"
+  }
+
+  override_data {
+    target = data.evroc_organization_quota.this
+    values = {
+      compute_vcpus         = 4
+      compute_memory        = "16GB"
+      networking_public_ips = 2
+      usage_vcpus           = 0
+      usage_memory          = "0GB"
+      usage_public_ips      = 0
+    }
+  }
+
+  assert {
+    condition     = output.provider_details.gpu_quota_request.by_pool["cp"].gpus == 1
+    error_message = "A GPU control plane must appear in gpu_quota_request as pool cp."
+  }
+}
+
+# GPU VMs are admitted in zone a only; control planes go round-robin over zones.
+run "gpu_control_plane_outside_gpu_zone" {
+  command = plan
+
+  variables {
+    image_ready                 = true
+    control_plane_count         = 3
+    control_plane_instance_type = "gn-l40s.s"
+  }
+
+  override_data {
+    target = data.evroc_organization_quota.this
+    values = {
+      compute_vcpus         = 100
+      compute_memory        = "4000GB"
+      networking_public_ips = 100
+      usage_vcpus           = 0
+      usage_memory          = "0GB"
+      usage_public_ips      = 0
+    }
+  }
+
+  expect_failures = [evroc_vpc.this]
+}
+
+# An image-only plan creates no control planes, so their zones are not checked.
+run "gpu_control_plane_image_only" {
+  command = plan
+
+  variables {
+    deploy_nodes                = false
+    control_plane_count         = 3
+    control_plane_instance_type = "gn-l40s.s"
+  }
+
+  override_data {
+    target = data.evroc_organization_quota.this
+    values = {
+      compute_vcpus         = 100
+      compute_memory        = "4000GB"
+      networking_public_ips = 100
+      usage_vcpus           = 0
+      usage_memory          = "0GB"
+      usage_public_ips      = 0
+    }
+  }
+}

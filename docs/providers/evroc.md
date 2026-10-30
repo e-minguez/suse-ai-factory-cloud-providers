@@ -190,11 +190,19 @@ not rely on a host firewall in the image.
   from disks with a `diskImageRef`) fail with
   `Ready: disk is missing DiskImageRef (ProvisioningFailed)`.
 - **Zone.** An admission webhook admits GPU VMs in zone `a` only
-  (`cannot deploy a GPU VM in zone "b"`). It fires per VM at apply time, after
-  the boot disk exists, so the module checks it at plan time with
-  `local.gpu_zones = ["a"]`. An unpinned pool uses `zones[0]`; a pool pinned to
-  another zone fails the plan. The node's zone is also the zone of the snapshot
-  it clones, so zone `a` must be in `zones`.
+  (`cannot deploy a GPU VM in zone "b". GPU VMs are currently only supported on
+  zone "a"`, checked again on 2026-10-30 for zones `b` and `c`, also for a VM
+  created stopped). No data source exposes the GPU zones and the webhook fires
+  per VM at apply time, after the boot disk exists, so the module checks it at
+  plan time with `local.gpu_zones = ["a"]`. An unpinned pool uses `zones[0]`; a
+  pool pinned to another zone fails the plan. The node's zone is also the zone
+  of the snapshot it clones, so zone `a` must be in `zones`.
+- **GPU control plane.** `control_plane_instance_type` may be a GPU flavor (one
+  node that is control plane and GPU worker, catalog shape 01). Control-plane
+  nodes go round-robin over `zones`, so the plan requires every one of them to
+  land in a GPU zone: `a` first in `zones` for one node, `zones = ["a"]` for
+  more (a single node with three zones still builds three images). The nodes count in the GPU
+  demand as pool `cp` and not in the vCPU and memory footprint.
 - **Quota is per GPU model and counted in GPUs.** The flavor size is the GPU
   count and the webhook compares `count x gpu_quantity`. An unmodified project
   holds one L40S, so `gn-l40s.s` with `count = 1` is the only pool it can apply.
@@ -349,7 +357,8 @@ The module fails at `terraform plan` (hard failure, not a warning) when:
   (preconditions on `evroc_vpc.this`). The footprint is the maximum over passes
   of what exists at once: pass 1 is the jumphost plus one builder per other zone on
   `jumphost_instance_type`; pass 2 is the jumphost plus the control planes plus the `worker_pools` nodes
-  (ordinary compute, so their vCPU and memory count; GPU nodes' do not).
+  (ordinary compute, so their vCPU and memory count; GPU nodes' do not, also
+  when the control plane uses a GPU flavor).
   Public IPs are the API VIP, the jumphost and the optional per-node IPs of
   control planes, workers and GPU nodes.
   Usage by other workloads is not checked, and the result does not depend on
