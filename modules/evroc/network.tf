@@ -80,6 +80,11 @@ resource "evroc_vpc" "this" {
       condition     = alltrue([for k, v in local.agent_pools : contains(local.gpu_zones, coalesce(v.zone, local.zones[0])) if v.role == "gpu"])
       error_message = "evroc admits GPU VMs only in zone(s) ${join(", ", local.gpu_zones)}. Set zone on the gpu_pools entry, or list a GPU zone first in zones (an unpinned pool uses zones[0]). worker_pools may use any zone."
     }
+
+    precondition {
+      condition     = !local.control_plane_gpu || !var.deploy_nodes || alltrue([for n in local.control_plane_nodes : contains(local.gpu_zones, n.zone)])
+      error_message = "control_plane_instance_type ${local.control_plane_instance_type} is a GPU flavor and evroc admits GPU VMs only in zone(s) ${join(", ", local.gpu_zones)}. Control-plane nodes go round-robin over zones, so set zones = [${join(", ", [for z in local.gpu_zones : "\"${z}\""])}]."
+    }
   }
 }
 

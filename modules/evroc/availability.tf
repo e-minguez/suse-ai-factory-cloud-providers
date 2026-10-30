@@ -36,11 +36,18 @@ locals {
     for d in data.evroc_compute_profiles.this.details : d.name => d
   }
 
+  # A GPU flavor on the control plane (single-node shapes): its VMs count in the
+  # GPU quota, not in vCPU and memory, and must sit in a GPU zone (network.tf).
+  control_plane_gpu = coalesce(try(local.compute_profile_details[local.control_plane_instance_type].gpu_quantity, 0), 0) > 0
+
   # GPU quota is counted in GPUs, not VMs (gn-l40s.s = 1, .m = 2, .l = 4), and the
   # provider has no GPU quota data source, so count * gpu_quantity is exposed via
-  # gpu_quota_request.
+  # gpu_quota_request. A GPU control plane appears as pool "cp".
   gpu_pool_demand = {
-    for k, v in var.gpu_pools : k => {
+    for k, v in merge(
+      var.gpu_pools,
+      local.control_plane_gpu && var.deploy_nodes ? { cp = { instance_type = local.control_plane_instance_type, count = var.control_plane_count } } : {},
+      ) : k => {
       instance_type = v.instance_type
       model         = try(local.compute_profile_details[v.instance_type].gpu_model, "unknown")
       gpus          = v.count * coalesce(try(local.compute_profile_details[v.instance_type].gpu_quantity, 0), 0)
@@ -66,7 +73,13 @@ locals {
     [for k, v in var.worker_pools : v.instance_type],
   ))
 
-  # Worker nodes (non-GPU flavors) draw from the compute quota once nodes deploy.
+  # Control planes and worker nodes (non-GPU flavors) draw from the compute
+  # quota once nodes deploy.
+  control_plane_vcpus = local.control_plane_gpu ? 0 : var.control_plane_count * local.flavor_vcpus[local.control_plane_instance_type]
+  control_plane_memory_gb = local.control_plane_gpu ? 0 : try(
+    var.control_plane_count * local.flavor_memory_gb[local.control_plane_instance_type],
+    null
+  )
   worker_vcpus = sum(concat([0], [for k, v in var.worker_pools : v.count * local.flavor_vcpus[v.instance_type]]))
   worker_memory_gb = try(
     sum(concat([0], [for k, v in var.worker_pools : v.count * local.flavor_memory_gb[v.instance_type]])),
@@ -98,11 +111,11 @@ locals {
   quota_demand = {
     vcpus = max(
       length(local.zones) * local.flavor_vcpus[local.jumphost_instance_type],
-      local.flavor_vcpus[local.jumphost_instance_type] + var.control_plane_count * local.flavor_vcpus[local.control_plane_instance_type] + local.worker_vcpus,
+      local.flavor_vcpus[local.jumphost_instance_type] + local.control_plane_vcpus + local.worker_vcpus,
     )
     memory_gb = try(max(
       length(local.zones) * local.flavor_memory_gb[local.jumphost_instance_type],
-      local.flavor_memory_gb[local.jumphost_instance_type] + var.control_plane_count * local.flavor_memory_gb[local.control_plane_instance_type] + local.worker_memory_gb,
+      local.flavor_memory_gb[local.jumphost_instance_type] + local.control_plane_memory_gb + local.worker_memory_gb,
     ), null)
     public_ips = (
       2
@@ -115,11 +128,12 @@ locals {
 locals {
   # Per-resource breakdown for the error messages of the checks on
   # evroc_vpc.this (network.tf).
-  worker_breakdown = join("", [for k in sort(keys(var.worker_pools)) : " + ${var.worker_pools[k].count} x ${var.worker_pools[k].instance_type} (worker pool ${k})"])
+  control_plane_breakdown = "${var.control_plane_count} x ${local.control_plane_instance_type}${local.control_plane_gpu ? " (GPU, not counted)" : ""}"
+  worker_breakdown        = join("", [for k in sort(keys(var.worker_pools)) : " + ${var.worker_pools[k].count} x ${var.worker_pools[k].instance_type} (worker pool ${k})"])
 
   quota_breakdown = {
-    vcpus      = "pass 1: ${length(local.zones)} x ${local.jumphost_instance_type} (jumphost + builders) = ${length(local.zones) * local.flavor_vcpus[local.jumphost_instance_type]}; pass 2: 1 x ${local.jumphost_instance_type} + ${var.control_plane_count} x ${local.control_plane_instance_type}${local.worker_breakdown} = ${local.flavor_vcpus[local.jumphost_instance_type] + var.control_plane_count * local.flavor_vcpus[local.control_plane_instance_type] + local.worker_vcpus}"
-    memory     = "pass 1: ${length(local.zones)} x ${local.jumphost_instance_type} (jumphost + builders) = ${try(length(local.zones) * local.flavor_memory_gb[local.jumphost_instance_type], "?")} GB; pass 2: 1 x ${local.jumphost_instance_type} + ${var.control_plane_count} x ${local.control_plane_instance_type}${local.worker_breakdown} = ${try(local.flavor_memory_gb[local.jumphost_instance_type] + var.control_plane_count * local.flavor_memory_gb[local.control_plane_instance_type] + local.worker_memory_gb, "?")} GB"
+    vcpus      = "pass 1: ${length(local.zones)} x ${local.jumphost_instance_type} (jumphost + builders) = ${length(local.zones) * local.flavor_vcpus[local.jumphost_instance_type]}; pass 2: 1 x ${local.jumphost_instance_type} + ${local.control_plane_breakdown}${local.worker_breakdown} = ${local.flavor_vcpus[local.jumphost_instance_type] + local.control_plane_vcpus + local.worker_vcpus}"
+    memory     = "pass 1: ${length(local.zones)} x ${local.jumphost_instance_type} (jumphost + builders) = ${try(length(local.zones) * local.flavor_memory_gb[local.jumphost_instance_type], "?")} GB; pass 2: 1 x ${local.jumphost_instance_type} + ${local.control_plane_breakdown}${local.worker_breakdown} = ${try(local.flavor_memory_gb[local.jumphost_instance_type] + local.control_plane_memory_gb + local.worker_memory_gb, "?")} GB"
     public_ips = "API VIP + jumphost = 2, control planes = ${var.control_plane_public_ip ? var.control_plane_count : 0}, worker and GPU nodes = ${length([for n in local.agent_nodes : n if n.public_ip])}"
   }
 }

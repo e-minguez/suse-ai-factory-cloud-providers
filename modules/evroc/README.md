@@ -114,7 +114,11 @@ DiskImageRef`; see [docs/providers/evroc.md](../../docs/providers/evroc.md#gpus)
 evroc runs GPU VMs in **zone `a` only**, so an unpinned pool defaults to
 `zones[0]`, which the module checks is a GPU zone. The admission webhook fires
 per VM during apply, after that node's boot disk exists, which is why the
-module checks the zone at plan time.
+module checks the zone at plan time. A GPU flavor on the control plane (one
+node that is control plane and GPU worker) needs every control plane in zone
+`a`: control-plane nodes go round-robin over `zones`, so one node needs `a`
+first and three need `zones = ["a"]`; its VMs count in the GPU quota,
+not in vCPU and memory.
 
 `worker_pools` are not restricted to GPU zones: a pool may use any zone in
 `zones`, and an unpinned pool uses `zones[0]`, like GPU pools. Each node clones
