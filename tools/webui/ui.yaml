@@ -139,5 +139,7 @@ vultr:
       - ssh_key_ids
       - {name: lb_supervisor_extra_cidrs, widget: cidr_list}
       - {name: agent_cloud_extra_cidrs, widget: cidr_list}
+      - vpc_id
+      - nat_gateway_id
   managed:
     - vultr_api_key

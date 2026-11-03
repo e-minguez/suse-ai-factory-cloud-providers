@@ -19,7 +19,7 @@ resource "vultr_bare_metal_server" "agent" {
   snapshot_id = local.effective_snapshot_id
 
   # Singular vpc_id here; vultr_instance takes vpc_ids.
-  vpc_id = vultr_vpc.this.id
+  vpc_id = local.vpc_id
 
   label    = each.key
   hostname = each.key
@@ -61,7 +61,7 @@ resource "vultr_instance" "agent_cloud" {
   snapshot_id = local.effective_snapshot_id
 
   vpc_only = each.value.vpc_only
-  vpc_ids  = [vultr_vpc.this.id]
+  vpc_ids  = [local.vpc_id]
 
   firewall_group_id = one(vultr_firewall_group.agent_cloud[*].id)
 

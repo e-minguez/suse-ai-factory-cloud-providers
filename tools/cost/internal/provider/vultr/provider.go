@@ -17,9 +17,13 @@ func init() { provider.Register(vultr{}) }
 
 func (vultr) Name() string { return "vultr" }
 
-// Resolve applies the locals.tf defaults. The module has no provider-only
-// variable that affects price.
-func (vultr) Resolve(c tfconfig.Common, _ *tfconfig.Vars) (provider.Config, []tfconfig.Diagnostic) {
+// details holds the vultr-only variables that affect price.
+type details struct {
+	existingVPC bool // vpc_id set: the VPC and its NAT gateway already exist
+}
+
+// Resolve applies the locals.tf defaults and reads vpc_id.
+func (vultr) Resolve(c tfconfig.Common, v *tfconfig.Vars) (provider.Config, []tfconfig.Diagnostic) {
 	var diags []tfconfig.Diagnostic
 	if c.ControlPlaneInstanceType == "" {
 		c.ControlPlaneInstanceType = defaults["control_plane_instance_type"]
@@ -30,7 +34,11 @@ func (vultr) Resolve(c tfconfig.Common, _ *tfconfig.Vars) (provider.Config, []tf
 	if c.Region == "" {
 		diags = append(diags, tfconfig.Diagnostic{Severity: tfconfig.SeverityError, Summary: `variable "region" has no default and no value was found in the tfvars; pass --region`})
 	}
-	return provider.Config{Common: c}, diags
+	var d details
+	if v != nil {
+		d.existingVPC = v.IsSet("vpc_id")
+	}
+	return provider.Config{Common: c, Details: d}, diags
 }
 
 // Catalog resolves rates in this order: the --catalog file; with --no-network

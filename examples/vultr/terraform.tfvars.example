@@ -85,6 +85,12 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 # Managed disks of bare metal pools only: raid1, jbod or none (default).
 # mdisk_mode = "none"
 
+# Deploy into an existing VPC (original VPC, not VPC 2.0) in region and reuse
+# its NAT gateway. Both or neither. Destroy leaves them in place. Every address
+# in the VPC subnet reaches the RKE2 ports; see docs/providers/vultr.md.
+# vpc_id         = "REPLACE_WITH_VULTR_VPC_ID"
+# nat_gateway_id = "REPLACE_WITH_VULTR_NAT_GATEWAY_ID"
+
 # AI Factory: a version X.Y.Z (tag aif-operator-<version>, 2.1.0 or newer) or
 # a manifest URL (branch, fork or mirror).
 # aif_release = "2.3.0"

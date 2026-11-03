@@ -75,6 +75,14 @@ The `jumphost`, `nodes`, `api_host`, `rancher_url` and `egress_ips` outputs give
 addresses. `tools/multicluster` can register this cluster in a Rancher
 (`../../tools/multicluster/README.md`).
 
+## Existing VPC
+
+Set `vpc_id` and `nat_gateway_id` (both, from the Vultr console or
+`GET /v2/vpcs` and `GET /v2/vpcs/<id>/nat-gateway`) to deploy into an
+existing original VPC in `region` and reuse its NAT gateway. Set them before the
+first apply: changing them later replaces the nodes. Destroy leaves both in
+place. Constraints: [`modules/vultr`](../../modules/vultr/README.md#existing-vpc).
+
 ## GPU pools
 
 `gpu_pools` defaults to `{}` (control plane only). `mdisk_mode` (`raid1`, `jbod`,
