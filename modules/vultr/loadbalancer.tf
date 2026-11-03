@@ -4,7 +4,7 @@
 locals {
   lb_api_firewall = concat(
     [for c in var.api_cidrs : { port = 6443, source = c }],
-    [for c in concat([for ip in vultr_nat_gateway.this.public_ips : "${ip}/32"], var.lb_supervisor_extra_cidrs) : { port = 9345, source = c }],
+    [for c in concat([for ip in local.nat_gateway_public_ips : "${ip}/32"], var.lb_supervisor_extra_cidrs) : { port = 9345, source = c }],
   )
 }
 
@@ -15,7 +15,7 @@ resource "vultr_load_balancer" "api" {
   region              = var.region
   label               = "${var.cluster_name}-api-lb"
   balancing_algorithm = "leastconn"
-  vpc                 = vultr_vpc.this.id
+  vpc                 = local.vpc_id
   nodes               = local.lb_nodes
 
   # Vultr returns attached_instances sorted; sorting here avoids a diff that
@@ -81,7 +81,7 @@ resource "vultr_load_balancer" "ingress" {
   region              = var.region
   label               = "${var.cluster_name}-ingress-lb"
   balancing_algorithm = "leastconn"
-  vpc                 = vultr_vpc.this.id
+  vpc                 = local.vpc_id
   nodes               = local.lb_nodes
 
   # sort() for the same reason as the API LB above.

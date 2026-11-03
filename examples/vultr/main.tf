@@ -61,6 +61,9 @@ module "ai_factory" {
   ssh_key_ids   = var.ssh_key_ids
   mdisk_mode    = var.mdisk_mode
 
+  vpc_id         = var.vpc_id
+  nat_gateway_id = var.nat_gateway_id
+
   # Empty on pass 1; deploy.sh fills them on pass 2 (image/load balancer cycle).
   lb_backend_instance_ids   = var.lb_backend_instance_ids
   lb_supervisor_extra_cidrs = var.lb_supervisor_extra_cidrs

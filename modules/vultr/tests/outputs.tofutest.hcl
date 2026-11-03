@@ -157,7 +157,7 @@ run "zones_at_most_one" {
     zones = ["a", "b"]
   }
 
-  expect_failures = [vultr_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 # build_id is unknown at plan time here (the hash covers the load balancer IP),
@@ -422,7 +422,7 @@ run "worker_unsupported_fields_rejected" {
     worker_pools = { wrk = { instance_type = "vc2-6c-16gb", count = 1, zone = "a" } }
   }
 
-  expect_failures = [vultr_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "worker_stock_checked_for_new_node" {
@@ -607,4 +607,151 @@ run "control_plane_missing_runs_stock_check" {
   }
 
   expect_failures = [data.http.plan_availability]
+}
+
+# --- Existing VPC (vpc_id + nat_gateway_id) ----------------------------------
+
+run "existing_vpc_reused" {
+  command = plan
+
+  variables {
+    vpc_id         = "vpc-existing"
+    nat_gateway_id = "nat-existing"
+  }
+
+  override_data {
+    target = data.vultr_vpc.existing
+    values = { id = "vpc-existing", region = "ams", v4_subnet = "10.30.0.0", v4_subnet_mask = 22 }
+  }
+
+  override_data {
+    target = data.http.nat_gateway
+    values = {
+      status_code   = 200
+      response_body = "{\"nat_gateway\":{\"id\":\"nat-existing\",\"private_ips\":[\"10.30.0.1\"],\"public_ips\":[\"198.51.100.9\"],\"status\":\"active\"}}"
+    }
+  }
+
+  assert {
+    condition     = length(vultr_vpc.this) == 0 && length(vultr_nat_gateway.this) == 0
+    error_message = "vpc_id must not create a VPC or NAT gateway."
+  }
+
+  assert {
+    condition     = output.network.vpc_cidr == "10.30.0.0/22" && jsonencode(output.egress_ips) == "[\"198.51.100.9\"]"
+    error_message = "network and egress_ips must come from the existing VPC and NAT gateway."
+  }
+
+  assert {
+    condition     = output.provider_details.nat_gateway_private_ip == "10.30.0.1" && vultr_instance.jumphost.vpc_ids == toset(["vpc-existing"])
+    error_message = "Instances must join the existing VPC and route through its NAT gateway."
+  }
+
+  assert {
+    condition     = contains([for r in vultr_load_balancer.api.firewall_rules : r.source if r.port == 9345], "198.51.100.9/32")
+    error_message = "The API load balancer must admit 9345 from the existing NAT gateway."
+  }
+
+  assert {
+    condition = alltrue([
+      for r in vultr_firewall_rule.control_plane : r.subnet == "10.30.0.0" && r.subnet_size == 22
+    ])
+    error_message = "Control plane firewall rules must admit the existing VPC subnet, not the default vpc_cidr."
+  }
+
+  assert {
+    condition = anytrue([
+      for j in values(module.config.node_runtime_ignition) : anytrue([
+        for f in jsondecode(j).storage.files :
+        strcontains(base64decode(trimprefix(f.contents.source, "data:;base64,")), "regexIface: '^10\\.30\\.'")
+        if endswith(f.path, "/canal.yaml")
+      ])
+    ])
+    error_message = "The canal ifaceRegex must match the existing VPC subnet."
+  }
+}
+
+run "existing_vpc_needs_nat_gateway" {
+  command = plan
+
+  variables {
+    vpc_id = "vpc-existing"
+  }
+
+  override_data {
+    target = data.vultr_vpc.existing
+    values = { id = "vpc-existing", region = "ams", v4_subnet = "10.30.0.0", v4_subnet_mask = 22 }
+  }
+
+  expect_failures = [var.nat_gateway_id]
+}
+
+run "existing_vpc_wrong_region" {
+  command = plan
+
+  variables {
+    vpc_id         = "vpc-existing"
+    nat_gateway_id = "nat-existing"
+  }
+
+  override_data {
+    target = data.vultr_vpc.existing
+    values = { id = "vpc-existing", region = "fra", v4_subnet = "10.30.0.0", v4_subnet_mask = 22 }
+  }
+
+  override_data {
+    target = data.http.nat_gateway
+    values = {
+      status_code   = 200
+      response_body = "{\"nat_gateway\":{\"private_ips\":[\"10.30.0.1\"],\"public_ips\":[\"198.51.100.9\"]}}"
+    }
+  }
+
+  expect_failures = [data.vultr_vpc.existing]
+}
+
+run "existing_vpc_cidr_mismatch" {
+  command = plan
+
+  variables {
+    vpc_id         = "vpc-existing"
+    nat_gateway_id = "nat-existing"
+    vpc_cidr       = "10.20.0.0/20"
+  }
+
+  override_data {
+    target = data.vultr_vpc.existing
+    values = { id = "vpc-existing", region = "ams", v4_subnet = "10.30.0.0", v4_subnet_mask = 22 }
+  }
+
+  override_data {
+    target = data.http.nat_gateway
+    values = {
+      status_code   = 200
+      response_body = "{\"nat_gateway\":{\"private_ips\":[\"10.30.0.1\"],\"public_ips\":[\"198.51.100.9\"]}}"
+    }
+  }
+
+  expect_failures = [data.vultr_vpc.existing]
+}
+
+run "existing_nat_gateway_not_found" {
+  command = plan
+
+  variables {
+    vpc_id         = "vpc-existing"
+    nat_gateway_id = "nat-missing"
+  }
+
+  override_data {
+    target = data.vultr_vpc.existing
+    values = { id = "vpc-existing", region = "ams", v4_subnet = "10.30.0.0", v4_subnet_mask = 22 }
+  }
+
+  override_data {
+    target = data.http.nat_gateway
+    values = { status_code = 404, response_body = "{\"error\":\"not found\"}" }
+  }
+
+  expect_failures = [data.http.nat_gateway]
 }

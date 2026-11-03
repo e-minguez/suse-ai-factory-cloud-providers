@@ -115,3 +115,12 @@ func TestResolveRequiresRegion(t *testing.T) {
 }
 
 var _ provider.Provider = vultr{}
+
+func TestExpandExistingVPCSkipsNAT(t *testing.T) {
+	cfg, _ := vultr{}.Resolve(baseCommon(), nil)
+	cfg.Details = details{existingVPC: true}
+	res, _ := vultr{}.Expand(cfg)
+	if got := qtys(res)["nat gateway|"]; got != 0 {
+		t.Errorf("nat gateway qty = %d, want 0 with vpc_id (the existing one is reused)", got)
+	}
+}

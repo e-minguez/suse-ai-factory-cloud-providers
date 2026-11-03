@@ -125,6 +125,43 @@ cannot tag are listed under [Known limitations](#known-limitations).
   (`write-node-ip.service` failed); replace it with `deploy.sh -- -replace=<address>`.
 - Metadata is served on `169.254.169.254` without authentication and is not
   reachable over a VPC NIC before its DHCP has completed.
+- With `vpc_id`, the VPC and NAT gateway already exist: see [Existing VPC](#existing-vpc).
+
+## Existing VPC
+
+`vpc_id` and `nat_gateway_id` (both or neither) deploy into an existing VPC and
+reuse its NAT gateway instead of creating them. Set them before the first apply:
+setting or clearing them later replaces the nodes, the load balancers and the
+jumphost.
+
+- The VPC must be an original VPC in `region`. VPC 2.0 IDs are not found by
+  the `vultr_vpc` data source, and the plan fails on another region.
+- The NAT gateway must belong to that VPC and have its addresses assigned. The
+  provider has no NAT gateway data source, so the module reads
+  `GET /v2/vpcs/{vpc_id}/nat-gateway/{nat_gateway_id}` at plan time; a 404
+  fails the plan.
+- `vpc_cidr` becomes the VPC subnet: leave it null or set it to that subnet. The
+  subnet must not overlap `10.42.0.0/16` or `10.43.0.0/16` (RKE2 cluster and
+  service CIDRs).
+- The firewall groups admit the RKE2 ports from the whole VPC subnet, so other
+  instances in the VPC reach the control plane and cloud agents.
+- The NAT gateway private IP is the default route of `vpc_only` nodes and is
+  baked into the image: changing `nat_gateway_id` rebuilds it. Its public IPs
+  are admitted on 9345 and reported in `egress_ips`.
+- Destroy leaves the VPC and the NAT gateway in place. `tools/leftovers/vultr.sh`
+  matches VPCs by the description `<cluster_name>-vpc`, so an existing VPC with
+  that description is listed too.
+
+Find the IDs:
+
+```bash
+curl -s -H "Authorization: Bearer $VULTR_API_KEY" https://api.vultr.com/v2/vpcs \
+  | jq '.vpcs[] | {id, region, description, v4_subnet, v4_subnet_mask}'
+curl -s -H "Authorization: Bearer $VULTR_API_KEY" \
+  "https://api.vultr.com/v2/vpcs/$VPC_ID/nat-gateway" | jq '.nat_gateways[] | {id, status, public_ips, private_ips}'
+```
+
+Module details: [`modules/vultr`](../../modules/vultr/README.md#existing-vpc).
 
 ## Bare metal
 
@@ -277,7 +314,8 @@ Compute, Cloud GPU and VX1 instances only.
 plans API (no key, cached); load balancer, NAT gateway and snapshot rates are
 fixed values in the tool because the API does not list them. It prices
 instances, bare metal and cloud GPU plans, the load balancers, the NAT gateway
-and the snapshot; monthly-invoiced plans are capped at the monthly rate.
+(none with `vpc_id`, which reuses an existing one) and the snapshot;
+monthly-invoiced plans are capped at the monthly rate.
 Bandwidth overage is not included. The result is an estimate, not a quote.
 
 

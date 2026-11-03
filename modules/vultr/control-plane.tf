@@ -15,7 +15,7 @@ resource "vultr_instance" "control_plane" {
 
   # No public NIC. Egress is the NAT gateway; the jumphost is the only way in.
   vpc_only = true
-  vpc_ids  = [vultr_vpc.this.id]
+  vpc_ids  = [local.vpc_id]
 
   firewall_group_id = vultr_firewall_group.control_plane.id
 

@@ -332,6 +332,18 @@ variable "mdisk_mode" {
   description = "Managed disk mode of bare metal worker and GPU nodes: raid1, jbod or none."
 }
 
+variable "vpc_id" {
+  type        = string
+  default     = null
+  description = "ID of an existing VPC (original VPC, not VPC 2.0) in region to deploy into. Requires nat_gateway_id; null creates a VPC and NAT gateway."
+}
+
+variable "nat_gateway_id" {
+  type        = string
+  default     = null
+  description = "ID of the existing NAT gateway of vpc_id. Required with vpc_id."
+}
+
 # Filled by deploy.sh on pass 2 through pass2.auto.tfvars.json.
 variable "lb_backend_instance_ids" {
   type        = list(string)

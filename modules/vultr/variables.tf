@@ -47,3 +47,20 @@ variable "image_import_port_open" {
   default     = true
   description = "Allow tcp/80 from anywhere on the jumphost so Vultr can fetch the raw image. deploy.sh sets it to false on pass 2, once the snapshot is complete."
 }
+
+variable "vpc_id" {
+  type        = string
+  default     = null
+  description = "ID of an existing VPC (original VPC, not VPC 2.0) in region to deploy into instead of creating one. Requires nat_gateway_id; vpc_cidr must be null or equal to the VPC subnet."
+}
+
+variable "nat_gateway_id" {
+  type        = string
+  default     = null
+  description = "ID of the existing NAT gateway of vpc_id, used as egress for vpc_only nodes. Required with vpc_id, must be null without it."
+
+  validation {
+    condition     = (var.nat_gateway_id == null) == (var.vpc_id == null)
+    error_message = "vpc_id and nat_gateway_id must be set together: an existing VPC needs its existing NAT gateway."
+  }
+}
