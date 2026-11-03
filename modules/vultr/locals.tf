@@ -21,10 +21,12 @@ locals {
     "${abspath("${path.module}/../../scripts")}/${s}.sh -C ${local.cluster_dir}"
   ) }
 
-  vpc_cidr    = coalesce(var.vpc_cidr, "10.20.0.0/20")
-  vpc_network = cidrhost(local.vpc_cidr, 0)
-  vpc_prefix  = tonumber(split("/", local.vpc_cidr)[1])
-  vpc_mtu     = coalesce(var.vpc_mtu, 1450)
+  # With vpc_id, the existing VPC subnet (network.tf checks vpc_cidr matches).
+  vpc_cidr_new = coalesce(var.vpc_cidr, "10.20.0.0/20")
+  vpc_cidr     = var.vpc_id != null ? local.existing_vpc_cidr : local.vpc_cidr_new
+  vpc_network  = cidrhost(local.vpc_cidr_new, 0)
+  vpc_prefix   = tonumber(split("/", local.vpc_cidr_new)[1])
+  vpc_mtu      = coalesce(var.vpc_mtu, 1450)
 
   control_plane_plan = coalesce(var.control_plane_instance_type, "vx1-g-4c-16g-240s")
   jumphost_plan      = coalesce(var.jumphost_instance_type, "vc2-6c-16gb")

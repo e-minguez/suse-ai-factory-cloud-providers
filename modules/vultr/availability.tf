@@ -1,6 +1,6 @@
 # Plan-time checks: a bad input or an out-of-stock plan fails before anything
 # is created. Stock can still drain between plan and apply. The input checks
-# are preconditions on vultr_vpc.this (network.tf).
+# are preconditions on terraform_data.input_checks (network.tf).
 
 locals {
   agent_pool_unsupported = sort([

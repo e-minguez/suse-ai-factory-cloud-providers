@@ -83,7 +83,7 @@ module "config" {
 
   extra_config_files = {
     "network/configure-network.sh" = templatefile("${path.module}/templates/elemental/network/configure-network.sh.tftpl", {
-      nat_gateway_ip = vultr_nat_gateway.this.private_ips[0]
+      nat_gateway_ip = local.nat_gateway_private_ip
       vpc_mtu        = local.vpc_mtu
       vpc_prefix     = local.vpc_prefix
       dns_servers    = local.dns_servers
