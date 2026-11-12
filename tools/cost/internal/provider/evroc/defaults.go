@@ -12,7 +12,8 @@ var defaults = map[string]string{
 	"jumphost_disk_size_gb":       "200",
 }
 
-// defaultZones mirrors `length(var.zones) > 0 ? var.zones : ["a", "b", "c"]`.
+// defaultZones mirrors the last fallback of locals.tf zones: var.zones, else
+// the subnet_names keys with vpc_name, else ["a", "b", "c"].
 // Checked by TestDefaultsMatchLocals.
 var defaultZones = []string{"a", "b", "c"}
 

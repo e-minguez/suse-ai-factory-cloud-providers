@@ -110,6 +110,15 @@ GPU pools: an unpinned pool uses `zones[0]`, which must be zone `a`
 (the platform admits GPU VMs there only). Do not reorder `zones` on a standing
 cluster: subnets are numbered by position.
 
+## Existing VPC
+
+Set `vpc_name` and `subnet_names` (both; one subnet per zone, from
+`evroc networking virtualprivatecloud list` and `evroc networking subnet list`)
+to deploy into an existing VPC in `region` and `project`. Set them before the
+first apply: changing them later replaces the nodes and the load balancer.
+Destroy leaves the VPC and subnets in place. Constraints:
+[`modules/evroc`](../../modules/evroc/README.md#existing-vpc).
+
 ## Several clusters and Rancher registration
 
 Use [`tools/multicluster`](../../tools/multicluster/README.md): `cluster.sh new

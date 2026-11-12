@@ -86,7 +86,7 @@ locals {
 # The public admin entrypoint: admin_cidrs SSH plus the status relay during a build.
 resource "evroc_security_group" "jumphost" {
   name        = "${var.cluster_name}-jumphost"
-  vpc_ref     = evroc_vpc.this.fqid
+  vpc_ref     = local.vpc_ref
   project     = var.project
   region      = var.region
   user_labels = merge(local.common_labels, { "elemental-role" = "jumphost" })
@@ -123,7 +123,7 @@ resource "evroc_security_group" "builder" {
   count = length(local.builder_zones) > 0 ? 1 : 0
 
   name        = "${var.cluster_name}-builder"
-  vpc_ref     = evroc_vpc.this.fqid
+  vpc_ref     = local.vpc_ref
   project     = var.project
   region      = var.region
   user_labels = merge(local.common_labels, { "elemental-role" = "builder" })
@@ -208,7 +208,7 @@ locals {
 
 resource "evroc_security_group" "control_plane" {
   name        = "${var.cluster_name}-control-plane"
-  vpc_ref     = evroc_vpc.this.fqid
+  vpc_ref     = local.vpc_ref
   project     = var.project
   region      = var.region
   user_labels = merge(local.common_labels, { "elemental-role" = "control_plane" })
@@ -252,7 +252,7 @@ resource "evroc_security_group" "agent" {
   count = length(local.agent_pools) > 0 ? 1 : 0
 
   name    = "${var.cluster_name}-agent"
-  vpc_ref = evroc_vpc.this.fqid
+  vpc_ref = local.vpc_ref
   project = var.project
   region  = var.region
 

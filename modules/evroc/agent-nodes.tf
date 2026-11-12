@@ -64,7 +64,7 @@ resource "evroc_virtual_machine" "agent" {
   boot_disk = evroc_disk.agent[each.key].name
   # The worker group exists exactly when any pool is defined, as does agent_nodes_map.
   security_groups = [one(evroc_security_group.agent[*].fqid)]
-  subnet_ref      = evroc_subnet.this[each.value.zone].fqid
+  subnet_ref      = local.subnet_refs[each.value.zone]
   # null means no public IP.
   public_ip = try(evroc_public_ip.agent[each.key].name, null)
 

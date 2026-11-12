@@ -127,7 +127,7 @@ locals {
 
 locals {
   # Per-resource breakdown for the error messages of the checks on
-  # evroc_vpc.this (network.tf).
+  # terraform_data.input_checks (network.tf).
   control_plane_breakdown = "${var.control_plane_count} x ${local.control_plane_instance_type}${local.control_plane_gpu ? " (GPU, not counted)" : ""}"
   worker_breakdown        = join("", [for k in sort(keys(var.worker_pools)) : " + ${var.worker_pools[k].count} x ${var.worker_pools[k].instance_type} (worker pool ${k})"])
 

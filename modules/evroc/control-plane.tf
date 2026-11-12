@@ -65,7 +65,7 @@ resource "evroc_virtual_machine" "control_plane" {
   security_groups = [evroc_security_group.control_plane.fqid]
   # Zonal placement group and subnet of the node's zone; the security group is regional.
   placement_group = evroc_placement_group.control_plane[each.value.zone].fqid
-  subnet_ref      = evroc_subnet.this[each.value.zone].fqid
+  subnet_ref      = local.subnet_refs[each.value.zone]
   public_ip       = try(evroc_public_ip.control_plane[each.key].name, null)
 
   # Per-node Ignition (hostname, role) from the config module; it also fails

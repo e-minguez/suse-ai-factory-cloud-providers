@@ -309,7 +309,7 @@ run "quota_limit_short" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "managed_labels" {
@@ -541,7 +541,7 @@ run "tags_reject_slash_in_key" {
     tags = { "example.com/team" = "x" }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "api_cidrs_default_open" {
@@ -612,5 +612,266 @@ run "rancher_hostname_default_sslip" {
   assert {
     condition     = output.rancher_hostname == null || endswith(output.rancher_hostname, ".sslip.io") || !can(tostring(output.rancher_hostname))
     error_message = "Without ingress_domain the Rancher hostname must keep the sslip.io default."
+  }
+}
+
+# --- Existing VPC (vpc_name + subnet_names) ----------------------------------
+
+run "existing_vpc_reused" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a", b = "shared-b" }
+    image_ids    = { a = "SNAP-a", b = "SNAP-b" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["b"]
+    values = { fqid = "projects/p/subnets/shared-b", region = "se-sto", zone = "b", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.16.0/20" }
+  }
+
+  assert {
+    condition     = length(evroc_vpc.this) == 0 && length(evroc_subnet.this) == 0
+    error_message = "vpc_name must not create a VPC or subnets."
+  }
+
+  assert {
+    condition     = output.network.vpc_cidr == "10.30.0.0/16" && output.network.subnet_cidrs == { a = "10.30.0.0/20", b = "10.30.16.0/20" }
+    error_message = "network must come from the existing VPC and subnets; zones defaults to the subnet_names keys."
+  }
+
+  assert {
+    condition     = evroc_security_group.control_plane.vpc_ref == "projects/p/vpcs/shared-vpc" && evroc_loadbalancer.cluster.backend_network[0].vpc_ref == "projects/p/vpcs/shared-vpc"
+    error_message = "Security groups and the load balancer must use the existing VPC."
+  }
+
+  assert {
+    condition     = toset([for s in evroc_loadbalancer.cluster.backend_network[0].subnet : s.subnet_ref]) == toset(["projects/p/subnets/shared-a", "projects/p/subnets/shared-b"])
+    error_message = "The load balancer must reach the existing subnets."
+  }
+
+  assert {
+    condition = anytrue([
+      for j in values(module.config.node_runtime_ignition) : anytrue([
+        for f in jsondecode(j).storage.files :
+        strcontains(base64decode(trimprefix(f.contents.source, "data:;base64,")), "regexIface: '^10\\.30\\.'")
+        if endswith(f.path, "/canal.yaml")
+      ])
+    ])
+    error_message = "The canal ifaceRegex must match the existing VPC block."
+  }
+}
+
+run "existing_vpc_needs_subnets" {
+  command = plan
+
+  variables {
+    vpc_name = "shared-vpc"
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  expect_failures = [var.subnet_names]
+}
+
+run "existing_vpc_subnet_per_zone" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a" }
+    zones        = ["a", "b"]
+    image_ids    = { a = "SNAP-a", b = "SNAP-b" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  expect_failures = [var.subnet_names]
+}
+
+run "existing_vpc_wrong_region" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a" }
+    image_ids    = { a = "SNAP-a" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "other", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  expect_failures = [data.evroc_vpc.existing]
+}
+
+run "existing_vpc_two_blocks" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a" }
+    image_ids    = { a = "SNAP-a" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16", "10.31.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  expect_failures = [data.evroc_vpc.existing]
+}
+
+run "existing_vpc_cidr_mismatch" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a" }
+    image_ids    = { a = "SNAP-a" }
+    vpc_cidr     = "10.20.0.0/16"
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  expect_failures = [data.evroc_vpc.existing]
+}
+
+run "existing_vpc_overlaps_rke2" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a" }
+    image_ids    = { a = "SNAP-a" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.40.0.0/14"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.40.0.0/20" }
+  }
+
+  expect_failures = [data.evroc_vpc.existing]
+}
+
+run "existing_subnet_wrong_zone_or_vpc" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a" }
+    image_ids    = { a = "SNAP-a" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "b", vpc_ref = "projects/p/vpcs/other-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  expect_failures = [data.evroc_subnet.existing["a"]]
+}
+
+run "existing_subnets_mixed_prefix" {
+  command = plan
+
+  variables {
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a", b = "shared-b" }
+    image_ids    = { a = "SNAP-a", b = "SNAP-b" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["b"]
+    values = { fqid = "projects/p/subnets/shared-b", region = "se-sto", zone = "b", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.16.0/24" }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+# region null (CLI context) accepts the VPC and subnets wherever they are.
+run "existing_vpc_region_from_cli_context" {
+  command = plan
+
+  variables {
+    region       = null
+    vpc_name     = "shared-vpc"
+    subnet_names = { a = "shared-a" }
+    image_ids    = { a = "SNAP-a" }
+  }
+
+  override_data {
+    target = data.evroc_vpc.existing
+    values = { fqid = "projects/p/vpcs/shared-vpc", region = "se-sto", ipv4_cidr_blocks = ["10.30.0.0/16"] }
+  }
+
+  override_data {
+    target = data.evroc_subnet.existing["a"]
+    values = { fqid = "projects/p/subnets/shared-a", region = "se-sto", zone = "a", vpc_ref = "projects/p/vpcs/shared-vpc", ipv4_cidr_block = "10.30.0.0/20" }
+  }
+
+  assert {
+    condition     = output.network.vpc_cidr == "10.30.0.0/16"
+    error_message = "A null region must not reject the existing VPC."
   }
 }

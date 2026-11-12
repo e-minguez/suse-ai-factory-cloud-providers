@@ -22,6 +22,13 @@
 # by position, so reordering replaces every node. Appending is safe.
 zones = ["a", "b", "c"]
 
+# Deploy into an existing VPC and its subnets instead of creating them: the VPC
+# name and one subnet name per zone (keys must match zones; with zones unset
+# they become zones). Both or neither. Destroy leaves them in place. Every
+# address in the VPC block reaches the RKE2 ports; see docs/providers/evroc.md.
+# vpc_name     = "REPLACE_WITH_EVROC_VPC_NAME"
+# subnet_names = { a = "REPLACE_WITH_SUBNET_A", b = "REPLACE_WITH_SUBNET_B", c = "REPLACE_WITH_SUBNET_C" }
+
 # --------------------------------------------------------------------------
 # Access: SSH keys, admin CIDRs, password hashes
 # --------------------------------------------------------------------------

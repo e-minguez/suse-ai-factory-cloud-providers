@@ -348,6 +348,38 @@ working copy. `jumphost_disk_size_gb` defaults to 200.
   address a destroyed one had, with a different host key. `scripts/ssh.sh` uses
   a throwaway `known_hosts`, so it is unaffected; a manual `ssh` may need
   `ssh-keygen -R <ip>`.
+- With `vpc_name`, the VPC and subnets already exist: see [Existing VPC](#existing-vpc).
+
+## Existing VPC
+
+`vpc_name` and `subnet_names` (both or neither) deploy into an existing VPC and
+its subnets instead of creating them. Set them before the first apply: setting
+or clearing them later replaces the nodes and the load balancer
+(`backend_network` forces replacement).
+
+- The VPC and subnets are looked up by name in `project` and must be in
+  `region`. The VPC must have one IPv4 CIDR block.
+- `subnet_names` maps each zone in use to one subnet of that VPC in that zone.
+  With `zones` unset, its keys become the zones. All subnets need the same
+  prefix length: the image is shared by every zone and `configure-network.sh`
+  states one prefix.
+- `vpc_cidr` becomes the VPC block: leave it null or set it to that block. The
+  block must not overlap `10.42.0.0/16` or `10.43.0.0/16` (RKE2 cluster and
+  service CIDRs).
+- The security groups admit the RKE2 ports and the build-status relay from the
+  whole VPC block, so other VMs in the VPC reach the control plane and agents.
+- Egress is unchanged: the platform NAT serves VMs without a public IP in any VPC.
+- Destroy leaves the VPC and subnets in place. `tools/leftovers/evroc.sh`
+  matches by the `elemental-cluster` label, which they do not carry.
+
+Find the names:
+
+```bash
+evroc networking virtualprivatecloud list -o json | jq '.items[] | {name: .metadata.name, spec}'
+evroc networking subnet list -o json | jq '.items[] | {name: .metadata.name, spec}'
+```
+
+Module details: [`modules/evroc`](../../modules/evroc/README.md#existing-vpc).
 
 ## Quota
 
@@ -360,7 +392,7 @@ and 3 public IPs, plus a per-model GPU quota.
 The module fails at `terraform plan` (hard failure, not a warning) when:
 
 - the cluster's footprint exceeds the organization limit
-  (preconditions on `evroc_vpc.this`). The footprint is the maximum over passes
+  (preconditions on `terraform_data.input_checks`). The footprint is the maximum over passes
   of what exists at once: pass 1 is the jumphost plus one builder per other zone on
   `jumphost_instance_type`; pass 2 is the jumphost plus the control planes plus the `worker_pools` nodes
   (ordinary compute, so their vCPU and memory count; GPU nodes' do not, also

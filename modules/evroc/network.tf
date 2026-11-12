@@ -1,13 +1,6 @@
-# One regional VPC spans all zones. Regional: VPC, load balancer, backend pool,
-# public IP, security group. Zonal: subnet, disk, VM, placement group, snapshot.
-resource "evroc_vpc" "this" {
-  name             = "${var.cluster_name}-vpc"
-  ipv4_cidr_blocks = [local.vpc_cidr]
-  project          = var.project
-  region           = var.region
-  user_labels      = merge(local.common_labels, { "elemental-role" = "network" })
-
-  # Plan-time input and org-limit checks; every node depends on the VPC.
+# Plan-time input and org-limit checks. Kept off the VPC, which does not exist
+# with vpc_name.
+resource "terraform_data" "input_checks" {
   lifecycle {
     precondition {
       condition     = local.quota_demand.vcpus <= data.evroc_organization_quota.this.compute_vcpus
@@ -38,7 +31,7 @@ resource "evroc_vpc" "this" {
     }
 
     precondition {
-      condition     = tonumber(split("/", local.vpc_cidr)[1]) >= 16 && tonumber(split("/", local.vpc_cidr)[1]) <= 24
+      condition     = var.vpc_name != null || (tonumber(split("/", local.vpc_cidr_new)[1]) >= 16 && tonumber(split("/", local.vpc_cidr_new)[1]) <= 24)
       error_message = "vpc_cidr must be a /16 to /24 block: one subnet per zone is carved out of it with ${local.subnet_newbits} extra prefix bits."
     }
 
@@ -85,21 +78,117 @@ resource "evroc_vpc" "this" {
       condition     = !local.control_plane_gpu || !var.deploy_nodes || alltrue([for n in local.control_plane_nodes : contains(local.gpu_zones, n.zone)])
       error_message = "control_plane_instance_type ${local.control_plane_instance_type} is a GPU flavor and evroc admits GPU VMs only in zone(s) ${join(", ", local.gpu_zones)}. Control-plane nodes go round-robin over zones, so set zones = [${join(", ", [for z in local.gpu_zones : "\"${z}\""])}]."
     }
+
+    precondition {
+      condition     = var.vpc_name == null || length(distinct([for z, c in local.existing_subnet_cidrs : split("/", c)[1]])) <= 1
+      error_message = "The subnet_names subnets must share one prefix length (the image states a single one): ${jsonencode(local.existing_subnet_cidrs)}."
+    }
   }
 }
 
+# One regional VPC spans all zones. Regional: VPC, load balancer, backend pool,
+# public IP, security group. Zonal: subnet, disk, VM, placement group, snapshot.
+# Not created with var.vpc_name.
+resource "evroc_vpc" "this" {
+  count = var.vpc_name == null ? 1 : 0
+
+  name             = "${var.cluster_name}-vpc"
+  ipv4_cidr_blocks = [local.vpc_cidr_new]
+  project          = var.project
+  region           = var.region
+  user_labels      = merge(local.common_labels, { "elemental-role" = "network" })
+}
+
+moved {
+  from = evroc_vpc.this
+  to   = evroc_vpc.this[0]
+}
+
 # One subnet per zone (zonal), CIDRs from local.subnet_cidrs. Keyed by zone name,
-# so removing a zone destroys only its subnet.
+# so removing a zone destroys only its subnet. Not created with var.vpc_name.
 resource "evroc_subnet" "this" {
-  for_each = toset(local.zones)
+  for_each = var.vpc_name == null ? toset(local.zones) : toset([])
 
   name            = "${var.cluster_name}-subnet-${each.key}"
-  vpc_ref         = evroc_vpc.this.fqid
+  vpc_ref         = evroc_vpc.this[0].fqid
   zone            = each.key
   ipv4_cidr_block = local.subnet_cidrs[each.key]
   project         = var.project
   region          = var.region
   user_labels     = merge(local.common_labels, { "elemental-role" = "network" })
+}
+
+# --- Existing VPC (var.vpc_name) ---------------------------------------------
+#
+# Read only: destroy leaves the VPC and its subnets in place.
+data "evroc_vpc" "existing" {
+  count = var.vpc_name != null ? 1 : 0
+
+  name    = var.vpc_name
+  project = var.project
+
+  lifecycle {
+    postcondition {
+      condition     = var.region == null || self.region == var.region
+      error_message = "VPC ${var.vpc_name} is in region \"${self.region}\", not \"${coalesce(var.region, "-")}\"."
+    }
+
+    # Firewall rules, the status relay and the canal interface regex take one block.
+    postcondition {
+      condition     = length(self.ipv4_cidr_blocks) == 1
+      error_message = "VPC ${var.vpc_name} must have exactly one IPv4 CIDR block; it has ${jsonencode(self.ipv4_cidr_blocks)}."
+    }
+
+    postcondition {
+      condition     = var.vpc_cidr == null || try(tolist(self.ipv4_cidr_blocks)[0] == var.vpc_cidr, false)
+      error_message = "vpc_cidr (${coalesce(var.vpc_cidr, "null")}) does not match the CIDR block of VPC ${var.vpc_name}, ${jsonencode(self.ipv4_cidr_blocks)}. Leave vpc_cidr null with vpc_name."
+    }
+
+    # Same rule as the vpc_cidr validation (variables-common.tf).
+    postcondition {
+      condition = !anytrue([
+        for b in self.ipv4_cidr_blocks : anytrue([
+          for c in ["10.42.0.0/16", "10.43.0.0/16"] :
+          cidrhost(format("%s/%d", cidrhost(b, 0), min(tonumber(split("/", b)[1]), 16)), 0) == cidrhost(format("%s/%d", cidrhost(c, 0), min(tonumber(split("/", b)[1]), 16)), 0)
+        ])
+      ])
+      error_message = "The CIDR block of VPC ${var.vpc_name}, ${jsonencode(self.ipv4_cidr_blocks)}, overlaps the RKE2 default cluster-cidr 10.42.0.0/16 or service-cidr 10.43.0.0/16."
+    }
+  }
+}
+
+data "evroc_subnet" "existing" {
+  for_each = var.vpc_name != null ? var.subnet_names : {}
+
+  name    = each.value
+  project = var.project
+
+  lifecycle {
+    postcondition {
+      condition     = self.zone == each.key
+      error_message = "subnet_names[\"${each.key}\"] = ${each.value} is in zone \"${self.zone}\", not \"${each.key}\"."
+    }
+
+    postcondition {
+      condition     = var.region == null || self.region == var.region
+      error_message = "Subnet ${each.value} is in region \"${self.region}\", not \"${coalesce(var.region, "-")}\"."
+    }
+
+    postcondition {
+      condition     = self.vpc_ref == data.evroc_vpc.existing[0].fqid
+      error_message = "Subnet ${each.value} belongs to ${self.vpc_ref}, not to VPC ${var.vpc_name}."
+    }
+  }
+}
+
+locals {
+  vpc_ref = var.vpc_name != null ? data.evroc_vpc.existing[0].fqid : evroc_vpc.this[0].fqid
+  subnet_refs = (var.vpc_name != null
+    ? { for z, s in data.evroc_subnet.existing : z => s.fqid }
+    : { for z, s in evroc_subnet.this : z => s.fqid }
+  )
+  existing_vpc_cidr     = var.vpc_name != null ? try(tolist(data.evroc_vpc.existing[0].ipv4_cidr_blocks)[0], null) : null
+  existing_subnet_cidrs = { for z, s in data.evroc_subnet.existing : z => s.ipv4_cidr_block }
 }
 
 # The API VIP, allocated with no dependencies so it is known before the load

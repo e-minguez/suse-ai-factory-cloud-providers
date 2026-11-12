@@ -135,13 +135,13 @@ resource "evroc_loadbalancer" "cluster" {
 
   # One subnet per zone; a missing zone's backends are unreachable.
   backend_network {
-    vpc_ref = evroc_vpc.this.fqid
+    vpc_ref = local.vpc_ref
 
     dynamic "subnet" {
-      for_each = evroc_subnet.this
+      for_each = local.subnet_refs
       content {
         zone       = subnet.key
-        subnet_ref = subnet.value.fqid
+        subnet_ref = subnet.value
       }
     }
   }
