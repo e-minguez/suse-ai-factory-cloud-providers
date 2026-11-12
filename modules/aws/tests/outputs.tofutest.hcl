@@ -692,37 +692,37 @@ run "ingress_domain_unset_keeps_nlb_lookup" {
 # File-level: apply to every run that sets vpc_id; runs override what they break.
 override_data {
   target = data.aws_vpc.existing
-  values = { id = "vpc-existing", cidr_block = "10.30.0.0/16", enable_dns_support = true }
+  values = { cidr_block = "10.30.0.0/16", enable_dns_support = true }
 }
 
 override_data {
   target = data.aws_subnet.public["a"]
-  values = { id = "subnet-pub-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.0.0/24" }
+  values = { vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.0.0/24" }
 }
 
 override_data {
   target = data.aws_subnet.public["b"]
-  values = { id = "subnet-pub-b", vpc_id = "vpc-existing", availability_zone = "us-east-1b", cidr_block = "10.30.1.0/24" }
+  values = { vpc_id = "vpc-existing", availability_zone = "us-east-1b", cidr_block = "10.30.1.0/24" }
 }
 
 override_data {
   target = data.aws_subnet.private["a"]
-  values = { id = "subnet-priv-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.10.0/24" }
+  values = { vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.10.0/24" }
 }
 
 override_data {
   target = data.aws_subnet.private["b"]
-  values = { id = "subnet-priv-b", vpc_id = "vpc-existing", availability_zone = "us-east-1b", cidr_block = "10.30.11.0/24" }
+  values = { vpc_id = "vpc-existing", availability_zone = "us-east-1b", cidr_block = "10.30.11.0/24" }
 }
 
 override_data {
   target = data.aws_route_table.public
-  values = { route_table_id = "rtb-pub", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "igw-1", nat_gateway_id = "" }] }
+  values = { routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "igw-1", nat_gateway_id = "", transit_gateway_id = "", carrier_gateway_id = "", core_network_arn = "", destination_prefix_list_id = "", egress_only_gateway_id = "", instance_id = "", ipv6_cidr_block = "", local_gateway_id = "", network_interface_id = "", odb_network_arn = "", vpc_endpoint_id = "", vpc_peering_connection_id = "" }] }
 }
 
 override_data {
   target = data.aws_route_table.private
-  values = { route_table_id = "rtb-priv", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "nat-1" }] }
+  values = { routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "nat-1", transit_gateway_id = "", carrier_gateway_id = "", core_network_arn = "", destination_prefix_list_id = "", egress_only_gateway_id = "", instance_id = "", ipv6_cidr_block = "", local_gateway_id = "", network_interface_id = "", odb_network_arn = "", vpc_endpoint_id = "", vpc_peering_connection_id = "" }] }
 }
 
 override_data {
@@ -785,7 +785,7 @@ run "existing_vpc_needs_subnets" {
 
   override_data {
     target = data.aws_vpc.existing
-    values = { id = "vpc-existing", cidr_block = "10.30.0.0/16", enable_dns_support = true }
+    values = { cidr_block = "10.30.0.0/16", enable_dns_support = true }
   }
 
   expect_failures = [var.public_subnet_ids]
@@ -802,7 +802,7 @@ run "existing_vpc_without_dns_support" {
 
   override_data {
     target = data.aws_vpc.existing
-    values = { id = "vpc-existing", cidr_block = "10.30.0.0/16", enable_dns_support = false }
+    values = { cidr_block = "10.30.0.0/16", enable_dns_support = false }
   }
 
   expect_failures = [data.aws_vpc.existing]
@@ -832,7 +832,7 @@ run "existing_subnet_wrong_zone" {
 
   override_data {
     target = data.aws_subnet.private["b"]
-    values = { id = "subnet-priv-b", vpc_id = "vpc-existing", availability_zone = "us-east-1c", cidr_block = "10.30.11.0/24" }
+    values = { vpc_id = "vpc-existing", availability_zone = "us-east-1c", cidr_block = "10.30.11.0/24" }
   }
 
   expect_failures = [data.aws_subnet.private["b"]]
@@ -849,7 +849,7 @@ run "existing_subnet_outside_vpc_cidr" {
 
   override_data {
     target = data.aws_subnet.public["a"]
-    values = { id = "subnet-pub-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "100.64.0.0/24" }
+    values = { vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "100.64.0.0/24" }
   }
 
   expect_failures = [data.aws_subnet.public["a"]]
@@ -866,7 +866,7 @@ run "existing_public_subnet_without_igw" {
 
   override_data {
     target = data.aws_route_table.public
-    values = { route_table_id = "rtb-pub", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "nat-1" }] }
+    values = { routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "nat-1", transit_gateway_id = "", carrier_gateway_id = "", core_network_arn = "", destination_prefix_list_id = "", egress_only_gateway_id = "", instance_id = "", ipv6_cidr_block = "", local_gateway_id = "", network_interface_id = "", odb_network_arn = "", vpc_endpoint_id = "", vpc_peering_connection_id = "" }] }
   }
 
   expect_failures = [data.aws_route_table.public]
@@ -883,7 +883,7 @@ run "existing_private_subnet_via_igw" {
 
   override_data {
     target = data.aws_route_table.private
-    values = { route_table_id = "rtb-priv", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "igw-1", nat_gateway_id = "" }] }
+    values = { routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "igw-1", nat_gateway_id = "", transit_gateway_id = "", carrier_gateway_id = "", core_network_arn = "", destination_prefix_list_id = "", egress_only_gateway_id = "", instance_id = "", ipv6_cidr_block = "", local_gateway_id = "", network_interface_id = "", odb_network_arn = "", vpc_endpoint_id = "", vpc_peering_connection_id = "" }] }
   }
 
   expect_failures = [data.aws_route_table.private]
@@ -900,7 +900,7 @@ run "existing_private_subnet_too_small" {
 
   override_data {
     target = data.aws_subnet.private["a"]
-    values = { id = "subnet-priv-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.10.0/28" }
+    values = { vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.10.0/28" }
   }
 
   expect_failures = [data.aws_subnet.private["a"]]
@@ -918,7 +918,7 @@ run "existing_private_subnet_via_tgw" {
 
   override_data {
     target = data.aws_route_table.private
-    values = { route_table_id = "rtb-priv", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "", transit_gateway_id = "tgw-1" }] }
+    values = { routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "", transit_gateway_id = "tgw-1", carrier_gateway_id = "", core_network_arn = "", destination_prefix_list_id = "", egress_only_gateway_id = "", instance_id = "", ipv6_cidr_block = "", local_gateway_id = "", network_interface_id = "", odb_network_arn = "", vpc_endpoint_id = "", vpc_peering_connection_id = "" }] }
   }
 
   assert {
