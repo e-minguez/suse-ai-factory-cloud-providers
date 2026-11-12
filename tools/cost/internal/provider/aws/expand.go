@@ -18,7 +18,8 @@ const (
 // Expand mirrors the resources of modules/aws.
 func (*awsProvider) Expand(cfg provider.Config) ([]pricing.Resource, []pricing.Excluded) {
 	c := cfg.Common
-	zones := cfg.Details.(details).zones
+	d := cfg.Details.(details)
+	zones := d.zones
 	var res []pricing.Resource
 
 	nodeQty := func(n int) int {
@@ -62,10 +63,15 @@ func (*awsProvider) Expand(cfg provider.Config) ([]pricing.Resource, []pricing.E
 		pricing.Resource{Kind: pricing.KindFixed, Label: "public IPv4 (public NLB, one per zone)", Role: "lb", RateID: ratePublicIP, Qty: zones},
 	)
 
-	// network.tf: one NAT gateway with one Elastic IP for every private subnet.
+	// network.tf: one NAT gateway with one Elastic IP for every private subnet;
+	// none with vpc_id (the existing network provides egress).
+	nat := 1
+	if d.existingVPC {
+		nat = 0
+	}
 	res = append(res,
-		pricing.Resource{Kind: pricing.KindFixed, Label: "nat gateway", Role: "network", RateID: rateNAT, Qty: 1},
-		pricing.Resource{Kind: pricing.KindFixed, Label: "public IPv4 (nat gateway)", Role: "network", RateID: ratePublicIP, Qty: 1},
+		pricing.Resource{Kind: pricing.KindFixed, Label: "nat gateway", Role: "network", RateID: rateNAT, Qty: nat},
+		pricing.Resource{Kind: pricing.KindFixed, Label: "public IPv4 (nat gateway)", Role: "network", RateID: ratePublicIP, Qty: nat},
 	)
 
 	// image.tf: the imported EBS snapshot, removed by destroy. The AMI has no

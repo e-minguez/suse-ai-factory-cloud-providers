@@ -88,6 +88,10 @@ aws:
   examples:
     worker_pools: |
       {"cpu": {"instance_type": "m7i.xlarge", "count": 2}}
+    public_subnet_ids: |
+      {"a": "subnet-0123456789abcdef0", "b": "subnet-0123456789abcdef1"}
+    private_subnet_ids: |
+      {"a": "subnet-0fedcba9876543210", "b": "subnet-0fedcba9876543211"}
   basic:
     - name: region
       label: AWS region
@@ -97,6 +101,9 @@ aws:
     Provider:
       - vmimport_role_name
       - jumphost_instance_profile_name
+      - vpc_id
+      - {name: public_subnet_ids, widget: json}
+      - {name: private_subnet_ids, widget: json}
 
 evroc:
   examples:

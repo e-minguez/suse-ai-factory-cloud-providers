@@ -60,6 +60,10 @@ module "ai_factory" {
   vmimport_role_name             = var.vmimport_role_name
   jumphost_instance_profile_name = var.jumphost_instance_profile_name
 
+  vpc_id             = var.vpc_id
+  public_subnet_ids  = var.public_subnet_ids
+  private_subnet_ids = var.private_subnet_ids
+
   image_rebuild      = var.image_rebuild
   aif_release        = var.aif_release
   components         = var.components

@@ -16,7 +16,6 @@ locals {
 
   config_dir = "/opt/elemental-config"
 
-  vpc_cidr                    = coalesce(var.vpc_cidr, "10.20.0.0/20")
   vpc_mtu                     = coalesce(var.vpc_mtu, 9001)
   pod_veth_mtu                = local.vpc_mtu - 50
   control_plane_instance_type = coalesce(var.control_plane_instance_type, "m7i.xlarge")
@@ -24,8 +23,9 @@ locals {
   jumphost_instance_type      = coalesce(var.jumphost_instance_type, "c6i.xlarge")
   jumphost_disk_size_gb       = coalesce(var.jumphost_disk_size_gb, 100)
 
-  # Empty zones: the first three AZs of the region. Suffixes are relative to var.region.
-  zones = length(var.zones) > 0 ? var.zones : [
+  # Empty zones: the private_subnet_ids keys with vpc_id, else the first three
+  # AZs of the region. Suffixes are relative to var.region.
+  zones = length(var.zones) > 0 ? var.zones : length(var.private_subnet_ids) > 0 ? sort(keys(var.private_subnet_ids)) : [
     for n in slice(data.aws_availability_zones.available.names, 0, min(3, length(data.aws_availability_zones.available.names))) :
     trimprefix(n, coalesce(var.region, ""))
   ]
@@ -55,16 +55,27 @@ locals {
 # Networking: every address is chosen at plan time, so the image, load
 # balancers and nodes need no second apply.
 locals {
-  # Each half of the VPC (low = public, high = private) is split into one subnet per zone.
-  az_bits       = local.az_count <= 1 ? 0 : ceil(log(local.az_count, 2))
-  public_block  = cidrsubnet(local.vpc_cidr, 1, 0)
-  private_block = cidrsubnet(local.vpc_cidr, 1, 1)
+  # With vpc_id, the existing VPC primary CIDR and subnets (network.tf checks them).
+  vpc_cidr_new = coalesce(var.vpc_cidr, "10.20.0.0/20")
+  vpc_cidr     = var.vpc_id != null ? local.existing_vpc_cidr : local.vpc_cidr_new
 
-  public_subnet_cidrs  = [for i in range(local.az_count) : cidrsubnet(local.public_block, local.az_bits, i)]
-  private_subnet_cidrs = [for i in range(local.az_count) : cidrsubnet(local.private_block, local.az_bits, i)]
+  # Each half of a new VPC (low = public, high = private) is split into one subnet per zone.
+  az_bits       = local.az_count <= 1 ? 0 : ceil(log(local.az_count, 2))
+  public_block  = cidrsubnet(local.vpc_cidr_new, 1, 0)
+  private_block = cidrsubnet(local.vpc_cidr_new, 1, 1)
+
+  # Indexed by zone: index i is local.az_names[i].
+  public_subnet_cidrs = (var.vpc_id != null
+    ? [for z in local.zones : try(data.aws_subnet.public[z].cidr_block, null)]
+    : [for i in range(local.az_count) : cidrsubnet(local.public_block, local.az_bits, i)]
+  )
+  private_subnet_cidrs = (var.vpc_id != null
+    ? [for z in local.zones : try(data.aws_subnet.private[z].cidr_block, null)]
+    : [for i in range(local.az_count) : cidrsubnet(local.private_block, local.az_bits, i)]
+  )
 
   # Host 10 of the first private subnet: the internal NLB's static address and network.apiVIP.
-  api_vip  = cidrhost(local.private_subnet_cidrs[0], 10)
+  api_vip  = try(cidrhost(local.private_subnet_cidrs[0], 10), null)
   api_host = coalesce(var.api_host, aws_lb.api.dns_name)
   # Outputs and kubeconfig: the public NLB serves kubectl on 6443 to api_cidrs and
   # is in the SANs. Nodes keep api_host above (internal NLB) in their config.
@@ -90,7 +101,7 @@ locals {
   ]
 
   # Worker and GPU pools in sort(keys()) order so hostnames stay stable when other pools change.
-  # A zone outside local.zones maps to index 0 here; the aws_vpc.this preconditions reject it.
+  # A zone outside local.zones maps to index 0 here; terraform_data.input_checks rejects it.
   agent_nodes_raw = flatten([
     for pool in sort(keys(local.agent_pools)) : [
       for i in range(local.agent_pools[pool].count) : {
@@ -117,12 +128,13 @@ locals {
   cluster_nodes = [
     for idx, node in local.cluster_nodes_raw : merge(node, {
       subnet_index = node.az_index
-      private_ip = node.role != "control_plane" ? null : cidrhost(
+      # try(): an existing subnet too small fails terraform_data.input_checks instead.
+      private_ip = node.role != "control_plane" ? null : try(cidrhost(
         local.private_subnet_cidrs[node.az_index],
         local.node_ip_base_offset + length([
           for earlier in slice(local.cluster_nodes_raw, 0, idx) : earlier if earlier.az_index == node.az_index
         ])
-      )
+      ), null)
     })
   ]
 

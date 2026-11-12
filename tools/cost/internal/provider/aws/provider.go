@@ -13,7 +13,8 @@ import (
 
 // details is Config.Details for aws.
 type details struct {
-	zones int // number of Availability Zones the module spans
+	zones       int  // number of Availability Zones the module spans
+	existingVPC bool // vpc_id set: the VPC, its gateways and routes already exist
 }
 
 // awsProvider implements provider.Provider. Catalog is called after Resolve
@@ -30,9 +31,10 @@ func init() { provider.Register(&awsProvider{}) }
 
 func (*awsProvider) Name() string { return "aws" }
 
-// Resolve applies the locals.tf defaults and records the instance types the
-// catalog must price.
-func (p *awsProvider) Resolve(c tfconfig.Common, _ *tfconfig.Vars) (provider.Config, []tfconfig.Diagnostic) {
+// Resolve applies the locals.tf defaults (zones from the private_subnet_ids
+// keys when unset), reads vpc_id and records the instance types the catalog
+// must price.
+func (p *awsProvider) Resolve(c tfconfig.Common, v *tfconfig.Vars) (provider.Config, []tfconfig.Diagnostic) {
 	var diags []tfconfig.Diagnostic
 	if c.Region == "" {
 		diags = append(diags, tfconfig.Diagnostic{Severity: tfconfig.SeverityError, Summary: `variable "region" has no default and no value was found in the tfvars; pass --region`})
@@ -48,9 +50,15 @@ func (p *awsProvider) Resolve(c tfconfig.Common, _ *tfconfig.Vars) (provider.Con
 	c.GPUPools = withDisk(c.GPUPools)
 	c.WorkerPools = withDisk(c.WorkerPools)
 
-	zones := defaultZones
+	d := details{zones: defaultZones}
+	if v != nil {
+		d.existingVPC = v.IsSet("vpc_id")
+		if len(c.Zones) == 0 {
+			c.Zones = v.MapKeys("private_subnet_ids")
+		}
+	}
 	if len(c.Zones) > 0 {
-		zones = len(c.Zones)
+		d.zones = len(c.Zones)
 	}
 
 	set := map[string]bool{c.ControlPlaneInstanceType: true}
@@ -71,7 +79,7 @@ func (p *awsProvider) Resolve(c tfconfig.Common, _ *tfconfig.Vars) (provider.Con
 	p.types = types
 	p.mu.Unlock()
 
-	return provider.Config{Common: c, Details: details{zones: zones}}, diags
+	return provider.Config{Common: c, Details: d}, diags
 }
 
 func orDefault(v *float64, def string) *float64 {

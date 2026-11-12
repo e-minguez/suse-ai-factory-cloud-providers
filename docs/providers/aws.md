@@ -343,6 +343,47 @@ pool's `disk_size_gb` (default 200).
   NeuVector then use `rancher.<domain>`, `obs.<domain>` and
   `neuvector.<domain>`, and the NLB DNS name keeps all zones, so the single-zone
   caveat above does not apply. The API keeps its own name (`api_host`).
+- With `vpc_id`, the VPC, subnets and routes already exist: see [Existing VPC](#existing-vpc).
+
+## Existing VPC
+
+`vpc_id`, `public_subnet_ids` and `private_subnet_ids` (all three or none)
+deploy into an existing VPC instead of creating one. Set them before the first
+apply: setting or clearing them later replaces the nodes and the load balancers.
+
+- One public and one private subnet per zone, keyed by zone suffix (`a`, `b`,
+  ...). With `zones` unset, the keys become the zones.
+- Public subnets (jumphost, internet-facing NLB) need a `0.0.0.0/0` route to an
+  internet gateway. Private subnets (nodes, internal NLB) need a `0.0.0.0/0`
+  route that is not an internet gateway: a NAT gateway, transit gateway or
+  appliance. The plan reads each subnet's route table (its explicit association,
+  else the VPC main table) and fails otherwise.
+- The VPC needs DNS support: nodes resolve the internal NLB by name.
+- `vpc_cidr` becomes the VPC primary CIDR: leave it null or set it to that CIDR.
+  Every subnet must be inside it, and it must not overlap `10.42.0.0/16` or
+  `10.43.0.0/16` (RKE2 cluster and service CIDRs). Every address in it reaches
+  the internal NLB (6443, 9345).
+- Fixed addresses: host 10 of the first private subnet is the API VIP, and
+  control planes take hosts 20 and up of their zone's private subnet. They must
+  be free; the plan checks only that the subnet is large enough, and EC2 fails
+  the apply when an address is in use.
+- The module creates no S3 gateway endpoint and changes no route table. The
+  jumphost uploads the image from the public subnet through the internet gateway.
+- `egress_ips` lists the public IPs of the NAT gateways the private route
+  tables use; it is empty when egress goes through a transit gateway or appliance.
+- Destroy leaves the VPC, subnets, gateways and route tables in place.
+  `tools/leftovers/aws.sh` matches by the `elemental-cluster` tag, which they do
+  not carry.
+
+Find the IDs:
+
+```bash
+aws ec2 describe-vpcs --query 'Vpcs[].{id:VpcId,cidr:CidrBlock,name:Tags[?Key==`Name`]|[0].Value}' --output table
+aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC_ID \
+  --query 'Subnets[].{id:SubnetId,az:AvailabilityZone,cidr:CidrBlock,name:Tags[?Key==`Name`]|[0].Value}' --output table
+```
+
+Module details: [`modules/aws`](../../modules/aws/README.md#existing-vpc).
 
 ## Cost estimate
 
@@ -350,7 +391,7 @@ pool's `disk_size_gb` (default 200).
 ([tools/cost](../../tools/cost/README.md)). Rates come from the AWS Price List
 API, so it needs credentials with `pricing:GetProducts` (for example
 `aws sso login`) and network access. It prices EC2 instances, gp3 volumes, the
-NAT gateway with its public IPv4 address, load balancer hours, public IPv4
+NAT gateway with its public IPv4 address (none with `vpc_id`), load balancer hours, public IPv4
 addresses and the image snapshot; the jumphost is listed as build only. Data
 transfer, NLB capacity units, NAT per-GB processing and the raw image in S3 are
 not included. The result is an estimate, not a quote.
