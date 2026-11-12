@@ -105,7 +105,7 @@ run "vcpu_short" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "vcpu_short_pass2" {
@@ -127,7 +127,7 @@ run "vcpu_short_pass2" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "memory_short" {
@@ -149,7 +149,7 @@ run "memory_short" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "ip_short" {
@@ -171,7 +171,7 @@ run "ip_short" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "ip_short_with_control_plane_ips" {
@@ -194,7 +194,7 @@ run "ip_short_with_control_plane_ips" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "high_usage_but_footprint_fits" {
@@ -261,7 +261,7 @@ run "vcpu_short_pass1_peak_seen_on_pass2" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 # Pass 2 peak is 4 (jumphost) + 3 x 4 (control planes) = 16 vCPU; one worker
@@ -286,7 +286,7 @@ run "worker_nodes_count_toward_footprint" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "worker_nodes_fit" {
@@ -330,7 +330,7 @@ run "worker_public_ips_count" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "worker_gpu_flavor_rejected" {
@@ -440,7 +440,7 @@ run "gpu_control_plane_outside_gpu_zone" {
     }
   }
 
-  expect_failures = [evroc_vpc.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 # An image-only plan creates no control planes, so their zones are not checked.

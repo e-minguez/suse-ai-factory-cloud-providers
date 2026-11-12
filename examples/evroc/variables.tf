@@ -138,6 +138,18 @@ variable "image_target_disk_gb" {
   description = "Size in GB of the blank disk each build host writes the raw image onto."
 }
 
+variable "vpc_name" {
+  type        = string
+  default     = null
+  description = "Name of an existing VPC in region and project to deploy into. Requires subnet_names; null creates a VPC and subnets."
+}
+
+variable "subnet_names" {
+  type        = map(string)
+  default     = {}
+  description = "Existing subnets of vpc_name keyed by zone, one per zone in use. Required with vpc_name."
+}
+
 variable "gpu_pools" {
   type = map(object({
     instance_type = string

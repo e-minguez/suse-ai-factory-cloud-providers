@@ -102,11 +102,15 @@ evroc:
   examples:
     worker_pools: |
       {"general": {"instance_type": "c1a.m", "count": 2, "zone": "b"}}
+    subnet_names: |
+      {"a": "my-subnet-a", "b": "my-subnet-b"}
   basic:
     - {name: region, label: evroc region (empty = CLI context), widget: text}
   groups:
     Provider:
       - project
+      - vpc_name
+      - {name: subnet_names, widget: json}
 
 exoscale:
   examples:

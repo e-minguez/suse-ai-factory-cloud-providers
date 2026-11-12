@@ -30,6 +30,9 @@ module "ai_factory" {
   gpu_pools                   = var.gpu_pools
   worker_pools                = var.worker_pools
 
+  vpc_name     = var.vpc_name
+  subnet_names = var.subnet_names
+
   components = var.components
 
   suse_storage_nodes         = var.suse_storage_nodes

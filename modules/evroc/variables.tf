@@ -31,3 +31,25 @@ variable "image_target_disk_gb" {
     error_message = "image_target_disk_gb (${var.image_target_disk_gb}) must be at least the size image_disk_size (${var.image_disk_size}) requests."
   }
 }
+
+variable "vpc_name" {
+  type        = string
+  default     = null
+  description = "Name of an existing VPC in region and project to deploy into instead of creating one. Requires subnet_names; vpc_cidr must be null or equal to the VPC CIDR block."
+}
+
+variable "subnet_names" {
+  type        = map(string)
+  default     = {}
+  description = "Existing subnets of vpc_name keyed by zone (\"a\", \"b\", \"c\"), one per zone in use. Required with vpc_name, must be empty without it; empty zones defaults to its keys."
+
+  validation {
+    condition     = (length(var.subnet_names) == 0) == (var.vpc_name == null)
+    error_message = "vpc_name and subnet_names must be set together: an existing VPC needs one existing subnet per zone."
+  }
+
+  validation {
+    condition     = length(var.subnet_names) == 0 || length(var.zones) == 0 || toset(var.zones) == toset(keys(var.subnet_names))
+    error_message = "subnet_names needs exactly one entry per zone in zones (${join(", ", var.zones)}); it has ${join(", ", sort(keys(var.subnet_names)))}."
+  }
+}

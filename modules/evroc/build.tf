@@ -134,7 +134,7 @@ resource "evroc_virtual_machine" "jumphost" {
   boot_disk       = evroc_disk.jumphost_boot[local.primary_zone].name
   security_groups = [evroc_security_group.jumphost.fqid]
   public_ip       = evroc_public_ip.jumphost.name
-  subnet_ref      = evroc_subnet.this[local.primary_zone].fqid
+  subnet_ref      = local.subnet_refs[local.primary_zone]
   ssh_keys        = var.ssh_authorized_keys
 
   cloud_config_user_data = local.jumphost_user_data
@@ -169,7 +169,7 @@ resource "evroc_virtual_machine" "builder" {
 
   boot_disk       = evroc_disk.builder_boot[each.key].name
   security_groups = [evroc_security_group.builder[0].fqid]
-  subnet_ref      = evroc_subnet.this[each.key].fqid
+  subnet_ref      = local.subnet_refs[each.key]
   ssh_keys        = var.ssh_authorized_keys
 
   # No public_ip; outbound access is provided by the platform.

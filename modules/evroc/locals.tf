@@ -16,8 +16,7 @@ locals {
     "${abspath("${path.module}/../../scripts")}/${s}.sh -C ${local.cluster_dir}"
   ) }
 
-  zones                       = length(var.zones) > 0 ? var.zones : ["a", "b", "c"]
-  vpc_cidr                    = coalesce(var.vpc_cidr, "10.20.0.0/16")
+  zones                       = length(var.zones) > 0 ? var.zones : (var.vpc_name != null ? sort(keys(var.subnet_names)) : ["a", "b", "c"])
   vpc_mtu                     = coalesce(var.vpc_mtu, 8900)
   control_plane_instance_type = coalesce(var.control_plane_instance_type, "c1a.m")
   control_plane_disk_size_gb  = coalesce(var.control_plane_disk_size_gb, 200)
@@ -92,14 +91,20 @@ locals {
   # exported as the subnet_cidrs output.
   #
   # The index is the zone's position in local.zones: append zones, do not reorder.
-  subnet_cidrs = {
-    for i, z in local.zones : z => cidrsubnet(local.vpc_cidr, local.subnet_newbits, i)
+  # With vpc_name, the existing VPC block and subnets (network.tf checks them).
+  vpc_cidr_new = coalesce(var.vpc_cidr, "10.20.0.0/16")
+  vpc_cidr     = var.vpc_name != null ? local.existing_vpc_cidr : local.vpc_cidr_new
+  subnet_cidrs = var.vpc_name != null ? local.existing_subnet_cidrs : {
+    for i, z in local.zones : z => cidrsubnet(local.vpc_cidr_new, local.subnet_newbits, i)
   }
 
-  # Every subnet shares this prefix length by construction, which is what lets
+  # One prefix for every subnet (by construction, or checked in network.tf), so
   # configure-network.sh -- one script baked into one image serving nodes in
-  # every zone -- state a single expected prefix.
-  subnet_prefix = tonumber(split("/", local.vpc_cidr)[1]) + local.subnet_newbits
+  # every zone -- states a single expected prefix.
+  subnet_prefix = (var.vpc_name != null
+    ? try(tonumber(split("/", local.subnet_cidrs[local.zones[0]])[1]), 0)
+    : tonumber(split("/", local.vpc_cidr_new)[1]) + local.subnet_newbits
+  )
 
   # Snapshots are zonal, so the image is built once per zone (build.tf).
   # See docs/decisions/004-evroc-module-rationale.md.
