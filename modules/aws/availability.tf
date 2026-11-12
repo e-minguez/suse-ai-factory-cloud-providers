@@ -1,5 +1,5 @@
 # Plan-time preflight: per-zone instance-type offerings. The input checks are
-# preconditions on aws_vpc.this (network.tf).
+# preconditions on terraform_data.input_checks (network.tf).
 
 locals {
   # One (instance_type, zone) pair per node placed, plus the jumphost while an image is built.

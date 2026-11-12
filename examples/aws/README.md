@@ -145,6 +145,15 @@ aws ec2 copy-image --source-region <region> --region <region> \
 `ssh.sh` (it reaches nodes through the jumphost) and `build-logs.sh` need the
 jumphost, so they are unavailable while `image_id` is set.
 
+## Existing VPC
+
+Set `vpc_id`, `public_subnet_ids` and `private_subnet_ids` (all three; one public
+and one private subnet per zone) to deploy into an existing VPC in `region`.
+The module then creates no VPC, subnets, gateways, route tables or S3 endpoint,
+and destroy leaves them in place. Set them before the first apply: changing
+them later replaces the nodes and load balancers. Constraints:
+[docs/providers/aws.md](../../docs/providers/aws.md#existing-vpc).
+
 ## Teardown
 
 ```bash

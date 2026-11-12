@@ -343,13 +343,13 @@ run "managed_labels" {
   }
 
   assert {
-    condition = alltrue([for k in ["cluster", "managed-by", "module", "created"] : contains(keys(aws_vpc.this.tags), "elemental-${k}")]) && (
-      aws_vpc.this.tags["elemental-cluster"] == "out-aws" &&
-      aws_vpc.this.tags["elemental-managed-by"] == "terraform" &&
-      aws_vpc.this.tags["elemental-module"] == "ai-factory" &&
-      can(regex("^[0-9]{8}-[0-9]{6}$", aws_vpc.this.tags["elemental-created"])) &&
-      aws_vpc.this.tags["elemental-created"] == "20260930-123456" &&
-      aws_vpc.this.tags["env"] == "test"
+    condition = alltrue([for k in ["cluster", "managed-by", "module", "created"] : contains(keys(aws_vpc.this[0].tags), "elemental-${k}")]) && (
+      aws_vpc.this[0].tags["elemental-cluster"] == "out-aws" &&
+      aws_vpc.this[0].tags["elemental-managed-by"] == "terraform" &&
+      aws_vpc.this[0].tags["elemental-module"] == "ai-factory" &&
+      can(regex("^[0-9]{8}-[0-9]{6}$", aws_vpc.this[0].tags["elemental-created"])) &&
+      aws_vpc.this[0].tags["elemental-created"] == "20260930-123456" &&
+      aws_vpc.this[0].tags["env"] == "test"
     )
     error_message = "Managed tags must carry the four elemental.suse.com keys (created as UTC YYYYMMDD-hhmmss) plus var.tags."
   }
@@ -682,5 +682,245 @@ run "ingress_domain_unset_keeps_nlb_lookup" {
   assert {
     condition     = length(data.aws_network_interface.public_nlb) == 1 && output.rancher_hostname == aws_lb.public.dns_name
     error_message = "Without ingress_domain the default stays the NLB DNS name and the lookup runs."
+  }
+}
+
+# --- Existing VPC (vpc_id + public_subnet_ids + private_subnet_ids) ------------
+
+# File-level: apply to every run that sets vpc_id; runs override what they break.
+override_data {
+  target = data.aws_vpc.existing
+  values = { id = "vpc-existing", cidr_block = "10.30.0.0/16", enable_dns_support = true }
+}
+
+override_data {
+  target = data.aws_subnet.public["a"]
+  values = { id = "subnet-pub-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.0.0/24" }
+}
+
+override_data {
+  target = data.aws_subnet.public["b"]
+  values = { id = "subnet-pub-b", vpc_id = "vpc-existing", availability_zone = "us-east-1b", cidr_block = "10.30.1.0/24" }
+}
+
+override_data {
+  target = data.aws_subnet.private["a"]
+  values = { id = "subnet-priv-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.10.0/24" }
+}
+
+override_data {
+  target = data.aws_subnet.private["b"]
+  values = { id = "subnet-priv-b", vpc_id = "vpc-existing", availability_zone = "us-east-1b", cidr_block = "10.30.11.0/24" }
+}
+
+override_data {
+  target = data.aws_route_table.public
+  values = { route_table_id = "rtb-pub", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "igw-1", nat_gateway_id = "" }] }
+}
+
+override_data {
+  target = data.aws_route_table.private
+  values = { route_table_id = "rtb-priv", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "nat-1" }] }
+}
+
+override_data {
+  target = data.aws_nat_gateway.existing
+  values = { public_ip = "198.51.100.9" }
+}
+
+run "existing_vpc_reused" {
+  command = plan
+
+  variables {
+    zones              = []
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  assert {
+    condition     = length(aws_vpc.this) == 0 && length(aws_subnet.public) == 0 && length(aws_subnet.private) == 0 && length(aws_nat_gateway.this) == 0 && length(aws_internet_gateway.this) == 0 && length(aws_vpc_endpoint.s3) == 0 && length(aws_route_table.private) == 0
+    error_message = "vpc_id must not create a VPC, subnets, gateways, route tables or the S3 endpoint."
+  }
+
+  assert {
+    condition     = output.network.vpc_cidr == "10.30.0.0/16" && jsonencode(output.network.subnet_cidrs) == jsonencode(["10.30.0.0/24", "10.30.1.0/24", "10.30.10.0/24", "10.30.11.0/24"])
+    error_message = "network must come from the existing VPC and subnets; zones defaults to the subnet keys."
+  }
+
+  assert {
+    condition     = jsonencode(output.egress_ips) == jsonencode(["198.51.100.9"])
+    error_message = "egress_ips must be the public IP of the NAT gateway the private subnets route through."
+  }
+
+  assert {
+    condition     = output.provider_details.vpc_id == "vpc-existing" && jsonencode(output.provider_details.private_subnet_ids) == jsonencode(["subnet-priv-a", "subnet-priv-b"]) && jsonencode(output.provider_details.public_subnet_ids) == jsonencode(["subnet-pub-a", "subnet-pub-b"])
+    error_message = "provider_details must report the existing VPC and subnets."
+  }
+
+  assert {
+    condition     = aws_instance.control_plane["out-aws-cp-01"].subnet_id == "subnet-priv-a" && aws_instance.control_plane["out-aws-cp-01"].private_ip == "10.30.10.20" && aws_instance.control_plane["out-aws-cp-02"].private_ip == "10.30.11.20" && aws_instance.control_plane["out-aws-cp-03"].private_ip == "10.30.10.21"
+    error_message = "Control planes must take hosts 20+ of the existing private subnet of their zone."
+  }
+
+  assert {
+    condition     = one([for m in aws_lb.api.subnet_mapping : m.private_ipv4_address if m.subnet_id == "subnet-priv-a"]) == "10.30.10.10"
+    error_message = "The internal NLB must pin the API VIP to host 10 of the first existing private subnet."
+  }
+
+  assert {
+    condition     = alltrue([for r in aws_vpc_security_group_ingress_rule.api_nlb : r.cidr_ipv4 == "10.30.0.0/16"])
+    error_message = "The internal NLB must admit the existing VPC CIDR."
+  }
+}
+
+run "existing_vpc_needs_subnets" {
+  command = plan
+
+  variables {
+    vpc_id = "vpc-existing"
+  }
+
+  override_data {
+    target = data.aws_vpc.existing
+    values = { id = "vpc-existing", cidr_block = "10.30.0.0/16", enable_dns_support = true }
+  }
+
+  expect_failures = [var.public_subnet_ids]
+}
+
+run "existing_vpc_without_dns_support" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  override_data {
+    target = data.aws_vpc.existing
+    values = { id = "vpc-existing", cidr_block = "10.30.0.0/16", enable_dns_support = false }
+  }
+
+  expect_failures = [data.aws_vpc.existing]
+}
+
+run "existing_vpc_cidr_mismatch" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+    vpc_cidr           = "10.20.0.0/20"
+  }
+
+  expect_failures = [data.aws_vpc.existing]
+}
+
+run "existing_subnet_wrong_zone" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  override_data {
+    target = data.aws_subnet.private["b"]
+    values = { id = "subnet-priv-b", vpc_id = "vpc-existing", availability_zone = "us-east-1c", cidr_block = "10.30.11.0/24" }
+  }
+
+  expect_failures = [data.aws_subnet.private["b"]]
+}
+
+run "existing_subnet_outside_vpc_cidr" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  override_data {
+    target = data.aws_subnet.public["a"]
+    values = { id = "subnet-pub-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "100.64.0.0/24" }
+  }
+
+  expect_failures = [data.aws_subnet.public["a"]]
+}
+
+run "existing_public_subnet_without_igw" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  override_data {
+    target = data.aws_route_table.public
+    values = { route_table_id = "rtb-pub", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "nat-1" }] }
+  }
+
+  expect_failures = [data.aws_route_table.public]
+}
+
+run "existing_private_subnet_via_igw" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  override_data {
+    target = data.aws_route_table.private
+    values = { route_table_id = "rtb-priv", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "igw-1", nat_gateway_id = "" }] }
+  }
+
+  expect_failures = [data.aws_route_table.private]
+}
+
+run "existing_private_subnet_too_small" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  override_data {
+    target = data.aws_subnet.private["a"]
+    values = { id = "subnet-priv-a", vpc_id = "vpc-existing", availability_zone = "us-east-1a", cidr_block = "10.30.10.0/28" }
+  }
+
+  expect_failures = [data.aws_subnet.private["a"]]
+}
+
+# Egress through a transit gateway: accepted, egress_ips is empty.
+run "existing_private_subnet_via_tgw" {
+  command = plan
+
+  variables {
+    vpc_id             = "vpc-existing"
+    public_subnet_ids  = { a = "subnet-pub-a", b = "subnet-pub-b" }
+    private_subnet_ids = { a = "subnet-priv-a", b = "subnet-priv-b" }
+  }
+
+  override_data {
+    target = data.aws_route_table.private
+    values = { route_table_id = "rtb-priv", routes = [{ cidr_block = "0.0.0.0/0", gateway_id = "", nat_gateway_id = "", transit_gateway_id = "tgw-1" }] }
+  }
+
+  assert {
+    condition     = length(output.egress_ips) == 0
+    error_message = "Without a NAT gateway route, egress_ips must be empty."
   }
 }

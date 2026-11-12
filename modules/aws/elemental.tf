@@ -105,6 +105,6 @@ data "aws_network_interface" "public_nlb" {
 
   filter {
     name   = "subnet-id"
-    values = [aws_subnet.public[0].id]
+    values = [local.public_subnet_ids[0]]
   }
 }

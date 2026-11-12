@@ -370,3 +370,21 @@ variable "jumphost_instance_profile_name" {
   default     = null
   description = "Name of a pre-created instance profile for the build host. Set together with vmimport_role_name; null makes the module create both."
 }
+
+variable "vpc_id" {
+  type        = string
+  default     = null
+  description = "ID of an existing VPC in region to deploy into. Requires public_subnet_ids and private_subnet_ids; null creates the VPC, subnets, gateways and routes."
+}
+
+variable "public_subnet_ids" {
+  type        = map(string)
+  default     = {}
+  description = "Existing public subnets of vpc_id keyed by zone suffix, routed to an internet gateway. Required with vpc_id."
+}
+
+variable "private_subnet_ids" {
+  type        = map(string)
+  default     = {}
+  description = "Existing private subnets of vpc_id keyed by zone suffix, with a NAT (or other non-internet-gateway) default route. Required with vpc_id."
+}

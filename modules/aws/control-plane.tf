@@ -14,7 +14,7 @@ resource "aws_instance" "control_plane" {
 
   # Private subnet, no public IP. The static address is known at plan time
   # (locals.tf), so each node's Ignition can hardcode its node-ip.
-  subnet_id  = aws_subnet.private[each.value.subnet_index].id
+  subnet_id  = local.private_subnet_ids[each.value.subnet_index]
   private_ip = each.value.private_ip
 
   vpc_security_group_ids = [aws_security_group.control_plane.id]

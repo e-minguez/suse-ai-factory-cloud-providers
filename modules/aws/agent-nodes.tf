@@ -13,7 +13,7 @@ resource "aws_instance" "agent" {
   ami           = local.effective_ami_id
   instance_type = each.value.instance_type
 
-  subnet_id  = aws_subnet.private[each.value.subnet_index].id
+  subnet_id  = local.private_subnet_ids[each.value.subnet_index]
   private_ip = each.value.private_ip
 
   # one() because the group exists only when a worker or GPU pool does, as this resource.

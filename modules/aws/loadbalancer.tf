@@ -21,10 +21,10 @@ resource "aws_lb" "api" {
   # subnet_mapping pins a static private IP: the first subnet gets the apiVIP,
   # the others get an auto-assigned address so every zone has an ENI.
   dynamic "subnet_mapping" {
-    for_each = aws_subnet.private
+    for_each = local.private_subnet_ids
 
     content {
-      subnet_id            = subnet_mapping.value.id
+      subnet_id            = subnet_mapping.value
       private_ipv4_address = subnet_mapping.key == 0 ? local.api_vip : null
     }
   }
@@ -42,7 +42,7 @@ resource "aws_lb_target_group" "api_kube_api" {
   port        = 6443
   protocol    = "TCP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   preserve_client_ip = false
 
@@ -63,7 +63,7 @@ resource "aws_lb_target_group" "api_supervisor" {
   port        = 9345
   protocol    = "TCP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   preserve_client_ip = false
 
@@ -120,9 +120,12 @@ resource "aws_lb" "public" {
   internal           = false
   load_balancer_type = "network"
   security_groups    = [aws_security_group.public_nlb.id]
-  subnets            = aws_subnet.public[*].id
+  subnets            = local.public_subnet_ids
 
   enable_cross_zone_load_balancing = true
+
+  # With vpc_id: the public subnets' internet gateway route is checked first.
+  depends_on = [data.aws_route_table.public]
 
   tags = merge(local.common_tags, {
     Name             = "${var.cluster_name}-public-nlb"
@@ -138,7 +141,7 @@ resource "aws_lb_target_group" "http" {
   port        = 80
   protocol    = "TCP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   proxy_protocol_v2 = var.ingress_controller == "traefik"
 
@@ -163,7 +166,7 @@ resource "aws_lb_target_group" "https" {
   port        = 443
   protocol    = "TCP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   proxy_protocol_v2 = var.ingress_controller == "traefik"
 
@@ -222,7 +225,7 @@ resource "aws_lb_target_group" "admin_kube_api" {
   port        = 6443
   protocol    = "TCP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   preserve_client_ip = false
 

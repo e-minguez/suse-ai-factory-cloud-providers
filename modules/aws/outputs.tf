@@ -144,8 +144,8 @@ output "image" {
 }
 
 output "egress_ips" {
-  description = "Public source IPs of cluster egress: the NAT gateway Elastic IP."
-  value       = [aws_eip.nat.public_ip]
+  description = "Public source IPs of cluster egress: the NAT gateway Elastic IP. With vpc_id, the public IPs of the NAT gateways the private subnets route through (empty for other egress paths)."
+  value       = local.egress_ips
 }
 
 output "network" {
@@ -191,9 +191,9 @@ output "next_steps" {
 output "provider_details" {
   description = "AWS-only data: vpc_id, subnet ids, internal_api_host (the nodes' API name), build_bucket (as sensitive as state) and ami_name."
   value = {
-    vpc_id             = aws_vpc.this.id
-    public_subnet_ids  = aws_subnet.public[*].id
-    private_subnet_ids = aws_subnet.private[*].id
+    vpc_id             = local.vpc_id
+    public_subnet_ids  = local.public_subnet_ids
+    private_subnet_ids = local.private_subnet_ids
     internal_api_host  = local.api_host
     build_bucket       = aws_s3_bucket.build.id
     ami_name           = local.ami_name

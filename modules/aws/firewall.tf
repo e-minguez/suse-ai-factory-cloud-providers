@@ -34,7 +34,7 @@ locals {
 resource "aws_security_group" "jumphost" {
   name        = "${var.cluster_name}-jumphost"
   description = "Jumphost (build host and bastion): SSH from admin_cidrs, unrestricted egress"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   tags = merge(local.common_tags, {
     Name             = "${var.cluster_name}-jumphost"
@@ -77,7 +77,7 @@ resource "aws_vpc_security_group_egress_rule" "jumphost_all" {
 resource "aws_security_group" "api_nlb" {
   name        = "${var.cluster_name}-api-nlb"
   description = "Internal API/supervisor NLB: 6443+9345 from inside the VPC only"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   tags = merge(local.common_tags, {
     Name             = "${var.cluster_name}-api-nlb"
@@ -144,7 +144,7 @@ locals {
 resource "aws_security_group" "public_nlb" {
   name        = "${var.cluster_name}-public-nlb"
   description = "Internet-facing ingress + admin-kubectl NLB"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   tags = merge(local.common_tags, {
     Name             = "${var.cluster_name}-public-nlb"
@@ -185,7 +185,7 @@ resource "aws_vpc_security_group_egress_rule" "public_nlb_all" {
 resource "aws_security_group" "control_plane" {
   name        = "${var.cluster_name}-control-plane"
   description = "RKE2 control plane: full port matrix from itself/workers, LB listeners, ssh from jumphost"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   tags = merge(local.common_tags, {
     Name             = "${var.cluster_name}-control-plane"
@@ -295,7 +295,7 @@ resource "aws_security_group" "agent" {
 
   name        = "${var.cluster_name}-agent"
   description = "Worker and GPU pools: worker ports (no API, etcd or ingress), ssh from jumphost"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.vpc_id
 
   tags = merge(local.common_tags, {
     Name             = "${var.cluster_name}-agent"

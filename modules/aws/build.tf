@@ -91,7 +91,7 @@ resource "aws_instance" "jumphost" {
   # rejected with UnsupportedOperation); the default is the newest one it allows.
   instance_type = local.jumphost_instance_type
 
-  subnet_id                   = aws_subnet.public[0].id
+  subnet_id                   = local.public_subnet_ids[0]
   associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.jumphost.id]
   iam_instance_profile        = local.jumphost_profile

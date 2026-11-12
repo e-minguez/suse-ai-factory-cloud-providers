@@ -14,6 +14,15 @@ region = "us-east-1"
 # zones of the region.
 # zones = ["a", "b", "c"]
 
+# Deploy into an existing VPC instead of creating one: one public subnet
+# (default route to an internet gateway) and one private subnet (NAT or other
+# non-IGW default route) per zone, keyed by zone suffix; with zones unset the
+# keys become the zones. All three or none. Destroy leaves them in place.
+# Hosts 10 and 20+ of each private subnet must be free; see docs/providers/aws.md.
+# vpc_id             = "vpc-REPLACE"
+# public_subnet_ids  = { a = "subnet-REPLACE", b = "subnet-REPLACE" }
+# private_subnet_ids = { a = "subnet-REPLACE", b = "subnet-REPLACE" }
+
 # CIDRs allowed to SSH into the build host and reach the Kubernetes API.
 admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
 
