@@ -10,6 +10,7 @@ import (
 // price the same way, by plan ID.
 func (vultr) Expand(cfg provider.Config) ([]pricing.Resource, []pricing.Excluded) {
 	c := cfg.Common
+	d, _ := cfg.Details.(details)
 	var res []pricing.Resource
 
 	// jumphost.tf: always one, even with image_id set, because it is also the
@@ -48,8 +49,12 @@ func (vultr) Expand(cfg provider.Config) ([]pricing.Resource, []pricing.Excluded
 	}
 	res = append(res, pricing.Resource{Kind: pricing.KindFixed, Label: "load balancer (ingress)", Role: "lb", RateID: rateLB, Qty: ingress})
 
-	// network.tf: one NAT gateway.
-	res = append(res, pricing.Resource{Kind: pricing.KindFixed, Label: "nat gateway", Role: "network", RateID: rateNAT, Qty: 1})
+	// network.tf: one NAT gateway, none with vpc_id (the existing one is reused).
+	nat := 1
+	if d.existingVPC {
+		nat = 0
+	}
+	res = append(res, pricing.Resource{Kind: pricing.KindFixed, Label: "nat gateway", Role: "network", RateID: rateNAT, Qty: nat})
 
 	// image.tf: the snapshot is built only without image_id. It is a
 	// Terraform resource, so destroy removes it. Billed at image_disk_size,

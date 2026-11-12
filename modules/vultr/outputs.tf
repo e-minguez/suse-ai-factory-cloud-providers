@@ -68,8 +68,6 @@ locals {
       [for k in sort(keys(vultr_instance.agent_cloud)) : vultr_instance.agent_cloud[k].main_ip if vultr_instance.agent_cloud[k].vpc_only != true],
     ) : ip if ip != "" && ip != "0.0.0.0"
   ]
-
-  vpc_subnet_cidr = "${vultr_vpc.this.v4_subnet}/${vultr_vpc.this.v4_subnet_mask}"
 }
 
 output "provider" {
@@ -144,7 +142,7 @@ output "image" {
 
 output "egress_ips" {
   description = "Public source IPs of cluster egress (NAT gateway)."
-  value       = tolist(vultr_nat_gateway.this.public_ips)
+  value       = local.nat_gateway_public_ips
 }
 
 output "network" {
@@ -215,8 +213,8 @@ output "provider_details" {
   value = {
     control_plane_ids             = vultr_instance.control_plane[*].id
     agent_node_cidrs              = [for ip in local.agent_public_ipv4 : "${ip}/32"]
-    nat_gateway_public_cidrs      = [for ip in vultr_nat_gateway.this.public_ips : "${ip}/32"]
-    nat_gateway_private_ip        = vultr_nat_gateway.this.private_ips[0]
+    nat_gateway_public_cidrs      = [for ip in local.nat_gateway_public_ips : "${ip}/32"]
+    nat_gateway_private_ip        = local.nat_gateway_private_ip
     agent_cloud_firewall_group_id = one(vultr_firewall_group.agent_cloud[*].id)
     jumphost_vpc_ip               = vultr_instance.jumphost.internal_ip
     node_tags                     = local.node_tags

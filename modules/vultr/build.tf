@@ -66,7 +66,7 @@ resource "vultr_instance" "jumphost" {
   label    = "${var.cluster_name}-jumphost"
   hostname = "${var.cluster_name}-jumphost"
 
-  vpc_ids           = [vultr_vpc.this.id]
+  vpc_ids           = [local.vpc_id]
   firewall_group_id = vultr_firewall_group.jumphost.id
 
   ssh_key_ids = var.ssh_key_ids
