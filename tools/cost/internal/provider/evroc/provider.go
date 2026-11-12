@@ -23,8 +23,8 @@ type details struct {
 	imageIDs          int // entries of image_ids; > 0 means no image build
 }
 
-// Resolve applies the locals.tf defaults and reads image_ids and
-// image_target_disk_gb. Prices do not depend on the region, so a null region
+// Resolve applies the locals.tf defaults (zones from subnet_names keys with
+// vpc_name) and reads image_ids and image_target_disk_gb. Prices do not depend on the region, so a null region
 // (the evroc CLI context, which this tool cannot read) only changes the label.
 func (evroc) Resolve(c tfconfig.Common, v *tfconfig.Vars) (provider.Config, []tfconfig.Diagnostic) {
 	var diags []tfconfig.Diagnostic
@@ -39,6 +39,9 @@ func (evroc) Resolve(c tfconfig.Common, v *tfconfig.Vars) (provider.Config, []tf
 	}
 	if c.JumphostDiskGB == nil {
 		c.JumphostDiskGB = defaultDisk("jumphost_disk_size_gb")
+	}
+	if len(c.Zones) == 0 && v != nil && v.IsSet("vpc_name") {
+		c.Zones = v.MapKeys("subnet_names")
 	}
 	if len(c.Zones) == 0 {
 		c.Zones = defaultZones

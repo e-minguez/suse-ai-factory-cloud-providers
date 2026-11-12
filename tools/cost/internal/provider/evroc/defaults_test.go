@@ -47,8 +47,21 @@ func TestDefaultsMatchLocals(t *testing.T) {
 	var zones []string
 	hclsyntax.VisitAll(parse(t, localsFile), func(n hclsyntax.Node) hcl.Diagnostics {
 		if attr, ok := n.(*hclsyntax.Attribute); ok && attr.Name == "zones" {
-			if cond, ok := attr.Expr.(*hclsyntax.ConditionalExpr); ok {
-				if v, d := cond.FalseResult.Value(nil); !d.HasErrors() {
+			// The innermost false branch: zones -> subnet_names keys -> literal.
+			expr := attr.Expr
+			for {
+				if p, ok := expr.(*hclsyntax.ParenthesesExpr); ok {
+					expr = p.Expression
+					continue
+				}
+				cond, ok := expr.(*hclsyntax.ConditionalExpr)
+				if !ok {
+					break
+				}
+				expr = cond.FalseResult
+			}
+			if expr != attr.Expr {
+				if v, d := expr.Value(nil); !d.HasErrors() {
 					for _, e := range v.AsValueSlice() {
 						zones = append(zones, e.AsString())
 					}
