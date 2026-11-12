@@ -24,3 +24,9 @@ variable "image_import_port_open" {
   default     = true
   description = "Allow tcp/80 from anywhere on the jumphost so Exoscale can fetch the qcow2 image. deploy.sh sets it to false on pass 2, once the template exists."
 }
+
+variable "private_network_id" {
+  type        = string
+  default     = null
+  description = "ID of an existing managed private network (with a DHCP range) in the zone to deploy into instead of creating one. vpc_cidr must be null or equal to its range; every host on it reaches the nodes unfiltered."
+}

@@ -1,6 +1,6 @@
 # Plan-time checks: a bad input, an instance type the organization cannot use
 # or a quota without headroom fails before anything is created. The input
-# checks are preconditions on exoscale_private_network.this (network.tf).
+# checks are preconditions on terraform_data.input_checks (network.tf).
 # Capacity can still run out between plan and apply.
 
 locals {

@@ -22,6 +22,7 @@ module "ai_factory" {
   worker_pools                = var.worker_pools
   image_id                    = var.image_id
   image_rebuild               = var.image_rebuild
+  private_network_id          = var.private_network_id
   aif_release                 = var.aif_release
   components                  = var.components
   suse_storage_nodes          = var.suse_storage_nodes

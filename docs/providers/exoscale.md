@@ -121,10 +121,43 @@ closes it again.
   (`data.external.cp_members`); Terraform's own `instances` attribute lists
   fewer members right after a scale call until the next refresh. Tracked in
   [docs/workarounds.md](../workarounds.md).
-- The jumphost has a static lease (`vpc_cidr` host 5) below the DHCP range;
-  everything else gets a dynamic lease.
+- The jumphost has a static lease (`vpc_cidr` host 5) below the DHCP range of a
+  new network; everything else gets a dynamic lease.
 - No managed NAT gateway exists, and the VPC product is beta and cannot be
   attached from Terraform yet; egress uses each node's public IP.
+- With `private_network_id`, the private network already exists: see
+  [Existing network](#existing-network).
+
+## Existing network
+
+`private_network_id` deploys into an existing private network in the zone
+instead of creating one. Set it before the first apply: setting or clearing it
+later replaces the nodes, the control plane pool and the jumphost.
+
+- The network must be managed: a netmask and a DHCP range. Nodes and control
+  plane pool members take their private address by DHCP, and the plan fails on
+  an unmanaged network.
+- `vpc_cidr` becomes the network range (from the netmask and the first DHCP
+  address): leave it null or set it to that range. It must not overlap
+  `10.42.0.0/16` or `10.43.0.0/16` (RKE2 cluster and service CIDRs).
+- The jumphost takes a dynamic lease, not the static host 5 of a new network,
+  so no address outside the DHCP range is needed.
+- Security groups do not filter traffic inside a private network: every
+  instance attached to it reaches every port of the nodes, the RKE2 API,
+  etcd and the kubelet included. Use a network dedicated to the cluster unless
+  every other host on it is trusted.
+- The DHCP range must have a free lease for every node and the jumphost.
+- Destroy leaves the network in place. `tools/leftovers/exoscale.sh` matches by
+  the `elemental-cluster` label, which it does not carry.
+
+Find the ID:
+
+```bash
+exo compute private-network list -z <zone>
+exo compute private-network show -z <zone> <name-or-id>
+```
+
+Module details: [`modules/exoscale`](../../modules/exoscale/README.md#existing-network).
 
 ## Load balancer
 

@@ -194,7 +194,7 @@ output "provider_details" {
   value = {
     control_plane_pool_id = one(exoscale_instance_pool.control_plane[*].id)
     nlb_id                = exoscale_nlb.this.id
-    private_network_id    = exoscale_private_network.this.id
+    private_network_id    = local.private_network_id
     security_group_ids = {
       jumphost      = exoscale_security_group.jumphost.id
       control_plane = exoscale_security_group.control_plane.id

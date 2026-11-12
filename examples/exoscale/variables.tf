@@ -351,3 +351,9 @@ variable "image_rebuild" {
   default     = 0
   description = "Rebuild counter mixed into the image build hash. deploy.sh --rebuild bumps it in rebuild.auto.tfvars.json; do not set it by hand or in terraform.tfvars."
 }
+
+variable "private_network_id" {
+  type        = string
+  default     = null
+  description = "ID of an existing managed private network in the zone to deploy into; null creates one."
+}

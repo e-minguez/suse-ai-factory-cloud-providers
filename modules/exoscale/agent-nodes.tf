@@ -22,7 +22,7 @@ resource "exoscale_compute_instance" "agent" {
   })
 
   network_interface {
-    network_id = exoscale_private_network.this.id
+    network_id = local.private_network_id
   }
 
   # Raw Ignition JSON (ignition.platform.id=exoscale), merged over the image's

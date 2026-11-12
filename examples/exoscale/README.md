@@ -136,6 +136,15 @@ Control plane names are `<cluster_name>-cp-<pool id>-<random>`; take them from
 | Template registration fails "Invalid QCOW image" | The image is not qcow2 or its virtual size is outside 10-1000 GiB; check the `deliver` step in the build log. |
 | A node has no `private_ip` in `terraform output nodes` | The private network lists no lease for it; check the member in the portal. |
 
+## Existing network
+
+Set `private_network_id` to deploy into an existing managed private network in
+the zone (`exo compute private-network list -z <zone>`). Set it before the
+first apply: changing it later replaces the nodes. Destroy leaves it in place.
+Security groups do not filter inside a private network, so every host on it
+reaches the nodes. Constraints:
+[docs/providers/exoscale.md](../../docs/providers/exoscale.md#existing-network).
+
 ## Destroying
 
 ```bash

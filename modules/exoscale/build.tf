@@ -74,8 +74,8 @@ resource "exoscale_compute_instance" "jumphost" {
   labels             = merge(local.labels, { "elemental-role" = "jumphost" })
 
   network_interface {
-    network_id = exoscale_private_network.this.id
-    ip_address = local.jumphost_private_ip
+    network_id = local.private_network_id
+    ip_address = local.jumphost_static_ip
   }
 
   user_data = local.jumphost_user_data
@@ -92,4 +92,8 @@ resource "exoscale_compute_instance" "jumphost" {
       error_message = "Rendered jumphost user_data is ${nonsensitive(length(base64encode(local.jumphost_user_data)))} characters in base64, over the 32768 limit. The elemental config is one gzip bundle (config_bundle). Look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
     }
   }
+}
+
+locals {
+  jumphost_private_ip = local.jumphost_static_ip != null ? local.jumphost_static_ip : one([for ni in exoscale_compute_instance.jumphost.network_interface : ni.ip_address])
 }

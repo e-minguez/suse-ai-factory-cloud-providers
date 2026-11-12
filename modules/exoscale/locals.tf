@@ -24,16 +24,19 @@ locals {
   # An Exoscale zone (de-fra-1 offers gpu3 and gpurtx6000pro).
   zone = coalesce(var.region, "de-fra-1")
 
-  vpc_cidr    = coalesce(var.vpc_cidr, "10.20.0.0/20")
-  vpc_network = cidrhost(local.vpc_cidr, 0)
-  vpc_prefix  = tonumber(split("/", local.vpc_cidr)[1])
-  vpc_mtu     = coalesce(var.vpc_mtu, 1500)
+  # With private_network_id, the existing network's range (network.tf checks it).
+  # vpc_network/vpc_prefix feed the canal ifaceRegex and the privnet wait.
+  vpc_cidr_new = coalesce(var.vpc_cidr, "10.20.0.0/20")
+  vpc_cidr     = var.private_network_id != null ? local.existing_network_cidr : local.vpc_cidr_new
+  vpc_network  = cidrhost(local.vpc_cidr, 0)
+  vpc_prefix   = tonumber(split("/", local.vpc_cidr)[1])
+  vpc_mtu      = coalesce(var.vpc_mtu, 1500)
 
-  # The jumphost takes a static lease below the DHCP range; every other node
-  # gets a dynamic lease.
-  jumphost_private_ip = cidrhost(local.vpc_cidr, 5)
-  dhcp_start_ip       = cidrhost(local.vpc_cidr, 10)
-  dhcp_end_ip         = cidrhost(local.vpc_cidr, -3)
+  # A new network: the jumphost takes a static lease below the DHCP range and
+  # every other node a dynamic lease. An existing network: all dynamic.
+  jumphost_static_ip = var.private_network_id != null ? null : cidrhost(local.vpc_cidr_new, 5)
+  dhcp_start_ip      = cidrhost(local.vpc_cidr_new, 10)
+  dhcp_end_ip        = cidrhost(local.vpc_cidr_new, -3)
 
   control_plane_type    = coalesce(var.control_plane_instance_type, "standard.extra-large")
   control_plane_disk_gb = coalesce(var.control_plane_disk_size_gb, 100)

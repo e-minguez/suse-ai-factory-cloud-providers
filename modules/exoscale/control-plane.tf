@@ -22,7 +22,7 @@ resource "exoscale_instance_pool" "control_plane" {
   instance_type   = local.control_plane_type
   disk_size       = local.control_plane_disk_gb
 
-  network_ids             = [exoscale_private_network.this.id]
+  network_ids             = [local.private_network_id]
   security_group_ids      = [exoscale_security_group.control_plane.id]
   anti_affinity_group_ids = [exoscale_anti_affinity_group.control_plane.id]
 
@@ -61,7 +61,7 @@ data "external" "cp_members" {
     api_key    = var.exoscale_api_key
     api_secret = var.exoscale_api_secret
     pool_id    = one(exoscale_instance_pool.control_plane[*].id)
-    network_id = exoscale_private_network.this.id
+    network_id = local.private_network_id
     count      = tostring(local.control_plane_size)
   }
 }

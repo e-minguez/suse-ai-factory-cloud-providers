@@ -244,7 +244,7 @@ run "zones_at_most_one" {
     zones = ["a", "b"]
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "pool_fields_unsupported" {
@@ -254,7 +254,7 @@ run "pool_fields_unsupported" {
     gpu_pools = { gpu = { instance_type = "gpu3.small", count = 1, public_ip = true, placement = "spread" } }
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "control_plane_count_anti_affinity" {
@@ -264,7 +264,7 @@ run "control_plane_count_anti_affinity" {
     control_plane_count = 9
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 # Every node has a public IPv4: false is rejected, not ignored.
@@ -275,7 +275,7 @@ run "control_plane_public_ip_false" {
     control_plane_public_ip = false
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "pool_public_ip_default" {
@@ -285,7 +285,7 @@ run "pool_public_ip_default" {
     worker_pools = { cpu = { instance_type = "standard.medium", count = 1 } }
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "ingress_domain_rancher_hostname" {
@@ -327,4 +327,96 @@ run "rancher_hostname_default_sslip" {
     condition     = output.rancher_hostname == null || endswith(output.rancher_hostname, ".sslip.io") || !can(tostring(output.rancher_hostname))
     error_message = "Without ingress_domain the Rancher hostname must keep the sslip.io default."
   }
+}
+
+# --- Existing network (private_network_id) ------------------------------------
+
+run "existing_network_reused" {
+  command = plan
+
+  variables {
+    private_network_id = "00000000-0000-0000-0000-0000000000ee"
+  }
+
+  override_data {
+    target = data.exoscale_private_network.existing
+    values = { netmask = "255.255.252.0", start_ip = "10.30.0.10", end_ip = "10.30.3.250" }
+  }
+
+  assert {
+    condition     = length(exoscale_private_network.this) == 0
+    error_message = "private_network_id must not create a private network."
+  }
+
+  assert {
+    condition     = output.network.vpc_cidr == "10.30.0.0/22" && jsonencode(output.network.subnet_cidrs) == "[\"10.30.0.0/22\"]"
+    error_message = "network must come from the existing network's netmask and range."
+  }
+
+  assert {
+    condition     = output.provider_details.private_network_id == "00000000-0000-0000-0000-0000000000ee"
+    error_message = "provider_details must report the existing network."
+  }
+
+  assert {
+    condition     = one(exoscale_compute_instance.jumphost.network_interface).network_id == "00000000-0000-0000-0000-0000000000ee" && output.jumphost.private_ip == one(exoscale_compute_instance.jumphost.network_interface).ip_address
+    error_message = "The jumphost must join the existing network and report its dynamic lease (no static host 5)."
+  }
+
+  assert {
+    condition = anytrue([
+      for j in values(module.config.node_runtime_ignition) : anytrue([
+        for f in jsondecode(j).storage.files :
+        strcontains(base64decode(trimprefix(f.contents.source, "data:;base64,")), "regexIface: '^10\\.30\\.'")
+        if endswith(f.path, "/canal.yaml")
+      ])
+    ])
+    error_message = "The canal ifaceRegex must match the existing network range."
+  }
+}
+
+run "existing_network_unmanaged" {
+  command = plan
+
+  variables {
+    private_network_id = "00000000-0000-0000-0000-0000000000ee"
+  }
+
+  override_data {
+    target = data.exoscale_private_network.existing
+    values = { netmask = "", start_ip = "", end_ip = "" }
+  }
+
+  expect_failures = [data.exoscale_private_network.existing]
+}
+
+run "existing_network_vpc_cidr_mismatch" {
+  command = plan
+
+  variables {
+    private_network_id = "00000000-0000-0000-0000-0000000000ee"
+    vpc_cidr           = "10.20.0.0/20"
+  }
+
+  override_data {
+    target = data.exoscale_private_network.existing
+    values = { netmask = "255.255.252.0", start_ip = "10.30.0.10", end_ip = "10.30.3.250" }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "existing_network_overlaps_rke2" {
+  command = plan
+
+  variables {
+    private_network_id = "00000000-0000-0000-0000-0000000000ee"
+  }
+
+  override_data {
+    target = data.exoscale_private_network.existing
+    values = { netmask = "255.254.0.0", start_ip = "10.42.0.10", end_ip = "10.43.255.250" }
+  }
+
+  expect_failures = [terraform_data.input_checks]
 }

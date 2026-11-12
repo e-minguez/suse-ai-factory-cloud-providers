@@ -128,6 +128,9 @@ exoscale:
       label: Exoscale zone
       widget: select
       options: [de-fra-1, de-muc-1, ch-gva-2, ch-dk-2, at-vie-1, at-vie-2, bg-sof-1]
+  groups:
+    Provider:
+      - private_network_id
   managed:
     - exoscale_api_key
     - exoscale_api_secret

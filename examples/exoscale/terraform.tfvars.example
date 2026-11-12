@@ -7,6 +7,12 @@
 # Exoscale zone. de-fra-1 offers gpu3 (A40) and gpurtx6000pro.
 region = "de-fra-1"
 
+# Deploy into an existing managed private network (with a DHCP range) in the
+# zone instead of creating one. Destroy leaves it in place. Security groups do
+# not filter inside a private network: every host on it reaches the nodes. See
+# docs/providers/exoscale.md.
+# private_network_id = "REPLACE_WITH_EXOSCALE_PRIVATE_NETWORK_ID"
+
 # API key bound to an IAM role with the Compute service. Used by the exoscale
 # provider and the signed plan-time checks.
 exoscale_api_key    = "REPLACE_WITH_YOUR_EXOSCALE_API_KEY"
