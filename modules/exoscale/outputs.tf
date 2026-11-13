@@ -4,14 +4,14 @@
 locals {
   jumphost_access = {
     public_ip  = exoscale_compute_instance.jumphost.public_ip_address
-    private_ip = local.jumphost_private_ip
+    private_ip = local.private_mode ? local.jumphost_private_ip : null
     ssh_user   = var.jumphost_username != "" ? var.jumphost_username : "root"
   }
 
   build_status_value = {
     method     = "http"
     url_or_key = local.image_url
-    hosts      = [local.jumphost_private_ip]
+    hosts      = [local.private_mode ? local.jumphost_private_ip : exoscale_compute_instance.jumphost.public_ip_address]
   }
 
   # Members as the API lists them, oldest first. The pool has one Ignition
@@ -125,10 +125,10 @@ output "egress_ips" {
 }
 
 output "network" {
-  description = "Private network CIDR, also the only subnet."
+  description = "Private network CIDR, also the only subnet. null and empty in public mode: nodes use their public IPv4."
   value = {
-    vpc_cidr     = local.vpc_cidr
-    subnet_cidrs = [local.vpc_cidr]
+    vpc_cidr     = local.private_mode ? local.vpc_cidr : null
+    subnet_cidrs = local.private_mode ? [local.vpc_cidr] : []
   }
 }
 
@@ -190,16 +190,17 @@ output "next_steps" {
 }
 
 output "provider_details" {
-  description = "Exoscale-specific values: pool, load balancer, network and security group IDs, and the cp_initialized pin deploy.sh keeps."
+  description = "Exoscale-specific values: pool, load balancer, security group and private network IDs (null in public mode), the cp_initialized pin deploy.sh keeps, and ssh_via_jumphost (nodes are reachable by SSH only through the jumphost)."
   value = {
     control_plane_pool_id = one(exoscale_instance_pool.control_plane[*].id)
     nlb_id                = exoscale_nlb.this.id
-    private_network_id    = exoscale_private_network.this.id
+    private_network_id    = local.private_network_id
     security_group_ids = {
       jumphost      = exoscale_security_group.jumphost.id
       control_plane = exoscale_security_group.control_plane.id
       agent         = exoscale_security_group.agent.id
     }
-    cp_initialized = var.cp_initialized
+    cp_initialized   = var.cp_initialized
+    ssh_via_jumphost = true
   }
 }

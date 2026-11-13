@@ -24,6 +24,9 @@ locals {
   # An Exoscale zone (de-fra-1 offers gpu3 and gpurtx6000pro).
   zone = coalesce(var.region, "de-fra-1")
 
+  # vpc_cidr, vpc_mtu and the DHCP range only matter in private_network mode.
+  private_mode = var.network_mode == "private_network"
+
   vpc_cidr    = coalesce(var.vpc_cidr, "10.20.0.0/20")
   vpc_network = cidrhost(local.vpc_cidr, 0)
   vpc_prefix  = tonumber(split("/", local.vpc_cidr)[1])
@@ -90,9 +93,9 @@ locals {
   # Regex pinning canal VXLAN to the privnet NIC, from the octets the prefix
   # fixes (a /20 gives "^10\.20\.").
   vpc_iface_regex_octets = local.vpc_prefix >= 24 ? 3 : (local.vpc_prefix >= 16 ? 2 : 1)
-  vpc_iface_regex        = "^${join("\\.", slice(split(".", local.vpc_network), 0, local.vpc_iface_regex_octets))}\\."
+  vpc_iface_regex        = local.private_mode ? "^${join("\\.", slice(split(".", local.vpc_network), 0, local.vpc_iface_regex_octets))}\\." : null
 
-  # VXLAN adds 50 bytes; calico sizes pod veths from this value.
+  # Calico sizes pod veths from this value; VXLAN adds 50 bytes.
   pod_veth_mtu = local.vpc_mtu - 50
 
   # The control planes are one instance pool and share one Ignition entry: its

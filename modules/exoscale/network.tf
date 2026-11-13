@@ -1,14 +1,6 @@
-# Managed private network (L2, zone-local, MTU 1500) carrying all cluster
-# traffic. Security groups do not filter traffic inside it.
-resource "exoscale_private_network" "this" {
-  zone     = local.zone
-  name     = "${var.cluster_name}-net"
-  netmask  = cidrnetmask(local.vpc_cidr)
-  start_ip = local.dhcp_start_ip
-  end_ip   = local.dhcp_end_ip
-  labels   = merge(local.labels, { "elemental-role" = "network" })
-
-  # Plan-time input checks; every node depends on the network.
+# Plan-time input checks. Kept off the network, which only exists in
+# private_network mode; api_check depends on this, and every node on api_check.
+resource "terraform_data" "input_checks" {
   lifecycle {
     precondition {
       condition     = length(var.zones) <= 1
@@ -16,13 +8,13 @@ resource "exoscale_private_network" "this" {
     }
 
     precondition {
-      condition     = local.vpc_prefix >= 16 && local.vpc_prefix <= 26
+      condition     = !local.private_mode || (local.vpc_prefix >= 16 && local.vpc_prefix <= 26)
       error_message = "vpc_cidr must be a /16 to /26: the private network needs room for the DHCP range above the jumphost lease."
     }
 
     precondition {
       condition     = local.vpc_mtu <= 1500
-      error_message = "vpc_mtu must be at most 1500: Exoscale private networks do not support jumbo frames."
+      error_message = "vpc_mtu must be at most 1500: Exoscale networks do not support jumbo frames."
     }
 
     precondition {
@@ -44,7 +36,7 @@ resource "exoscale_private_network" "this" {
 
     precondition {
       condition     = length(local.agent_pool_private) == 0
-      error_message = "gpu_pools or worker_pools entries ${join(", ", local.agent_pool_private)} need public_ip = true: every Exoscale node has a public IPv4 (egress and the metadata service), with no inbound rules for worker and GPU nodes. See docs/providers/exoscale.md#limitations."
+      error_message = "gpu_pools or worker_pools entries ${join(", ", local.agent_pool_private)} need public_ip = true: every Exoscale node has a public IPv4 (egress and the metadata service), with no inbound rules from outside the cluster for worker and GPU nodes. See docs/providers/exoscale.md#limitations."
     }
 
     precondition {
@@ -52,4 +44,27 @@ resource "exoscale_private_network" "this" {
       error_message = "gpu_pools or worker_pools entries ${join(", ", local.agent_pool_unsupported)} set a field this provider does not support: zone and placement must be null and kind must be \"vm\"."
     }
   }
+}
+
+# Managed private network (L2, zone-local, MTU 1500) carrying all cluster
+# traffic in private_network mode. Security groups do not filter traffic inside
+# it.
+resource "exoscale_private_network" "this" {
+  count = local.private_mode ? 1 : 0
+
+  zone     = local.zone
+  name     = "${var.cluster_name}-net"
+  netmask  = cidrnetmask(local.vpc_cidr)
+  start_ip = local.dhcp_start_ip
+  end_ip   = local.dhcp_end_ip
+  labels   = merge(local.labels, { "elemental-role" = "network" })
+}
+
+moved {
+  from = exoscale_private_network.this
+  to   = exoscale_private_network.this[0]
+}
+
+locals {
+  private_network_id = one(exoscale_private_network.this[*].id)
 }

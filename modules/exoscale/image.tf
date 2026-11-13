@@ -78,8 +78,9 @@ module "config" {
   observability_suse_ai_namespace      = var.observability_suse_ai_namespace
   observability_opensearch_credentials = var.observability_opensearch_credentials
 
-  # Every node has a public and a privnet NIC: pin RKE2 to the privnet one.
-  enable_write_node_ip = true
+  # Private network mode: every node has a public and a privnet NIC, and RKE2
+  # is pinned to the privnet one.
+  enable_write_node_ip = local.private_mode
 
   extra_butane_units = local.node_units
   extra_butane_files = local.node_unit_files
@@ -93,20 +94,24 @@ module "config" {
 }
 
 # Units baked into the image. node-hostname: pool members share one Ignition
-# entry, so the hostname and RKE2 node-name come from metadata. wait-privnet:
-# pool NICs are hot-plugged, so write-node-ip waits for the privnet address.
-# RKE2 requires both.
+# entry, so the hostname and RKE2 node-name come from metadata. wait-privnet
+# (private_network mode only): pool NICs are hot-plugged, so write-node-ip
+# waits for the privnet address. RKE2 requires both.
 locals {
-  node_unit_specs = {
-    "node-hostname" = {
-      description = "Set the hostname and RKE2 node-name from the metadata service"
-      before      = "rke2-server.service rke2-agent.service"
-    }
-    "wait-privnet" = {
-      description = "Wait for the private network address"
-      before      = "write-node-ip.service rke2-server.service rke2-agent.service"
-    }
-  }
+  node_unit_specs = merge(
+    {
+      "node-hostname" = {
+        description = "Set the hostname and RKE2 node-name from the metadata service"
+        before      = "rke2-server.service rke2-agent.service"
+      }
+    },
+    local.private_mode ? {
+      "wait-privnet" = {
+        description = "Wait for the private network address"
+        before      = "write-node-ip.service rke2-server.service rke2-agent.service"
+      }
+    } : {},
+  )
 
   node_units = [
     for name, u in local.node_unit_specs : {
@@ -133,16 +138,16 @@ locals {
 
   # Scripts live in /var/lib/elemental, as write-node-ip.sh: the image's other
   # paths are read-only during Ignition.
-  node_unit_files = [
-    { path = "/var/lib/elemental/node-hostname.sh", contents = file("${path.module}/templates/node/node-hostname.sh") },
-    {
+  node_unit_files = concat(
+    [{ path = "/var/lib/elemental/node-hostname.sh", contents = file("${path.module}/templates/node/node-hostname.sh") }],
+    local.private_mode ? [{
       path = "/var/lib/elemental/wait-privnet.sh"
       contents = templatefile("${path.module}/templates/node/wait-privnet.sh.tftpl", {
         vpc_cidr        = local.vpc_cidr
         timeout_seconds = local.privnet_wait_seconds
       })
-    },
-  ]
+    }] : [],
+  )
 }
 
 # Warns rather than fails: some pre-release tags ship a manifest whose

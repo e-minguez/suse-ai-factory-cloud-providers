@@ -31,6 +31,26 @@ metadata service and missing NAT gateway leave no alternative today:
 - GPU pools: request GPU access from Exoscale by opening a support ticket for
   the GPU family and zone; GPU quotas are 0 by default.
 
+## Network mode
+
+`network_mode` selects how nodes reach each other:
+
+- `public` (default, temporary until Exoscale VPC works with instance pools and
+  the NLB): nodes talk over their public IPv4, restricted by security group
+  rules between the cluster's groups, with canal's default VXLAN backend (8472/udp;
+  pod traffic between nodes is unencrypted on public IPs). No private network is created, so `terraform output
+  nodes` has no `private_ip` and `network` has no `vpc_cidr`. Needed for
+  organizations that cannot create private networks.
+- `private_network`: a classic private network, as before. Exoscale stops it on
+  2027-05-03 and no longer enables it for new organizations.
+
+**Breaking change.** Switching an existing cluster from the previous behaviour to
+the new default `public` replaces the control-plane pool and the nodes, which
+breaks an initialized cluster (ADR 008). To keep a standing cluster, set
+`network_mode = "private_network"` before upgrading; the private network moves
+to `count` without replacement. Changing the mode of a running cluster
+replaces its nodes.
+
 ## API key
 
 Exoscale API keys are bound to an IAM role; the predefined roles are Owner and
@@ -131,10 +151,10 @@ Control plane names are `<cluster_name>-cp-<pool id>-<random>`; take them from
 |---|---|
 | Plan fails with "Instance types not usable in zone" | Type not offered there, or not available to the organization: for GPU types, request access from Exoscale with a support ticket. |
 | Plan fails with "Quota too low" | Ask Exoscale support for more with a ticket; GPU families start at 0. Right after a destroy, the usage can still count the deleted instances for a few minutes: wait and plan again ([quota notes](../../docs/providers/exoscale.md#quota-and-availability)). |
-| The API never answers after pass 2 | The first member failed to bootstrap; the joining members wait for it. Check it through the jumphost: `journalctl -b -u node-hostname -u wait-privnet -u write-node-ip -u rke2-server`. |
+| The API never answers after pass 2 | The first member failed to bootstrap; the joining members wait for it. Check it through the jumphost: `journalctl -b -u node-hostname -u wait-privnet -u write-node-ip -u rke2-server` (`wait-privnet` exists in `private_network` mode only). |
 | Waiting for the image never ends | Follow `../../scripts/build-logs.sh`; on the jumphost, `grep qcow2 /var/log/elemental-factory.log` shows the fetcher's requests. |
 | Template registration fails "Invalid QCOW image" | The image is not qcow2 or its virtual size is outside 10-1000 GiB; check the `deliver` step in the build log. |
-| A node has no `private_ip` in `terraform output nodes` | The private network lists no lease for it; check the member in the portal. |
+| A node has no `private_ip` in `terraform output nodes` | Expected with `network_mode = "public"`. With `private_network`, the network lists no lease for it: check the member in the portal. |
 
 ## Destroying
 

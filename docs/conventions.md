@@ -119,14 +119,14 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 | `nodes` | map(object) | key = hostname; `{ role, pool, init, zone, private_ip, public_ip, instance_type, id, ssh_user }`; `role` is `control_plane`, `worker` or `gpu`; `ssh_user` is `node_username` |
 | `image` | object | `{ build_id, rebuild, ids }`; `rebuild` is the `image_rebuild` counter; `ids` maps region or zone to image ID, empty until the image exists |
 | `egress_ips` | list(string) | public source IPs of cluster egress, used for allow-lists in [multicluster](../tools/multicluster/README.md#network) |
-| `network` | object | `{ vpc_cidr, subnet_cidrs }` |
+| `network` | object | `{ vpc_cidr, subnet_cidrs }`; null and empty where nodes use public addresses (exoscale `network_mode = "public"`) |
 | `build_status` | object or null | `{ method, url_or_key, hosts }` while a build runs, null once the image exists; `scripts/build-logs.sh` follows `hosts` |
 | `security` | object or null | `{ role, url, federation_endpoint, ca_pem }`; `role` is `management` or `downstream`, `url` is the NeuVector Manager URL (null on downstream), `federation_endpoint` is `<host>:443`, `ca_pem` is the cluster CA the Manager certificate chains to (null on downstream); null without a `security-*` component |
 | `security_credentials` | object, sensitive | `{ admin_password, join_token }`; null without a `security-*` component |
 | `observability` | object or null | `{ url, ca_pem, otlp_grpc_endpoint, otlp_http_endpoint }`; null without `observability-server` |
 | `observability_credentials` | object, sensitive | `{ admin_password, bootstrap_token }`; null without `observability-server` |
 | `next_steps` | string | post-deploy hints printed by `deploy.sh` |
-| `provider_details` | object | everything else; contents differ per provider and are documented in `docs/providers/<p>.md` |
+| `provider_details` | object | everything else; contents differ per provider and are documented in `docs/providers/<p>.md`; `ssh_via_jumphost = true` (exoscale) makes `scripts/ssh.sh` reach nodes without `private_ip` through the jumphost |
 
 `rke2_token` is not an output. It stays in state through `user_data`; see
 [security](security.md).

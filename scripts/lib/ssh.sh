@@ -90,12 +90,13 @@ ssh_setup() {
     def ok: if type == "string" and test("^[A-Za-z0-9._:-]+$") then . else error("unsafe or missing value: \(tojson)") end;
     (.jumphost.value // error("output jumphost missing")) as $j
     | (.nodes.value // {}) as $nodes
+    | (.provider_details.value.ssh_via_jumphost == true) as $via
     | "Host jumphost\n  HostName \($j.public_ip | ok)\n  User \($j.ssh_user | ok)\n",
       ($nodes | to_entries[]
         | (if $user != "" then $user else (.value.ssh_user | ok) end) as $u
         | if .value.private_ip != null
           then "Host \(.key | ok)\n  HostName \(.value.private_ip | ok)\n  User \($u)\n  ProxyJump jumphost\n"
-          else "Host \(.key | ok)\n  HostName \(.value.public_ip | ok)\n  User \($u)\n" end),
+          else "Host \(.key | ok)\n  HostName \(.value.public_ip | ok)\n  User \($u)\n\(if $via then "  ProxyJump jumphost\n" else "" end)" end),
       (((.build_status.value.hosts // []) + (if $extra != "" then [$extra] else [] end) | unique[]) as $h
         | select($h != "jumphost" and $h != $j.public_ip and $h != $j.private_ip and ($nodes | has($h) | not))
         | "Host \($h | ok)\n  HostName \($h)\n  User \(if $user != "" then $user else $j.ssh_user end)\n  ProxyJump jumphost\n"),
