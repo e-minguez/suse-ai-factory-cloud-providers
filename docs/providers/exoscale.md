@@ -15,8 +15,8 @@ Read these before choosing this provider:
   jumphost. The network load balancer returns traffic directly from its
   members' public interface, Ignition reads its configuration from the
   metadata service (instances without a public IP do not get one), and egress
-  uses it: Exoscale has no managed NAT gateway, and its VPC is beta and cannot
-  be attached from Terraform. `control_plane_public_ip` and each pool's
+  uses it: Exoscale has no managed NAT gateway, and instance pools cannot attach
+  to a VPC subnet yet. `control_plane_public_ip` and each pool's
   `public_ip` must be `true`: the example root defaults both to `true`, and
   the module rejects `false` instead of ignoring it.
 - **Inbound traffic is filtered by security groups only.** Worker and GPU nodes
@@ -30,9 +30,17 @@ Read these before choosing this provider:
   zone-scoped.
 - **Control plane names** are `<cluster_name>-cp-<pool id>-<random>`, set by
   the instance pool, not `-cp-NN`.
+- **No existing-network option**: the module always creates its own private
+  network; there is no equivalent of the other providers' `vpc_id` /
+  `subnet_id`. Classic private networks stop working on 2027-05-03 and are
+  replaced by VPC, which instance pools cannot use yet. The network layer moves
+  to VPC once they can, and the existing-network option (`vpc_id` +
+  `subnet_id`) comes with that change. A temporary mode without a private
+  network is parked in
+  [#62](https://github.com/e-minguez/suse-ai-factory-cloud-providers/pull/62).
 
-To revisit when the Exoscale VPC is generally available and the Terraform
-provider can attach instances to VPC subnets ([ADR 008](../decisions/008-exoscale-module.md)).
+To revisit when instance pools can attach to VPC subnets in the API and the
+Terraform provider ([ADR 008](../decisions/008-exoscale-module.md)).
 
 ## Passes: 2, and why
 
@@ -123,8 +131,8 @@ closes it again.
   [docs/workarounds.md](../workarounds.md).
 - The jumphost has a static lease (`vpc_cidr` host 5) below the DHCP range;
   everything else gets a dynamic lease.
-- No managed NAT gateway exists, and the VPC product is beta and cannot be
-  attached from Terraform yet; egress uses each node's public IP.
+- No managed NAT gateway exists, and instance pools cannot attach to a VPC
+  subnet yet; egress uses each node's public IP.
 
 ## Load balancer
 
