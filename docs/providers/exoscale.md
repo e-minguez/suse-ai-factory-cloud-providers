@@ -3,7 +3,8 @@
 Platform behaviour that decides how the Exoscale module is built. Design and
 variables: [`modules/exoscale/README.md`](../../modules/exoscale/README.md).
 Run it: [`examples/exoscale/README.md`](../../examples/exoscale/README.md).
-Decision record: [ADR 008](../decisions/008-exoscale-module.md). The behaviour
+Decision records: [ADR 008](../decisions/008-exoscale-module.md),
+[ADR 012](../decisions/012-exoscale-public-network.md). The behaviour
 below was confirmed by spike tests in de-fra-1 (2026-10, provider v0.74.2)
 unless marked as documented only.
 
@@ -19,20 +20,30 @@ Read these before choosing this provider:
   be attached from Terraform. `control_plane_public_ip` and each pool's
   `public_ip` must be `true`: the example root defaults both to `true`, and
   the module rejects `false` instead of ignoring it.
-- **Inbound traffic is filtered by security groups only.** Worker and GPU nodes
-  accept nothing from outside; control planes accept the load balancer ports
-  (6443 from `api_cidrs`, 80/443 from `ingress_cidrs`, healthchecks, joins);
-  the jumphost is the only SSH entry. Clients admitted to 6443 or 80/443 can
-  also reach a control plane directly on those ports.
+- **Inbound traffic is filtered by security groups only.** Control planes
+  accept the load balancer ports (6443 from `api_cidrs`, 80/443 from
+  `ingress_cidrs`, healthchecks, joins); the jumphost is the only SSH entry.
+  Clients admitted to 6443 or 80/443 can also reach a control plane directly
+  on those ports. In `public` network mode (default), nodes also accept the
+  RKE2 and VXLAN ports from the cluster's own security groups on their
+  public IPv4 (see [Security](#security)); no rule admits those ports from a
+  CIDR.
 - **No fixed egress address**: each node egresses from its own public IP
   (`egress_ips` lists them); there is no NAT address to allow-list.
 - **Single zone**: private networks, instance pools and templates are
   zone-scoped.
+- **Network mode**: `network_mode = "public"` (default) carries cluster traffic
+  over the nodes' public IPv4, because new organizations cannot create private
+  networks and pools and the load balancer cannot use a VPC yet. Nodes have no
+  private address (`private_ip` and `network.vpc_cidr` are null). Whether
+  same-zone traffic over public IPs is free of charge is to be verified.
+  `private_network` mode is kept for existing clusters until Exoscale stops
+  classic private networks on 2027-05-03 ([ADR 012](../decisions/012-exoscale-public-network.md)).
 - **Control plane names** are `<cluster_name>-cp-<pool id>-<random>`, set by
   the instance pool, not `-cp-NN`.
 
-To revisit when the Exoscale VPC is generally available and the Terraform
-provider can attach instances to VPC subnets ([ADR 008](../decisions/008-exoscale-module.md)).
+To revisit when instance pools and the load balancer can use a VPC
+([ADR 012](../decisions/012-exoscale-public-network.md)).
 
 ## Passes: 2, and why
 
@@ -106,6 +117,22 @@ closes it again.
   Ignition, pool members from `node-hostname.service`.
 
 ## Network
+
+`network_mode` ([ADR 012](../decisions/012-exoscale-public-network.md)):
+
+- `public` (default): one NIC per node (`ens3`, public IPv4). RKE2 picks the
+  public address, `write-node-ip.sh` does nothing, and pool members have no
+  private NIC to wait for (no `wait-privnet.service`). Canal keeps its default
+  VXLAN backend (8472/udp, pod MTU 1450 as in `private_network` mode) and
+  `canal_iface_regex` is unset. Temporary mode, until VPC works with instance
+  pools and the NLB.
+  `jumphost.private_ip`, nodes' `private_ip` and `provider_details.private_network_id`
+  are null, `network` is `{ vpc_cidr = null, subnet_cidrs = [] }`, and
+  `scripts/ssh.sh` reaches nodes on their public IP through the jumphost
+  (`provider_details.ssh_via_jumphost`).
+- `private_network`: the rest of this section.
+
+Private network mode:
 
 - One managed private network (L2, zone-local, DHCP, MTU 1500, no jumbo
   frames) carries all cluster traffic. Security groups do not apply to traffic
@@ -198,10 +225,28 @@ usage is back down and plan again.
 |---|---|
 | jumphost | 22 from `admin_cidrs`; 80 from anywhere while `image_import_port_open` |
 | control plane | 6443 from `api_cidrs`; 80/443 from `ingress_cidrs`; 6443/9345 from the control plane and agent groups (joins through the NLB); healthcheck ports from `public-nlb-healthcheck-sources` |
-| agent | none |
+| agent | none in `private_network` mode; in `public` mode see below |
 
+In `public` mode (default) the nodes reach each other over their public IPv4,
+so the cluster's own groups admit each other (rules reference security groups,
+never CIDRs):
+
+| Rule (source group, in `public` mode) | Ports |
+|---|---|
+| control plane to control plane | etcd 2379-2381, kubelet 10250, NodePort range, 6443/9345, VXLAN 8472/udp |
+| control plane to agent, agent to control plane, agent to agent | kubelet 10250, NodePort range, VXLAN 8472/udp |
+| jumphost to control plane and agent | tcp/22 |
+
+- The RKE2 ports are on public addresses and protected only by these rules.
+  Pod overlay traffic (VXLAN) between nodes crosses public IPs unencrypted,
+  only between nodes admitted by these rules; RKE2 control traffic (etcd,
+  kubelet, the Kubernetes API) is TLS-protected.
+- In `public` mode, pod traffic to another node's IP (hostNetwork or hostPort
+  listeners, e.g. observability and security component DaemonSets) only
+  reaches ports the rules above list. Check those components in e2e.
 - The jumphost is the only SSH entry; `admin_cidrs` applies to it only on
-  this provider. SSH to nodes goes through it to their private address.
+  this provider. SSH to nodes goes through it to their private address
+  (`private_network`) or public address (`public`).
 - Clients admitted by `api_cidrs` or `ingress_cidrs` can also reach a control
   plane directly on the same ports, because the NLB delivers to the public
   interface with the client address.
@@ -224,7 +269,7 @@ a quote.
 `tools/leftovers/exoscale.sh <cluster_name> [--region <zone>]` (needs
 `EXOSCALE_API_KEY`, `EXOSCALE_API_SECRET`, `curl`, `jq`, `openssl`) lists, read
 only, the instances (pool members included), the instance pool, the NLB and the
-private network by `elemental-cluster` label, and the security groups, the
+private network (`private_network` mode) by `elemental-cluster` label, and the security groups, the
 anti-affinity group and the templates by name. Exit 0 means nothing is left.
 
 ## Operational limits

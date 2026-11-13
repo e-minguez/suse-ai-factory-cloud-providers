@@ -188,7 +188,7 @@ configuration in a second apply ([ADR 008](decisions/008-exoscale-module.md)).
 ```mermaid
 flowchart TD
     subgraph p1 ["Pass 1: Bootstrap control plane (cp_initialized=false)"]
-        net["network: exoscale_private_network,<br/>exoscale_security_group per role<br/>(incl. tcp/80 for the image import)"]
+        net["network: exoscale_private_network<br/>(network_mode = private_network only),<br/>exoscale_security_group per role<br/>(incl. tcp/80 for the image import)"]
         lb["lb: exoscale_nlb"]
         jh["jumphost: exoscale_compute_instance<br/>(builds and serves the qcow2)"]
         img["image: exoscale_template"]
@@ -321,8 +321,8 @@ flowchart LR
     users(["Users / kubectl"])
     inet(["Internet"])
 
-    subgraph pn ["exoscale_private_network (security groups do not apply)"]
-        jh["jumphost<br/>exoscale_compute_instance (static lease)"]
+    subgraph pn ["public IPv4 (network_mode = public, default):<br/>SG-to-SG rules, VXLAN udp/8472<br/>private_network mode: exoscale_private_network,<br/>security groups do not apply"]
+        jh["jumphost<br/>exoscale_compute_instance"]
         cp["control_plane<br/>exoscale_instance_pool"]
         ag["worker, gpu<br/>exoscale_compute_instance"]
     end
@@ -331,8 +331,10 @@ flowchart LR
     tpl[("exoscale_template")]
 
     admin -- "SSH (admin_cidrs)" --> jh
-    jh -- "SSH (private network)" --> cp
-    jh -- "SSH (private network)" --> ag
+    jh -- "SSH (node address)" --> cp
+    jh -- "SSH (node address)" --> ag
+    cp <-- "etcd, kubelet, VXLAN (public IP)" --> cp
+    ag <-- "kubelet, VXLAN (public IP)" --> cp
     users -- "80/443 (ingress_cidrs)<br/>6443 (api_cidrs)" --> nlb --> cp
     cp -- "9345 joins (public IP)" --> nlb
     ag -- "6443, 9345 (public IP)" --> nlb

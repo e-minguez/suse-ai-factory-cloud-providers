@@ -8,7 +8,8 @@
 #            -> types, quotas, existing (JSON-encoded strings)
 #   members  pool_id, network_id; optional count, timeout_seconds (default 600)
 #            -> members (JSON-encoded list of {id, name, public_ip, private_ip,
-#               created_at}, oldest first)
+#               created_at}, oldest first); an empty network_id (public
+#               network mode) skips the leases and returns private_ip null
 set -euo pipefail
 
 die() {
@@ -98,7 +99,8 @@ case "$mode" in
     # stdout is the data source's JSON: progress goes to stderr.
     poll_until "$timeout" 10 probe >&2 ||
       die "the pool does not list $want running members after ${timeout}s; check it in the portal"
-    net=$(api_get "/v2/private-network/${network_id}")
+    net='{}'
+    [ -z "$network_id" ] || net=$(api_get "/v2/private-network/${network_id}")
     jq -n -c --argjson pool "$pool" --argjson net "$net" --argjson in "$instances" '
       (($net.leases // []) | map({key: .["instance-id"], value: .ip}) | from_entries) as $lease
       | ([($pool.instances // [])[].id]) as $ids

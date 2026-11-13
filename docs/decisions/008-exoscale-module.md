@@ -1,7 +1,7 @@
 # 008 - exoscale module design
 
 ## Status
-Accepted. Based on spike tests in de-fra-1 on 2026-10-05/06 with provider
+Accepted; the network design is amended by [ADR 012](012-exoscale-public-network.md). Based on spike tests in de-fra-1 on 2026-10-05/06 with provider
 `exoscale/exoscale` v0.74.2 ([plan](../plans/exoscale.md)); implemented in
 `modules/exoscale`, end-to-end checks pending (`docs/plans/exoscale.md`, section 11).
 

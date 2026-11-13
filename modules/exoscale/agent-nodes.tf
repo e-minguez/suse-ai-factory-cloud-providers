@@ -1,7 +1,7 @@
 # Worker and GPU agents: standalone instances with per-node Ignition, from the
 # same template as the control plane. for_each keyed by hostname, so growing
-# one pool never renumbers another. No inbound rules: they are reached over the
-# private network (dynamic lease); the public IP serves egress and metadata.
+# one pool never renumbers another. Private network mode: no inbound rules,
+# reached over a dynamic lease. Public mode: cluster traffic over the public IP.
 resource "exoscale_compute_instance" "agent" {
   for_each = var.deploy_nodes ? { for n in local.agent_nodes : n.hostname => n } : {}
 
@@ -21,8 +21,12 @@ resource "exoscale_compute_instance" "agent" {
     "elemental-build" = module.config.build_id
   })
 
-  network_interface {
-    network_id = exoscale_private_network.this.id
+  dynamic "network_interface" {
+    for_each = local.private_mode ? [1] : []
+
+    content {
+      network_id = exoscale_private_network.this[0].id
+    }
   }
 
   # Raw Ignition JSON (ignition.platform.id=exoscale), merged over the image's
@@ -37,5 +41,5 @@ resource "exoscale_compute_instance" "agent" {
 }
 
 locals {
-  agent_private_ip = { for h, a in exoscale_compute_instance.agent : h => one([for ni in a.network_interface : ni.ip_address]) }
+  agent_private_ip = { for h, a in exoscale_compute_instance.agent : h => local.private_mode ? one([for ni in a.network_interface : ni.ip_address]) : null }
 }

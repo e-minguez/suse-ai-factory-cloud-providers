@@ -2,7 +2,8 @@
 # Terraform suite and regenerate (make tofu-tests-gen). OpenTofu reads this file instead of it.
 # Asserts the common output set (docs/conventions.md#outputs), the control
 # plane init/join switch, the plan-time input and availability checks, and
-# the security group rules. Exoscale mocked; no cloud calls.
+# the security group rules in both network modes. Exoscale mocked; no cloud
+# calls.
 
 mock_provider "exoscale" {
 }
@@ -55,7 +56,10 @@ override_resource {
   values = { rfc3339 = "2026-10-06T12:34:56Z" }
 }
 
+# Private network mode is the baseline of the runs below; the public_* runs
+# switch to network_mode = "public", the module default.
 variables {
+  network_mode            = "private_network"
   exoscale_api_key        = "EXODUMMYKEY"
   exoscale_api_secret     = "DUMMY-SECRET"
   region                  = "de-fra-1"
@@ -244,7 +248,7 @@ run "zones_at_most_one" {
     zones = ["a", "b"]
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "pool_fields_unsupported" {
@@ -254,7 +258,7 @@ run "pool_fields_unsupported" {
     gpu_pools = { gpu = { instance_type = "gpu3.small", count = 1, public_ip = true, placement = "spread" } }
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "control_plane_count_anti_affinity" {
@@ -264,7 +268,7 @@ run "control_plane_count_anti_affinity" {
     control_plane_count = 9
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 # Every node has a public IPv4: false is rejected, not ignored.
@@ -275,7 +279,7 @@ run "control_plane_public_ip_false" {
     control_plane_public_ip = false
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "pool_public_ip_default" {
@@ -285,7 +289,7 @@ run "pool_public_ip_default" {
     worker_pools = { cpu = { instance_type = "standard.medium", count = 1 } }
   }
 
-  expect_failures = [exoscale_private_network.this]
+  expect_failures = [terraform_data.input_checks]
 }
 
 run "ingress_domain_rancher_hostname" {
@@ -327,4 +331,225 @@ run "rancher_hostname_default_sslip" {
     condition     = output.rancher_hostname == null || endswith(output.rancher_hostname, ".sslip.io") || !can(tostring(output.rancher_hostname))
     error_message = "Without ingress_domain the Rancher hostname must keep the sslip.io default."
   }
+}
+
+# --- network_mode = "public" -------------------------------------------------
+
+run "public_no_private_network" {
+  command = plan
+
+  variables {
+    network_mode = "public"
+  }
+
+  override_data {
+    target = data.external.cp_members
+    values = {
+      result = {
+        members = "[{\"id\":\"00000000-0000-0000-0000-0000000000c1\",\"name\":\"out-exo-cp-abcde-fghij\",\"private_ip\":null,\"public_ip\":\"203.0.113.21\"}]"
+      }
+    }
+  }
+
+  assert {
+    condition     = length(exoscale_private_network.this) == 0
+    error_message = "Public mode must create no private network."
+  }
+
+  assert {
+    condition     = length(exoscale_instance_pool.control_plane[0].network_ids) == 0
+    error_message = "Public mode must attach no network to the control plane pool."
+  }
+
+  assert {
+    condition     = length(exoscale_compute_instance.jumphost.network_interface) == 0 && alltrue([for h, a in exoscale_compute_instance.agent : length(a.network_interface) == 0])
+    error_message = "Public mode must attach no network_interface to the agents or the jumphost."
+  }
+
+  assert {
+    condition     = output.jumphost.private_ip == null
+    error_message = "Public mode must report a null jumphost private_ip."
+  }
+
+  assert {
+    condition     = output.network.vpc_cidr == null
+    error_message = "Public mode must report no vpc_cidr."
+  }
+
+  assert {
+    condition     = length(output.network.subnet_cidrs) == 0
+    error_message = "Public mode must report no subnet_cidrs."
+  }
+
+  assert {
+    condition     = local.private_network_id == null
+    error_message = "Public mode must report no private network ID."
+  }
+
+  assert {
+    condition     = local.build_status_value.hosts == ["203.0.113.11"]
+    error_message = "Public mode must follow the build on the jumphost public IP."
+  }
+
+  assert {
+    condition     = data.external.cp_members[0].query.network_id == ""
+    error_message = "Public mode must pass an empty network_id to the members lookup."
+  }
+}
+
+run "public_canal_vxlan" {
+  command = plan
+
+  variables {
+    network_mode = "public"
+  }
+
+  assert {
+    condition = (
+      !strcontains(base64decode(trimprefix([
+        for f in jsondecode(module.config.node_runtime_ignition["out-exo-cp"]).storage.files : f.contents.source if f.path == "/var/lib/rancher/rke2/server/manifests/canal.yaml"
+      ][0], "data:;base64,")), "regexIface") &&
+      !strcontains(base64decode(trimprefix([
+        for f in jsondecode(module.config.node_runtime_ignition["out-exo-cp"]).storage.files : f.contents.source if f.path == "/var/lib/rancher/rke2/server/manifests/canal.yaml"
+      ][0], "data:;base64,")), "backend")
+    )
+    error_message = "Public mode must keep canal's default backend: no regexIface and no backend."
+  }
+
+  assert {
+    condition = (
+      local.pod_veth_mtu == 1450 &&
+      strcontains(base64decode(trimprefix([
+        for f in jsondecode(module.config.node_runtime_ignition["out-exo-cp"]).storage.files : f.contents.source if f.path == "/var/lib/rancher/rke2/server/manifests/canal.yaml"
+      ][0], "data:;base64,")), "vethuMTU: 1450")
+    )
+    error_message = "Public mode must size pod veths at 1450 and render it as vethuMTU."
+  }
+
+  assert {
+    condition     = !anytrue([for f in jsondecode(module.config.node_runtime_ignition["out-exo-cp"]).storage.files : strcontains(f.path, "write-node-ip")])
+    error_message = "Public mode must not write write-node-ip into the node Ignition."
+  }
+
+  assert {
+    condition     = !anytrue([for f in local.node_unit_files : strcontains(f.path, "wait-privnet")]) && !anytrue([for u in local.node_units : u.name == "wait-privnet.service"])
+    error_message = "Public mode must not bake wait-privnet (script or unit) into the image."
+  }
+
+  assert {
+    condition     = output.provider_details.ssh_via_jumphost == true
+    error_message = "provider_details must flag SSH through the jumphost."
+  }
+}
+
+run "public_security_groups" {
+  command = plan
+
+  variables {
+    network_mode = "public"
+  }
+
+  # The mock leaves cidr and user_security_group_id unknown, so the source is
+  # checked on local.intra_rules, which feeds user_security_group_id only.
+  assert {
+    condition = length(local.intra_rules) > 0 && alltrue([
+      for k, r in local.intra_rules : contains(["control_plane", "agent"], r.src) && contains(["control_plane", "agent"], r.dst)
+    ]) && length(exoscale_security_group_rule.intra) == length(local.intra_rules)
+    error_message = "Intra-cluster rules must name a source and a destination node security group."
+  }
+
+  # Only the API, the ingress listeners and the NLB healthchecks may be open
+  # to a CIDR or a public group.
+  assert {
+    condition = alltrue([
+      for k, r in local.control_plane_rules :
+      r.cidr == null || contains(concat([6443], local.ingress_ports), r.port)
+    ])
+    error_message = "No RKE2 port other than the API and the ingress listeners may be open to a CIDR."
+  }
+
+  assert {
+    condition = alltrue([
+      contains(keys(exoscale_security_group_rule.intra), "control_plane-control_plane-etcd"),
+      contains(keys(exoscale_security_group_rule.intra), "control_plane-agent-kubelet"),
+      contains(keys(exoscale_security_group_rule.intra), "agent-control_plane-kubelet"),
+      contains(keys(exoscale_security_group_rule.intra), "agent-agent-vxlan"),
+      contains(keys(exoscale_security_group_rule.intra), "control_plane-agent-vxlan"),
+      !contains(keys(exoscale_security_group_rule.intra), "control_plane-agent-etcd"),
+      !anytrue([for k, r in exoscale_security_group_rule.intra : r.start_port == 51820]),
+    ])
+    error_message = "Rules must cover etcd between control planes, kubelet and VXLAN between all nodes, and no WireGuard."
+  }
+
+  assert {
+    condition     = exoscale_security_group_rule.intra["agent-agent-vxlan"].protocol == "UDP" && exoscale_security_group_rule.intra["agent-agent-vxlan"].start_port == 8472
+    error_message = "VXLAN must be 8472/udp."
+  }
+
+  assert {
+    condition = length(exoscale_security_group_rule.ssh_from_jumphost) == 2 && alltrue([
+      for k, r in exoscale_security_group_rule.ssh_from_jumphost : r.start_port == 22 && r.end_port == 22 && r.protocol == "TCP"
+    ])
+    error_message = "SSH must be admitted on tcp/22 only (the resource sources it from the jumphost group)."
+  }
+
+  assert {
+    condition     = toset(keys(local.ssh_rules)) == toset(["ssh-jumphost-agent", "ssh-jumphost-control_plane"])
+    error_message = "SSH must be admitted from the jumphost group to both node groups."
+  }
+}
+
+run "private_network_no_intra_rules" {
+  command = plan
+
+  assert {
+    condition     = length(exoscale_security_group_rule.intra) == 0 && length(exoscale_security_group_rule.ssh_from_jumphost) == 0 && length(exoscale_private_network.this) == 1
+    error_message = "Private network mode must keep the private network and add no intra-cluster rules."
+  }
+
+  assert {
+    condition     = output.network.vpc_cidr == "10.20.0.0/20"
+    error_message = "Private network mode must report its network."
+  }
+
+  assert {
+    condition = strcontains(base64decode(trimprefix([
+      for f in jsondecode(module.config.node_runtime_ignition["out-exo-cp"]).storage.files : f.contents.source if f.path == "/var/lib/rancher/rke2/server/manifests/canal.yaml"
+    ][0], "data:;base64,")), "regexIface") && anytrue([for f in local.node_unit_files : strcontains(f.path, "wait-privnet")])
+    error_message = "Private network mode must keep the regexIface pin and wait-privnet."
+  }
+}
+
+run "public_vpc_cidr_not_checked" {
+  command = plan
+
+  variables {
+    network_mode = "public"
+    vpc_cidr     = "172.0.0.0/8"
+  }
+
+  assert {
+    condition     = length(exoscale_private_network.this) == 0
+    error_message = "The vpc_cidr size check applies to private_network mode only."
+  }
+}
+
+run "private_vpc_cidr_too_big" {
+  command = plan
+
+  variables {
+    vpc_cidr = "172.0.0.0/8"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "network_mode_invalid" {
+  command = plan
+
+  variables {
+    network_mode = "vpc"
+  }
+
+  expect_failures = [var.network_mode]
 }

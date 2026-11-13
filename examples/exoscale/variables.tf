@@ -351,3 +351,9 @@ variable "image_rebuild" {
   default     = 0
   description = "Rebuild counter mixed into the image build hash. deploy.sh --rebuild bumps it in rebuild.auto.tfvars.json; do not set it by hand or in terraform.tfvars."
 }
+
+variable "network_mode" {
+  type        = string
+  default     = "public"
+  description = "How nodes reach each other. \"public\": over their public IPv4, restricted by security group rules (temporary mode, until VPC works with instance pools and the NLB); \"private_network\": a classic private network (stops working on 2027-05-03, not available to new organizations)."
+}

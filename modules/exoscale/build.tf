@@ -60,7 +60,8 @@ locals {
 }
 
 # openSUSE Leap jumphost (not the template it builds): builds and serves the
-# image, then stays as the only SSH entry. Static lease below the DHCP range.
+# image, then stays as the only SSH entry. Private network mode: static lease
+# below the DHCP range.
 resource "exoscale_compute_instance" "jumphost" {
   depends_on = [terraform_data.api_check]
 
@@ -73,9 +74,13 @@ resource "exoscale_compute_instance" "jumphost" {
   security_group_ids = [exoscale_security_group.jumphost.id]
   labels             = merge(local.labels, { "elemental-role" = "jumphost" })
 
-  network_interface {
-    network_id = exoscale_private_network.this.id
-    ip_address = local.jumphost_private_ip
+  dynamic "network_interface" {
+    for_each = local.private_mode ? [1] : []
+
+    content {
+      network_id = exoscale_private_network.this[0].id
+      ip_address = local.jumphost_private_ip
+    }
   }
 
   user_data = local.jumphost_user_data

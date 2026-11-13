@@ -82,6 +82,14 @@ kh="$W/kh"
 [ -f "$kh" ] || fail "persistent known_hosts not created"
 noleftover
 
+# provider_details.ssh_via_jumphost: node without private_ip goes through the jumphost
+via="$W/via.json"
+jq '.provider_details.value.ssh_via_jumphost = true' "$FAKE_TF_JSON" >"$via"
+cfg_via=$(FAKE_TF_JSON="$via" "$S/ssh.sh" --config)
+bm=$(awk "/^Host t-bm-01\$/{on=1;next} /^Host /{on=0} on" <<<"$cfg_via")
+has "$bm" "HostName 198.51.100.7"
+has "$bm" "ProxyJump jumphost"
+
 # unsafe output value refused
 bad="$W/bad.json"
 jq '.nodes.value["t-cp-01"].private_ip = "1.2.3.4\n  ProxyCommand evil"' "$FAKE_TF_JSON" >"$bad"

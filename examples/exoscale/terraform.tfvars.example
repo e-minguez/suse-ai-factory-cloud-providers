@@ -119,6 +119,9 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 # control_plane_count         = 3  # 1, or odd and at least 3; at most 8
 # control_plane_instance_type = "standard.extra-large"
 # jumphost_instance_type      = "standard.large"
+# "public" (default): nodes talk over their public IPv4 (temporary mode, canal VXLAN). "private_network"
+# keeps an existing cluster on its classic private network (changing it replaces the nodes).
+# network_mode                = "public"
 # tags replaces (not merges with) any tags map in common-*.tfvars.
 # tags                        = { env = "test" }
 # image_id                    = "..."  # boot an existing template instead of building
