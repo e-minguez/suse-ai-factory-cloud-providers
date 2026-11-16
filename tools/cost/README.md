@@ -7,8 +7,8 @@ and ends with this statement, and the JSON report carries it in a top-level
 `disclaimer` field.
 
 `cost` reads the same tfvars files as `deploy.sh`, applies the module
-defaults, prices the resources the module would create (aws, evroc, exoscale
-or vultr), and prints a per-resource table for 1h, 8h, 24h, 7d and 30d. It
+defaults, prices the resources the module would create (aws, evroc, exoscale,
+oci or vultr), and prints a per-resource table for 1h, 8h, 24h, 7d and 30d. It
 reads no plan, no state and no live resources, so it works before anything
 exists. Credentials in the tfvars files are never read.
 
@@ -18,7 +18,7 @@ of Go files.
 ## Usage
 
 ```
-make cost PROVIDER=<aws|evroc|exoscale|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
+make cost PROVIDER=<aws|evroc|exoscale|oci|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
 tools/multicluster/cluster.sh cost <name> [cost args]
 cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 ```
@@ -28,9 +28,9 @@ cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--provider NAME` | required | `aws`, `evroc`, `exoscale` or `vultr` |
+| `--provider NAME` | required | `aws`, `evroc`, `exoscale`, `oci` or `vultr` |
 | `--var-file F` | none | tfvars file; repeatable, later wins |
-| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; evroc and exoscale prices do not depend on it, and a null evroc region shows as `(evroc CLI context)`) |
+| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; evroc, exoscale and oci prices do not depend on it, and a null evroc region shows as `(evroc CLI context)`) |
 | `--json` | off | print a JSON report instead of a table |
 | `--catalog FILE` | none | use this provider catalog file instead of the network or cache |
 | `--no-network` | off | never call the network; use `--catalog` or a warm cache |
@@ -70,7 +70,7 @@ column per duration. `ROLE` and `POOL` use the label vocabulary in
   went.
 - `*` marks a row capped at the monthly rate (vultr monthly-invoiced plans).
 - Amounts are in the provider's native currency (aws and vultr USD, evroc EUR;
-  exoscale EUR, one of the three currencies it publishes). There is no
+  exoscale EUR, one of the three currencies it publishes; oci USD). There is no
   conversion.
 - `Not included` lists resources that exist but are not priced, each with the
   reason.
@@ -138,6 +138,35 @@ network load balancer is priced per hour. The public IPv4 of each instance,
 the private network and security groups have no charge.
 
 Not included: outbound traffic.
+
+### oci
+
+Prices come from the public Oracle price list API
+(`https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/?currencyCode=USD`,
+also behind <https://www.oracle.com/cloud/price-list/>). No key is needed and
+nothing from your account is read. The API has no region dimension (one USD
+price) and returns the whole list in one response; the estimator keeps the
+parts it uses. Cache and fallback work as for vultr and exoscale; `--catalog`
+takes a saved copy of the API response, and the report header then shows its
+`lastUpdated` date.
+
+Instance types follow `modules/oci/locals.tf`: a fixed shape name, or a flex
+shape as `<shape>:<ocpus>x<memory_gb>`. A flex shape costs OCPUs times the
+OCPU-hour rate plus memory GB times the GB-hour rate of its family (E3, E4, E5,
+E6, A1, Standard3). A fixed GPU shape (`VM.GPU.A10.1`, `VM.GPU.A10.2`,
+`VM.GPU3.1`, `VM.GPU3.2`, `VM.GPU3.4`, `VM.GPU2.1`) costs its GPU count times
+the per GPU-hour rate, CPU and memory included. A shape outside these tables
+fails with exit code 3 (`--allow-unknown-plans` prices it as 0); a malformed
+or missing flex size fails with exit code 2.
+
+Boot volumes use the block volume rate plus 10 volume performance units per GB
+(the OCI default, balanced). The custom image is priced as Object Storage on
+`image_disk_size`. The network load balancer, reserved public IP, NAT gateway
+and VCN have no charge. The A1 free tier is not applied.
+
+Not included: outbound traffic (the first 10 TB per month are free) and the
+build bucket (transient Object Storage use; the qcow2 is deleted unless
+`keep_build_artifacts`).
 
 ### vultr
 

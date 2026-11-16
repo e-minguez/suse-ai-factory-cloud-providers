@@ -1,0 +1,16 @@
+# Shape 04, GPU downstream cluster with storage. Shared values go in clusters/common-*.tfvars.
+
+cluster_name        = "aif-gpu"
+control_plane_count = 3
+components          = ["cert-manager", "gpu-operator", "suse-storage"]
+
+suse_storage_nodes = ["storage"]
+
+gpu_pools = {
+  gpu = { instance_type = "VM.GPU.A10.1", count = 1 }
+}
+
+worker_pools = {
+  storage = { instance_type = "VM.Standard.E5.Flex:4x16", count = 3 }
+  wrk     = { instance_type = "VM.Standard.E5.Flex:4x16", count = 2 }
+}

@@ -111,5 +111,6 @@ ingress; the provider guide lists the billed objects. The estimate for your valu
 
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
+- [OCI](oci/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).

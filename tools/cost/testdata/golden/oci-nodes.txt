@@ -1,0 +1,20 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: oci   Region: eu-frankfurt-1   Cluster: suse-ai-factory   Catalog: file (2026-11-02T14:49:49.342Z)
+
+  RESOURCE                                                     ROLE           POOL  QTY  TYPE                           USD/hr     1h     8h    24h      7d      30d
+  jumphost                                                     jumphost               1  VM.Standard.E5.Flex:2x16       0.0920   0.09   0.74   2.21   15.46    66.24
+  jumphost disk (100 GB)                                       jumphost               1  storage:boot              0.000058/GB   0.01   0.05   0.14    0.98     4.19
+  control plane                                                control_plane  cp      3  VM.Standard.E5.Flex:4x32       0.1840   0.55   4.42  13.25   92.74   397.44
+  control plane disk (100 GB)                                  control_plane  cp      3  storage:boot              0.000058/GB   0.02   0.14   0.42    2.93    12.58
+  gpu node                                                     gpu            g       1  VM.GPU.A10.1                   2.0000   2.00  16.00  48.00  336.00  1440.00
+  gpu node disk (200 GB)                                       gpu            g       1  storage:boot              0.000058/GB   0.01   0.09   0.28    1.96     8.38
+  custom image (8 GB)                                          image                  1  storage:object            0.000035/GB  <0.01  <0.01   0.01    0.05     0.20
+  network load balancer, reserved public ip, nat gateway, vcn  network                   -- free --                         --     --     --     --      --       --
+                                                                                                                         TOTAL   2.68  21.43  64.30  450.11  1929.03
+
+  All amounts in USD.
+  Not included:
+    - outbound traffic: traffic-dependent; the first 10 TB per month are free
+    - build bucket: transient Object Storage use while the image is built; the qcow2 is deleted unless keep_build_artifacts
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.

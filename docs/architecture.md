@@ -66,6 +66,7 @@ flowchart TD
         vultr["vultr: HTTP on jumphost :80 →<br/>vultr_snapshot_from_url"]
         evroc["evroc: dd to evroc_disk (image target) →<br/>detach → evroc_snapshot per zone"]
         exoscale["exoscale: qemu-img convert to qcow2 (≥ 10 GiB),<br/>HTTP on jumphost :80 → exoscale_template"]
+        oci["oci: qemu-img convert to qcow2, curl -T to write-only PARs →<br/>oci_core_image + UEFI capability schema"]
     end
 
     deliver --> nodes["Nodes: boot from the image,<br/>Ignition sets role, hostname, node-ip"]
@@ -75,8 +76,9 @@ flowchart TD
 
 Terraform waits for the build from the workstation: aws polls S3
 (`wait-for-raw.sh`), vultr and exoscale poll the served URL
-(`wait-for-image.sh`), evroc polls the build-status relay on the jumphost
-(`wait-for-image.sh`).
+(`wait-for-image.sh`), oci polls a read-only pre-authenticated request for the
+`done` marker (`wait-for-image.sh`), evroc polls the build-status relay on the
+jumphost (`wait-for-image.sh`).
 `scripts/build-logs.sh` follows the build log on the build host over SSH.
 
 ## Passes
@@ -216,6 +218,26 @@ flowchart TD
 Once the pool is in state, `deploy.sh` runs one apply with the pins; a new
 template reopens tcp/80 and a second apply closes it.
 
+### oci: one pass
+
+The NLB and its reserved public IP exist before the image, and NLB backends are
+separate resources added after the instances, so everything fits in one apply
+([ADR 012](decisions/012-oci-module.md)).
+
+```mermaid
+flowchart TD
+    subgraph p1 ["Pass 1: Deploy"]
+        net["network: oci_core_vcn, public + private oci_core_subnet,<br/>internet + NAT gateway, NSG per role"]
+        lb["lb: oci_core_public_ip (reserved), oci_network_load_balancer,<br/>backend set + listener per port"]
+        jh["jumphost: oci_core_instance (builds the image, then the SSH bastion)"]
+        img["image: oci_objectstorage_bucket + PARs, oci_core_image,<br/>oci_core_compute_image_capability_schema (UEFI)"]
+        nodes["nodes: oci_core_instance per node (fault domains)"]
+        be["oci_network_load_balancer_backend (control planes)"]
+        net --> lb --> img --> nodes --> be
+        net --> jh --> img
+    end
+```
+
 ## Network
 
 Main traffic paths. SSH always goes through the jumphost (`ProxyJump`,
@@ -340,6 +362,36 @@ flowchart LR
     cp -- "public IP" --> inet
     ag -- "public IP" --> inet
     tpl -- "fetch over HTTP :80 (pass 1)" --> jh
+```
+
+### oci
+
+```mermaid
+flowchart LR
+    admin(["Admin"])
+    users(["Users / kubectl"])
+    inet(["Internet"])
+
+    subgraph vcn ["oci_core_vcn"]
+        subgraph pub ["public subnet"]
+            jh["jumphost"]
+            nlb["oci_network_load_balancer (reserved IP)<br/>6443, 9345, 80/443"]
+        end
+        subgraph priv ["private subnet"]
+            cp["control_plane<br/>oci_core_instance"]
+            ag["worker, gpu<br/>oci_core_instance"]
+        end
+    end
+    nat["NAT gateway"]
+
+    admin -- "SSH (admin_cidrs)" --> jh
+    jh -- "SSH" --> cp
+    jh -- "SSH" --> ag
+    users -- "80/443 (ingress_cidrs, source kept)<br/>6443 (api_cidrs, NSG on the NLB)" --> nlb --> cp
+    cp -- "6443, 9345 via public address" --> nat
+    ag -- "6443, 9345 via public address" --> nat
+    nat --> inet
+    inet -- "to the reserved IP" --> nlb
 ```
 
 ### SUSE Security and SUSE Observability

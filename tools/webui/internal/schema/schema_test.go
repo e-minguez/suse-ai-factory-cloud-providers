@@ -24,7 +24,7 @@ func repoRoot(t *testing.T) string {
 
 func TestProviders(t *testing.T) {
 	got := Providers(repoRoot(t))
-	if len(got) != 4 {
+	if len(got) != 5 {
 		t.Fatalf("providers = %v", got)
 	}
 }

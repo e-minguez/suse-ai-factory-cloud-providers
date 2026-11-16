@@ -5,6 +5,7 @@ locals {
     config_dir            = var.config_dir
     log_file              = var.log_file
     state_dir             = var.state_dir
+    package_manager       = var.package_manager
     packages              = join(" ", concat(["podman", "curl"], var.extra_packages))
     customize_attempts    = var.customize_attempts
     customize_retry_delay = var.customize_retry_delay

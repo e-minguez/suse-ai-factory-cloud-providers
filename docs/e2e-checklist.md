@@ -1,6 +1,6 @@
 # End-to-end checks not yet run
 
-Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`.
+Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16).
 Run these from the cluster directory (`examples/<provider>` or
 `clusters/<name>`); `make ci` must pass first.
 
@@ -32,6 +32,22 @@ check. Not run yet:
       bootstraps the control plane in two passes.
 - [ ] As a multicluster downstream: `cluster.sh register` with the node
       `egress_ips` in the management `ingress_cidrs`.
+
+## oci
+
+The first run (2026-11-16, staged in `clusters/oci-e2e`) covered: image
+build and import, UEFI boot on E5.Flex and A10, one then three control planes
+joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
+`deploy_nodes` false then true, `--rebuild` (every node replaced), destroy and
+`tools/leftovers/oci.sh`, and a deployment into an existing VCN (`vpc_id`). Still to run (runbook:
+[examples/oci/README.md](../examples/oci/README.md)):
+
+- [ ] A worker pool (`worker_pools`).
+- [ ] Rancher local-path volume and aif-operator.
+- [ ] A plan after `deploy.sh --rebuild` shows no changes.
+- [ ] `image_id` set to an existing image: the jumphost is a bastion only, nodes boot.
+- [ ] As a multicluster downstream: `cluster.sh register` with the NAT address in the management `ingress_cidrs`.
+- [ ] Expired PARs after 24 hours: `oci os preauth-request list --bucket-name <cluster>-build`.
 
 ## Multicluster
 

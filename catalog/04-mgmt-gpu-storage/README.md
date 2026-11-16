@@ -130,5 +130,6 @@ estimate for your values: `tools/multicluster/cluster.sh cost <name>`.
 
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
+- [OCI](oci/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).

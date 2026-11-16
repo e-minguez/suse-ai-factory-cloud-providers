@@ -18,11 +18,11 @@ them.
 
 | Shape | Clusters | Nodes | Components | Providers |
 |---|---|---|---|---|
-| [01 Inference in a box](01-inference-in-a-box/README.md) | 1 | 1 control plane on a GPU plan | rancher, aif-operator, gpu-operator, local-path-provisioner | [vultr](01-inference-in-a-box/vultr/README.md), [evroc](01-inference-in-a-box/evroc/README.md) |
-| [02 HA cluster with storage](02-ha-storage/README.md) | 1 | 3 control plane, GPU pool, worker pool, 3 storage nodes | rancher, aif-operator, gpu-operator, suse-storage | [vultr](02-ha-storage/vultr/README.md), [evroc](02-ha-storage/evroc/README.md) |
-| [03 Management and GPU downstream](03-mgmt-gpu/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, local-path-provisioner | [vultr](03-mgmt-gpu/vultr/README.md), [evroc](03-mgmt-gpu/evroc/README.md) |
-| [04 Management and GPU downstream with storage](04-mgmt-gpu-storage/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool + worker pool + 3 storage nodes | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, suse-storage | [vultr](04-mgmt-gpu-storage/vultr/README.md), [evroc](04-mgmt-gpu-storage/evroc/README.md) |
-| [05 Platform](05-platform/README.md) | 4 | mgmt, sec, gpu: 3 control plane each; obs: 1 large node<br>gpu also has a GPU pool | mgmt: rancher, aif-operator, local-path-provisioner, observability-plugin, observability-agent, security-downstream<br>obs: observability-server, local-path-provisioner, security-downstream<br>sec: security-management, local-path-provisioner, observability-agent<br>gpu: cert-manager, gpu-operator, local-path-provisioner, security-downstream, observability-agent | [vultr](05-platform/vultr/README.md), [evroc](05-platform/evroc/README.md) |
+| [01 Inference in a box](01-inference-in-a-box/README.md) | 1 | 1 control plane on a GPU plan | rancher, aif-operator, gpu-operator, local-path-provisioner | [vultr](01-inference-in-a-box/vultr/README.md), [evroc](01-inference-in-a-box/evroc/README.md), [oci](01-inference-in-a-box/oci/README.md) |
+| [02 HA cluster with storage](02-ha-storage/README.md) | 1 | 3 control plane, GPU pool, worker pool, 3 storage nodes | rancher, aif-operator, gpu-operator, suse-storage | [vultr](02-ha-storage/vultr/README.md), [evroc](02-ha-storage/evroc/README.md), [oci](02-ha-storage/oci/README.md) |
+| [03 Management and GPU downstream](03-mgmt-gpu/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, local-path-provisioner | [vultr](03-mgmt-gpu/vultr/README.md), [evroc](03-mgmt-gpu/evroc/README.md), [oci](03-mgmt-gpu/oci/README.md) |
+| [04 Management and GPU downstream with storage](04-mgmt-gpu-storage/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool + worker pool + 3 storage nodes | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, suse-storage | [vultr](04-mgmt-gpu-storage/vultr/README.md), [evroc](04-mgmt-gpu-storage/evroc/README.md), [oci](04-mgmt-gpu-storage/oci/README.md) |
+| [05 Platform](05-platform/README.md) | 4 | mgmt, sec, gpu: 3 control plane each; obs: 1 large node<br>gpu also has a GPU pool | mgmt: rancher, aif-operator, local-path-provisioner, observability-plugin, observability-agent, security-downstream<br>obs: observability-server, local-path-provisioner, security-downstream<br>sec: security-management, local-path-provisioner, observability-agent<br>gpu: cert-manager, gpu-operator, local-path-provisioner, security-downstream, observability-agent | [vultr](05-platform/vultr/README.md), [evroc](05-platform/evroc/README.md), [oci](05-platform/oci/README.md) |
 
 Start with 01 to try AI Factory on one machine. Use 03 or later when
 management and GPU workloads must be separate, for example to add GPU clusters
@@ -114,6 +114,13 @@ VPC. Nothing in the repository depends on the ranges being different: the
 clusters talk to each other only through public load balancer addresses and DNS
 names, and the VPC range is used only inside one cluster. Vultr accepts
 several VPCs with the same subnet in one region (checked 2026-10-29).
+
+### OCI: shapes and limits
+
+Every shape runs on VM shapes only (`VM.GPU.A10.1` for GPUs); no shape needs
+bare metal, which cannot boot the imported image. Each cluster has its own VCN,
+and the plan checks shape availability and service limits of the cluster
+alone, not the usage of other clusters in the compartment.
 
 ### evroc: quota is per organization
 
