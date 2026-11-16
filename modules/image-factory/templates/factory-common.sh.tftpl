@@ -72,15 +72,30 @@ trap cleanup EXIT
 log "=== image-factory starting (build $BUILD_ID) ==="
 
 step prereqs "installing ${packages}"
+%{ if package_manager == "dnf" ~}
+# Install only missing commands: OL9 ships curl-minimal, and installing curl
+# would conflict with it and abort the whole transaction.
+missing=""
+for cmd in ${packages}; do
+  command -v "$cmd" >/dev/null || missing="$missing $cmd"
+done
+dnf -y makecache \
+  || log "dnf makecache reported a non-zero exit, continuing"
+if [[ -n "$missing" ]]; then
+  dnf -y install $missing \
+    || log "dnf install reported a non-zero exit (packages may already be present), continuing"
+fi
+%{ else ~}
 # Leap 16 mirrors 404 on zypper's parallel package preload; see docs/workarounds.md.
 export ZYPP_PCK_PRELOAD=0
 zypper -n --gpg-auto-import-keys refresh \
   || log "zypper refresh reported a non-zero exit, continuing"
 zypper -n install ${packages} \
   || log "zypper install reported a non-zero exit (packages may already be present), continuing"
+%{ endif ~}
 for cmd in ${packages}; do
   if ! command -v "$cmd" >/dev/null; then
-    log "ERROR: $cmd is not installed after zypper install"
+    log "ERROR: $cmd is not installed after ${package_manager} install"
     exit 1
   fi
 done

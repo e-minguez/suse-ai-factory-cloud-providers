@@ -1,0 +1,151 @@
+{
+  "disclaimer": "ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.",
+  "provider": "oci",
+  "region": "eu-frankfurt-1",
+  "cluster_name": "suse-ai-factory",
+  "currency": "USD",
+  "catalog": {
+    "source": "file",
+    "as_of": "2026-11-02T14:49:49.342Z"
+  },
+  "durations": [
+    "1h",
+    "8h",
+    "24h",
+    "7d",
+    "30d"
+  ],
+  "resources": [
+    {
+      "resource": "jumphost",
+      "kind": "compute",
+      "role": "jumphost",
+      "rate_id": "VM.Standard.E5.Flex:2x16",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0.092,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.092,
+        "24h": 2.208,
+        "30d": 66.24,
+        "7d": 15.456,
+        "8h": 0.736
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "jumphost disk",
+      "kind": "storage",
+      "role": "jumphost",
+      "rate_id": "storage:boot",
+      "qty": 1,
+      "size_gb": 100,
+      "rate_found": true,
+      "hourly": 0.000058,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.005822,
+        "24h": 0.139726,
+        "30d": 4.191781,
+        "7d": 0.978082,
+        "8h": 0.046575
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "custom image",
+      "kind": "storage",
+      "role": "image",
+      "rate_id": "storage:object",
+      "qty": 1,
+      "size_gb": 8,
+      "rate_found": true,
+      "hourly": 0.000035,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0.000279,
+        "24h": 0.006707,
+        "30d": 0.201205,
+        "7d": 0.046948,
+        "8h": 0.002236
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    },
+    {
+      "resource": "network load balancer, reserved public ip, nat gateway, vcn",
+      "kind": "free",
+      "role": "network",
+      "qty": 1,
+      "rate_found": true,
+      "hourly": 0,
+      "build_only": false,
+      "survives_destroy": false,
+      "costs": {
+        "1h": 0,
+        "24h": 0,
+        "30d": 0,
+        "7d": 0,
+        "8h": 0
+      },
+      "capped": {
+        "1h": false,
+        "24h": false,
+        "30d": false,
+        "7d": false,
+        "8h": false
+      }
+    }
+  ],
+  "totals": {
+    "1h": 0.098101,
+    "24h": 2.354433,
+    "30d": 70.632986,
+    "7d": 16.48103,
+    "8h": 0.784811
+  },
+  "build_only_totals": {
+    "1h": 0,
+    "24h": 0,
+    "30d": 0,
+    "7d": 0,
+    "8h": 0
+  },
+  "recurring_after_destroy_per_month": 0,
+  "excluded": [
+    {
+      "resource": "outbound traffic",
+      "reason": "traffic-dependent; the first 10 TB per month are free"
+    },
+    {
+      "resource": "build bucket",
+      "reason": "transient Object Storage use while the image is built; the qcow2 is deleted unless keep_build_artifacts"
+    }
+  ],
+  "incomplete": false,
+  "warnings": [],
+  "notes": [
+    "deploy_nodes = false: node rows omitted."
+  ]
+}

@@ -83,9 +83,10 @@ test-scripts: ## Script tests (fake terraform, tofu and ssh) and poll.sh self-te
 	bash scripts/tests/leftovers_aws_test.sh
 	bash scripts/tests/leftovers_evroc_test.sh
 	bash scripts/tests/leftovers_exoscale_test.sh
+	bash scripts/tests/leftovers_oci_test.sh
 	bash scripts/tests/leftovers_vultr_test.sh
 	@if [ -x /bin/bash ]; then \
-		for t in aws evroc exoscale vultr; do /bin/bash scripts/tests/leftovers_$${t}_test.sh || exit 1; done; \
+		for t in aws evroc exoscale oci vultr; do /bin/bash scripts/tests/leftovers_$${t}_test.sh || exit 1; done; \
 	fi
 	bash scripts/lib/poll_test.sh
 	[ ! -x /bin/bash ] || /bin/bash scripts/lib/poll_test.sh
@@ -114,8 +115,8 @@ image: ## Build the web UI container image (suse-ai-factory-cloud-providers:<too
 	docker buildx build --load -f tools/webui/Dockerfile --build-arg VERSION=$(WEBUI_VERSION) \
 		-t suse-ai-factory-cloud-providers:$(WEBUI_VERSION) -t suse-ai-factory-cloud-providers:dev .
 
-cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|vultr> TFVARS="common-all.tfvars terraform.tfvars"
-	@[ -n "$(PROVIDER)" ] || { echo "cost: set PROVIDER=aws|evroc|exoscale|vultr (and TFVARS=\"f1 f2\", later wins)" >&2; exit 1; }
+cost: ## Estimate cost from tfvars: make cost PROVIDER=<aws|evroc|exoscale|oci|vultr> TFVARS="common-all.tfvars terraform.tfvars"
+	@[ -n "$(PROVIDER)" ] || { echo "cost: set PROVIDER=aws|evroc|exoscale|oci|vultr (and TFVARS=\"f1 f2\", later wins)" >&2; exit 1; }
 	cd tools/cost && go run . --provider $(PROVIDER) $(foreach f,$(TFVARS),--var-file $(abspath $(f)))
 
 cost-fixtures: ## Run the live-tagged cost tests (network, optional credentials)

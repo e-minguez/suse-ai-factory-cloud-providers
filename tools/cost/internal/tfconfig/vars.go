@@ -2,6 +2,7 @@ package tfconfig
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -23,9 +24,14 @@ type Vars struct {
 // declared in decls becomes a warning (name only, never the value).
 func NewVars(decls map[string]*VariableDecl, tfvars map[string]TFVarValue, overrides map[string]string) *Vars {
 	v := &Vars{decls: decls, tfvars: tfvars, overrides: overrides}
-	for name, tv := range tfvars {
+	names := make([]string, 0, len(tfvars))
+	for name := range tfvars {
+		names = append(names, name)
+	}
+	sort.Strings(names) // stable warning order
+	for _, name := range names {
 		if _, ok := decls[name]; !ok {
-			r := tv.Range
+			r := tfvars[name].Range
 			v.diags = append(v.diags, Diagnostic{
 				Severity: SeverityWarning,
 				Summary:  fmt.Sprintf("tfvars sets %q, which is not declared in the module's variables", name),

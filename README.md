@@ -64,6 +64,7 @@ flowchart LR
 | **aws** | 1 | Raw image uploaded to S3, imported as an EBS snapshot and AMI | NLB DNS names | [aws.md](docs/providers/aws.md) |
 | **evroc** | 2 (+1 optional) | Raw image written to a disk, one snapshot per zone | sslip.io | [evroc.md](docs/providers/evroc.md) |
 | **exoscale** | 2 | Raw image converted to qcow2, served over HTTP, template per zone | sslip.io | [exoscale.md](docs/providers/exoscale.md); every node has a public IPv4, single zone ([limitations](docs/providers/exoscale.md#limitations)) |
+| **oci** | 1 | Raw image converted to qcow2, uploaded through write-only pre-authenticated requests, custom image with a UEFI capability schema | sslip.io | [oci.md](docs/providers/oci.md) |
 | **vultr** | 2 | Raw image served over HTTP, account-wide snapshot from the URL | sslip.io | [vultr.md](docs/providers/vultr.md) |
 
 Each provider has an example root with its own README:
@@ -313,7 +314,7 @@ disk. See [docs/webui.md](docs/webui.md).
 | `tools/multicluster` | Several clusters from one checkout, imported into a management Rancher ([above](#multi-cluster)). |
 | `tools/observability` | Optional OpenTelemetry Operator, `Instrumentation` and demo app manifests, rendered from a cluster's outputs ([tools/observability](tools/observability/README.md)). |
 | `make cost PROVIDER=<p> TFVARS="..."` | Cost estimate from tfvars before a deploy; an estimate, not a quote ([tools/cost](tools/cost/README.md)). |
-| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
+| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, oci optional `--region` and `--compartment` with the `oci` CLI, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
 | `tools/orphans/evroc [--adopt]` | Run in `examples/evroc` (or the cluster directory): lists evroc objects missing from the state, for example after an interrupted apply, and writes `import` blocks for them (`--adopt` writes `imports.tf` directly). |
 | `tools/vultr/passthrough-stock.sh [region ...]` | Vultr GPU passthrough plans in stock per region. Needs `VULTR_API_KEY`, `curl` and `jq`. |
 

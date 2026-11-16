@@ -80,6 +80,53 @@ run "defaults_render_without_hooks" {
   }
 }
 
+run "default_package_manager_is_zypper" {
+  command = plan
+
+  assert {
+    condition = (
+      strcontains(output.script, "zypper -n install podman curl unzip") &&
+      strcontains(output.script, "not installed after zypper install") &&
+      !strcontains(output.script, "dnf")
+    )
+    error_message = "the default must render the zypper prereqs only"
+  }
+}
+
+run "dnf_renders_dnf_prereqs" {
+  command = plan
+
+  variables {
+    package_manager = "dnf"
+  }
+
+  assert {
+    condition = (
+      strcontains(output.script, "dnf -y makecache") &&
+      strcontains(output.script, "dnf -y install $missing") &&
+      strcontains(output.script, "for cmd in podman curl unzip; do") &&
+      strcontains(output.script, "not installed after dnf install") &&
+      strcontains(output.script, "systemctl enable --now podman.socket")
+    )
+    error_message = "dnf must refresh the cache and install the packages"
+  }
+
+  assert {
+    condition     = !strcontains(output.script, "zypper") && !strcontains(output.script, "ZYPP_PCK_PRELOAD")
+    error_message = "dnf must not render any zypper line"
+  }
+}
+
+run "rejects_unknown_package_manager" {
+  command = plan
+
+  variables {
+    package_manager = "apt"
+  }
+
+  expect_failures = [var.package_manager]
+}
+
 run "hash_tracks_hook_body" {
   command = plan
 

@@ -1,0 +1,335 @@
+{
+  "lastUpdated": "2026-11-02T14:49:49.342Z",
+  "items": [
+    {
+      "partNumber": "B111129",
+      "displayName": "OCI - Compute - Standard - E6 - OCPU",
+      "metricName": "OCPU Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.03
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B111130",
+      "displayName": "OCI - Compute - Standard - E6 - Memory",
+      "metricName": "Gigabytes Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.002
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B88518",
+      "displayName": "Compute - Virtual Machine GPU Standard - X7",
+      "metricName": "GPU Per Hour",
+      "serviceCategory": "Compute - GPU",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 1.275
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B89734",
+      "displayName": "Compute - GPU Standard - V2",
+      "metricName": "GPU Per Hour",
+      "serviceCategory": "Compute - GPU",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 2.95
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B91628",
+      "displayName": "Object Storage - Storage",
+      "metricName": "Gigabyte Storage Capacity Per Month",
+      "serviceCategory": "Storage - Object Storage",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0,
+              "rangeMin": 0,
+              "rangeMax": 10
+            },
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.0255,
+              "rangeMin": 10,
+              "rangeMax": 999999999
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B91961",
+      "displayName": "Storage - Block Volume - Storage",
+      "metricName": "Gigabyte Storage Capacity Per Month",
+      "serviceCategory": "Storage - Block Volumes",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.0255
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B91962",
+      "displayName": "Storage - Block Volume - Performance Units",
+      "metricName": "Performance Units Per Gigabyte Per Month",
+      "serviceCategory": "Storage - Block Volumes",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.0017
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B92306",
+      "displayName": "Compute - Standard - E3 - OCPU",
+      "metricName": "OCPU Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.025
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B92307",
+      "displayName": "Compute - Standard - E3 - Memory",
+      "metricName": "Gigabytes Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.0015
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B93113",
+      "displayName": "Compute - Standard - E4 - OCPU",
+      "metricName": "OCPU Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.025
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B93114",
+      "displayName": "Compute - Standard - E4  - Memory",
+      "metricName": "Gigabyte Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.0015
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B93297",
+      "displayName": "Compute - Standard - A1 - OCPU",
+      "metricName": "OCPU Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0,
+              "rangeMin": 0,
+              "rangeMax": 3000
+            },
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.01,
+              "rangeMin": 3000,
+              "rangeMax": 999999999999999
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B93298",
+      "displayName": "Compute - Standard - A1 - Memory",
+      "metricName": "Gigabyte Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0,
+              "rangeMin": 0,
+              "rangeMax": 18000
+            },
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.0015,
+              "rangeMin": 18000,
+              "rangeMax": 999999999999999
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B94176",
+      "displayName": "Compute - Standard - X9 - OCPU",
+      "metricName": "OCPU Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.04
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B94177",
+      "displayName": "Compute - Standard - X9 - Memory",
+      "metricName": "Gigabytes Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.0015
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B95909",
+      "displayName": "Compute  - GPU - A10",
+      "metricName": "GPU Per Hour",
+      "serviceCategory": "Compute - GPU",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B97384",
+      "displayName": "Compute - Standard - E5 - OCPU",
+      "metricName": "OCPU Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.03
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNumber": "B97385",
+      "displayName": "Compute - Standard - E5 - Memory",
+      "metricName": "Gigabytes Per Hour",
+      "serviceCategory": "Compute - Virtual Machine",
+      "currencyCodeLocalizations": [
+        {
+          "currencyCode": "USD",
+          "prices": [
+            {
+              "model": "PAY_AS_YOU_GO",
+              "value": 0.002
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

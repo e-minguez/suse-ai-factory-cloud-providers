@@ -1,5 +1,5 @@
 // Command cost estimates, from tfvars alone, what a deployment of this repo
-// will cost on aws, evroc or vultr. Nothing is deployed or discovered. See
+// will cost on aws, evroc, exoscale, oci or vultr. Nothing is deployed or discovered. See
 // tools/cost/README.md and the provider packages under internal/provider.
 package main
 

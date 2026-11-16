@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034  # LO_* are read by the sourcing tool
 # Sourced by tools/leftovers/<provider>.sh. Common arguments, report and exit codes.
 #
-#   lo_init "$@"                       parse args; sets LO_CLUSTER, LO_REGION, LO_PROJECT, LO_ALL, LO_TMP
+#   lo_init "$@"                       parse args; sets LO_CLUSTER, LO_REGION, LO_PROJECT, LO_COMPARTMENT, LO_ALL, LO_TMP
 #   lo_row <status> <type> <id> <name> [created]
 #                                      status: LIVE | RECORD | UNKNOWN | gone
 #   lo_finish                          print the report (header shows LO_SCOPE if set), exit 0 or 1
@@ -10,7 +10,7 @@
 #   lo_usage_error <msg>               exit 2
 #
 # The provider script sets LO_USAGE (usage line) and LO_FLAGS (accepted flags:
-# any of "region project") before lo_init. Bash 3.2 compatible.
+# any of "region project compartment") before lo_init. Bash 3.2 compatible.
 
 set -euo pipefail
 
@@ -33,7 +33,7 @@ lo_need() {
 }
 
 lo_init() {
-  LO_CLUSTER="" LO_REGION="" LO_PROJECT="" LO_SCOPE="" LO_ALL=0
+  LO_CLUSTER="" LO_REGION="" LO_PROJECT="" LO_COMPARTMENT="" LO_SCOPE="" LO_ALL=0
   while [ $# -gt 0 ]; do
     case "$1" in
       -h | --help)
@@ -41,10 +41,14 @@ lo_init() {
         exit 0
         ;;
       --all) LO_ALL=1 ;;
-      --region | --project)
+      --region | --project | --compartment)
         case " ${LO_FLAGS:-} " in *" ${1#--} "*) ;; *) lo_usage_error "unknown flag: $1" ;; esac
         if [ $# -lt 2 ] || [ -z "$2" ]; then lo_usage_error "$1 needs a value"; fi
-        if [ "$1" = --region ]; then LO_REGION=$2; else LO_PROJECT=$2; fi
+        case "$1" in
+          --region) LO_REGION=$2 ;;
+          --project) LO_PROJECT=$2 ;;
+          *) LO_COMPARTMENT=$2 ;;
+        esac
         shift
         ;;
       -*) lo_usage_error "unknown flag: $1" ;;

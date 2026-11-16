@@ -25,3 +25,4 @@ with `# see docs/decisions/NNN-title.md`.
 - [008](008-exoscale-module.md) exoscale module design
 - [009](009-webui-runner.md) web UI runner
 - [010](010-security-observability.md) SUSE Security and SUSE Observability components
+- [012](012-oci-module.md) oci module design

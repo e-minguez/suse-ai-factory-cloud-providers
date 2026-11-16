@@ -1,0 +1,12 @@
+# Converts the raw to qcow2 and uploads it through the write-only PARs. The
+# URLs are not logged. The marker is written last: it means "upload complete".
+QCOW="$(dirname "$1")/${image_base}.qcow2"
+qemu-img convert -f raw -O qcow2 -o preallocation=off "$1" "$QCOW"
+rm -f "$1"
+log "uploading ${image_base}.qcow2: $(du -h "$QCOW" | cut -f1) file, $(qemu-img info "$QCOW" | grep 'virtual size')"
+curl -fsS --retry 5 --retry-delay 15 --retry-all-errors -T "$QCOW" "${qcow_url}"
+# From a file, not stdin: curl sends stdin chunked and Object Storage answers 501.
+printf '%s' "$BUILD_ID" > "$QCOW.done"
+curl -fsS --retry 5 --retry-delay 15 --retry-all-errors -T "$QCOW.done" "${done_url}"
+log "upload complete"
+rm -f "$QCOW" "$QCOW.done"

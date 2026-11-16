@@ -32,6 +32,17 @@ variable "extra_packages" {
   description = "Packages installed in addition to podman and curl. Each must provide a command of the same name; the script fails when one is missing afterwards."
 }
 
+variable "package_manager" {
+  type        = string
+  default     = "zypper"
+  description = "Package manager of the build host, \"zypper\" or \"dnf\". Selects how podman, curl and extra_packages are installed."
+
+  validation {
+    condition     = contains(["zypper", "dnf"], var.package_manager)
+    error_message = "package_manager must be \"zypper\" or \"dnf\"."
+  }
+}
+
 variable "customize_attempts" {
   type        = number
   default     = 3

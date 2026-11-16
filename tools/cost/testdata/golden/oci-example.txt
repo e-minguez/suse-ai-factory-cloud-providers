@@ -1,0 +1,17 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: oci   Region: eu-frankfurt-1   Cluster: suse-ai-factory   Catalog: file (2026-11-02T14:49:49.342Z)
+
+  RESOURCE                                                     ROLE      POOL  QTY  TYPE                           USD/hr     1h     8h   24h     7d    30d
+  jumphost                                                     jumphost          1  VM.Standard.E5.Flex:2x16       0.0920   0.09   0.74  2.21  15.46  66.24
+  jumphost disk (100 GB)                                       jumphost          1  storage:boot              0.000058/GB   0.01   0.05  0.14   0.98   4.19
+  custom image (8 GB)                                          image             1  storage:object            0.000035/GB  <0.01  <0.01  0.01   0.05   0.20
+  network load balancer, reserved public ip, nat gateway, vcn  network              -- free --                         --     --     --    --     --     --
+                                                                                                                    TOTAL   0.10   0.78  2.35  16.48  70.63
+
+  All amounts in USD.
+  deploy_nodes = false: node rows omitted.
+  Not included:
+    - outbound traffic: traffic-dependent; the first 10 TB per month are free
+    - build bucket: transient Object Storage use while the image is built; the qcow2 is deleted unless keep_build_artifacts
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
