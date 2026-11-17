@@ -23,7 +23,10 @@ workers and a `gpu3.small` GPU pool (Rancher through the load balancer,
 local-path volumes, aif-operator, GPU operator, `nvidia-smi` and a CUDA
 workload); `deploy.sh --rebuild` (every node replaced, the pool bootstrapped
 again, port 80 closed); a second run without changes; destroy and leftover
-check. Not run yet:
+check. Passed in de-fra-1 (2026-11-17): one control plane and a
+`gpurtx6000pro.small` GPU pool (RTX PRO 6000 Blackwell; GPU operator, CUDA
+validator and a PyTorch workload, see
+[docs/providers/exoscale.md#gpus](providers/exoscale.md#gpus)). Not run yet:
 
 - [ ] Grow the control plane (`control_plane_count` 1 → 3) and a worker pool on
       a running cluster; nothing is replaced.
