@@ -175,6 +175,17 @@ closes it again.
   precompiled driver (`gpu_driver_version` 615) loads, the node advertises
   `nvidia.com/gpu: 1`, and a CUDA workload runs. One `gpu3.small` used 1 of a
   `gpu3` limit of 1.
+- Tested 2026-11 with `gpurtx6000pro.small` (one RTX PRO 6000 Blackwell Server
+  Edition, `sm_120`, 95 GiB) in de-fra-1, same precompiled driver (615): the
+  node advertises `nvidia.com/gpu: 1` and the GPU product label, the CUDA
+  validator completes, and a PyTorch 2.7 (CUDA 12.8) workload ran fp64, fp32
+  and bf16 matmuls, filled and verified 85 GiB of GPU memory and held 60 s of
+  full load at a steady 600 W. Workloads need a CUDA 12.8 or newer build
+  (first with `sm_120` kernels).
+- Creating a GPU instance takes longer than a standard one:
+  `exoscale_compute_instance` for `gpurtx6000pro.small` completed after about
+  10.5 minutes, while the API reported the instance `running` after about one
+  minute. The apply shows the resource as still creating during that time.
 
 ## Quota and availability
 
