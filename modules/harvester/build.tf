@@ -180,6 +180,8 @@ resource "harvester_virtualmachine" "buildhost" {
 
   lifecycle {
     replace_triggered_by = [terraform_data.build_trigger]
+    # Provider 1.9.1 reads the cloud-init disk back as a disk (docs/workarounds.md).
+    ignore_changes = [disk]
 
     precondition {
       condition     = local.buildhost_image_ref != null
@@ -199,6 +201,15 @@ locals {
     ssh_user   = var.jumphost_username != "" ? var.jumphost_username : "root"
   }
 
+  # The jumphost output: no address when the build host powers off. The apply that
+  # powers it off still holds the creation-time address in state, so the output
+  # cannot rely on a refresh; build_access keeps it for build-logs.sh.
+  jumphost_output = {
+    public_ip  = var.buildhost_power_off ? null : local.buildhost_ip
+    private_ip = var.buildhost_power_off ? null : local.buildhost_ip
+    ssh_user   = local.buildhost_access.ssh_user
+  }
+
   status_url = local.buildhost_ip == null ? null : "http://${local.buildhost_ip}:${local.status_port}/status"
 
   build_status_value = {
@@ -208,9 +219,9 @@ locals {
   }
 }
 
-# Build host and build host in state for scripts/lib/ssh.sh during the apply;
-# outputs reach the state file only after the image exists. Keeps the build-time
-# address after the buildhost powers off (ignore_changes; replaced per build).
+# Build host in state for scripts/lib/ssh.sh during the apply (outputs reach the
+# state only at the end); key "jumphost" is the contract with ssh.sh. Keeps the
+# build-time address after the power-off (ignore_changes; replaced per build).
 resource "terraform_data" "build_access" {
   count = local.build_image ? 1 : 0
 
@@ -218,7 +229,7 @@ resource "terraform_data" "build_access" {
 
   input = {
     build_id     = module.config.build_id
-    buildhost    = local.buildhost_access
+    jumphost     = local.buildhost_access
     build_status = local.build_status_value
   }
 

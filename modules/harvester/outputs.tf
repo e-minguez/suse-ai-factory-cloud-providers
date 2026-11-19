@@ -53,8 +53,8 @@ output "rancher_bootstrap_password" {
 }
 
 output "jumphost" {
-  description = "The build host (common output name jumphost): VLAN address while it runs (public_ip and private_ip are the same) and login user (root when jumphost_username is empty). The addresses are null once it is powered off and when image_id is set (no build host): scripts/ssh.sh then connects to the nodes directly."
-  value       = local.buildhost_access
+  description = "The build host (common output name jumphost): login user (root when jumphost_username is empty) and VLAN address (public_ip and private_ip are the same). The addresses are null with buildhost_power_off and when image_id is set (no build host): scripts/ssh.sh then connects to the nodes directly."
+  value       = local.jumphost_output
 }
 
 output "nodes" {

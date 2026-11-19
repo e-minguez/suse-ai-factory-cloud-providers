@@ -361,8 +361,8 @@ enforced; build-done signal over HTTP.
    `{ cp = "yolo" }` and `storage_class_name` unset (control planes on the
    single-replica class, agents and jumphost on replicated Longhorn, two
    image exports).
-2. **Powered-off build host:** implemented (2026-11-19), e2e
-   pending. `on_exit` hook powers off after a successful build once a GET of the
+2. **Powered-off build host:** implemented and **e2e passed** (2026-11-19, HA
+   run: 3 control planes + 1 agent, rancher + aif-operator). `on_exit` hook powers off after a successful build once a GET of the
    status file follows `done` (journal of `image-status.service`, 30 min at
    most); `wait-for-image.sh` then waits for the status URL to stop answering
    (15 min, then warns and exports from the running VM). Role label `builder`;
@@ -374,9 +374,14 @@ enforced; build-done signal over HTTP.
    `buildhost_image_url`, `node_storage_classes` key `buildhost`,
    `provider_details.buildhost_image`); common `jumphost_*` and the `jumphost`
    output stay.
-   To check on the next deploy: export from the stopped VM's volume (Step 0
-   case 1b), `ssh.sh` and `kubeconfig.sh` straight to the nodes, a plan after
-   the power-off shows no changes.
+   Verified: power-off after the build, export from the stopped VM's volume
+   (Step 0 case 1b), `ssh.sh` and `kubeconfig.sh` straight to the nodes. Found
+   and fixed on that run: the `jumphost` output kept the creation-time address
+   (now null with `buildhost_power_off`), and provider 1.9.1 reports the
+   cloud-init disk as a disk (perpetual in-place update of every VM;
+   `ignore_changes = [disk]`, harvester/harvester#10728). Chart order on that
+   run: metallb first (13:03), aif-operator done 13:09, `kubernetes-vip`
+   created right after: the VIP still waits for every chart.
 3. **Managed VIPs depend on every chart** (elemental installer): charts install
    in `release.yaml` order with `metallb`/`endpoint-copier-operator` appended
    last, and `deployHelmCharts` exits 1 on any failed chart, so `deployManifests`
