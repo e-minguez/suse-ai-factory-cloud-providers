@@ -344,9 +344,10 @@ run "build_pipeline" {
       terraform_data.build_access[0].input.build_status.method == "http-status" &&
       terraform_data.build_access[0].input.build_status.url_or_key == "http://10.114.128.50:8080/status" &&
       join(",", terraform_data.build_access[0].input.build_status.hosts) == "10.114.128.50" &&
-      output.jumphost.public_ip == "10.114.128.50" && output.jumphost.private_ip == "10.114.128.50" && output.jumphost.ssh_user == "suse"
+      terraform_data.build_access[0].input.jumphost.public_ip == "10.114.128.50" && terraform_data.build_access[0].input.jumphost.private_ip == "10.114.128.50" &&
+      output.jumphost.public_ip == null && output.jumphost.private_ip == null && output.jumphost.ssh_user == "suse"
     )
-    error_message = "build_status (kept in build_access while the image does not exist) points at the buildhost status file; buildhost addresses are its VLAN address."
+    error_message = "build_status and build_access point at the build host VLAN address; the jumphost output has none, as the build host powers off in the same apply."
   }
 }
 
@@ -428,13 +429,17 @@ run "buildhost_power_off_disabled" {
   }
 
   assert {
-    condition     = !strcontains(module.image_factory.script_stripped, "poweroff")
-    error_message = "buildhost_power_off = false keeps the builder running."
+    condition     = !strcontains(module.image_factory.script_stripped, "poweroff") && output.jumphost.public_ip == "10.114.128.50"
+    error_message = "buildhost_power_off = false keeps the build host running and its address in the jumphost output."
   }
 }
 
 run "powered_off_buildhost_has_no_address" {
   command = plan
+
+  variables {
+    buildhost_power_off = false
+  }
 
   override_resource {
     target = harvester_virtualmachine.buildhost
@@ -448,7 +453,7 @@ run "powered_off_buildhost_has_no_address" {
 
   assert {
     condition     = output.jumphost.public_ip == null && output.jumphost.private_ip == null
-    error_message = "A powered-off buildhost reports an empty address: the outputs carry null, so scripts/ssh.sh connects directly."
+    error_message = "A build host stopped by hand (buildhost_power_off = false) reports an empty address after a refresh: the output carries null, so scripts/ssh.sh connects directly."
   }
 }
 

@@ -171,7 +171,7 @@ provider from a kubeconfig path ([`examples/harvester`](../../examples/harvester
 | egress\_ips | Public source IPs of cluster egress. Always empty: egress leaves through the gateway of the VM network, which Terraform cannot read. |
 | image | Image build ID and the image (<namespace>/<name>) under the region label; none while the image does not exist. |
 | ingress\_endpoint | URL of the ingress controller on ingress\_vip. null when ingress\_controller is none. |
-| jumphost | The build host (common output name jumphost): VLAN address while it runs (public\_ip and private\_ip are the same) and login user (root when jumphost\_username is empty). The addresses are null once it is powered off and when image\_id is set (no build host): scripts/ssh.sh then connects to the nodes directly. |
+| jumphost | The build host (common output name jumphost): login user (root when jumphost\_username is empty) and VLAN address (public\_ip and private\_ip are the same). The addresses are null with buildhost\_power\_off and when image\_id is set (no build host): scripts/ssh.sh then connects to the nodes directly. |
 | kubernetes\_api\_endpoint | Kubernetes API URL on api\_host, port 6443. |
 | network | Subnet of the VM network; subnet\_cidrs holds the same CIDR. |
 | next\_steps | Post-deploy hints. |

@@ -184,8 +184,9 @@ node image replaces every node.
   It exists
   while an image is built (not with `image_id`) and powers off afterwards
   (`buildhost_power_off`); the stopped VM stays in state until the next build
-  replaces it. `jumphost.public_ip` is its VLAN address while it runs
-  (`private_ip` is the same) and null once it is off.
+  replaces it. `jumphost.public_ip` is null with `buildhost_power_off` (the
+  apply that powers it off would otherwise report the old address), else its
+  VLAN address (`private_ip` is the same).
 - **Node addresses** are DHCP leases: `nodes[*].private_ip`. There is no
   bastion: with no build host address, `scripts/ssh.sh` and
   `scripts/kubeconfig.sh` connect to the nodes directly, so the machine running

@@ -88,8 +88,11 @@ resource "harvester_virtualmachine" "node" {
   }
 
   # Ignition runs on first boot only: a new image or build replaces the node.
+  # disk: provider 1.9.1 reads the cloud-init disk back as a disk (docs/workarounds.md);
+  # root disk size, access mode and cache mode apply when the node is replaced.
   lifecycle {
     replace_triggered_by = [terraform_data.build_trigger, terraform_data.node_image[each.key]]
+    ignore_changes       = [disk]
   }
 }
 
