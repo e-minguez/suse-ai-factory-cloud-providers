@@ -18,11 +18,11 @@ them.
 
 | Shape | Clusters | Nodes | Components | Providers |
 |---|---|---|---|---|
-| [01 Inference in a box](01-inference-in-a-box/README.md) | 1 | 1 control plane on a GPU plan | rancher, aif-operator, gpu-operator, local-path-provisioner | [vultr](01-inference-in-a-box/vultr/README.md), [evroc](01-inference-in-a-box/evroc/README.md), [oci](01-inference-in-a-box/oci/README.md) |
-| [02 HA cluster with storage](02-ha-storage/README.md) | 1 | 3 control plane, GPU pool, worker pool, 3 storage nodes | rancher, aif-operator, gpu-operator, suse-storage | [vultr](02-ha-storage/vultr/README.md), [evroc](02-ha-storage/evroc/README.md), [oci](02-ha-storage/oci/README.md) |
-| [03 Management and GPU downstream](03-mgmt-gpu/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, local-path-provisioner | [vultr](03-mgmt-gpu/vultr/README.md), [evroc](03-mgmt-gpu/evroc/README.md), [oci](03-mgmt-gpu/oci/README.md) |
-| [04 Management and GPU downstream with storage](04-mgmt-gpu-storage/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool + worker pool + 3 storage nodes | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, suse-storage | [vultr](04-mgmt-gpu-storage/vultr/README.md), [evroc](04-mgmt-gpu-storage/evroc/README.md), [oci](04-mgmt-gpu-storage/oci/README.md) |
-| [05 Platform](05-platform/README.md) | 4 | mgmt, sec, gpu: 3 control plane each; obs: 1 large node<br>gpu also has a GPU pool | mgmt: rancher, aif-operator, local-path-provisioner, observability-plugin, observability-agent, security-downstream<br>obs: observability-server, local-path-provisioner, security-downstream<br>sec: security-management, local-path-provisioner, observability-agent<br>gpu: cert-manager, gpu-operator, local-path-provisioner, security-downstream, observability-agent | [vultr](05-platform/vultr/README.md), [evroc](05-platform/evroc/README.md), [oci](05-platform/oci/README.md) |
+| [01 Inference in a box](01-inference-in-a-box/README.md) | 1 | 1 control plane on a GPU plan | rancher, aif-operator, gpu-operator, local-path-provisioner | [vultr](01-inference-in-a-box/vultr/README.md), [evroc](01-inference-in-a-box/evroc/README.md), [oci](01-inference-in-a-box/oci/README.md), [aws](01-inference-in-a-box/aws/README.md) |
+| [02 HA cluster with storage](02-ha-storage/README.md) | 1 | 3 control plane, GPU pool, worker pool, 3 storage nodes | rancher, aif-operator, gpu-operator, suse-storage | [vultr](02-ha-storage/vultr/README.md), [evroc](02-ha-storage/evroc/README.md), [oci](02-ha-storage/oci/README.md), [aws](02-ha-storage/aws/README.md) |
+| [03 Management and GPU downstream](03-mgmt-gpu/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, local-path-provisioner | [vultr](03-mgmt-gpu/vultr/README.md), [evroc](03-mgmt-gpu/evroc/README.md), [oci](03-mgmt-gpu/oci/README.md), [aws](03-mgmt-gpu/aws/README.md) |
+| [04 Management and GPU downstream with storage](04-mgmt-gpu-storage/README.md) | 2 | mgmt: 3 control plane<br>gpu: 3 control plane + GPU pool + worker pool + 3 storage nodes | mgmt: rancher, aif-operator, local-path-provisioner<br>gpu: cert-manager, gpu-operator, suse-storage | [vultr](04-mgmt-gpu-storage/vultr/README.md), [evroc](04-mgmt-gpu-storage/evroc/README.md), [oci](04-mgmt-gpu-storage/oci/README.md), [aws](04-mgmt-gpu-storage/aws/README.md) |
+| [05 Platform](05-platform/README.md) | 4 | mgmt, sec, gpu: 3 control plane each; obs: 1 large node<br>gpu also has a GPU pool | mgmt: rancher, aif-operator, local-path-provisioner, observability-plugin, observability-agent, security-downstream<br>obs: observability-server, local-path-provisioner, security-downstream<br>sec: security-management, local-path-provisioner, observability-agent<br>gpu: cert-manager, gpu-operator, local-path-provisioner, security-downstream, observability-agent | [vultr](05-platform/vultr/README.md), [evroc](05-platform/evroc/README.md), [oci](05-platform/oci/README.md), [aws](05-platform/aws/README.md) |
 
 Start with 01 to try AI Factory on one machine. Use 03 or later when
 management and GPU workloads must be separate, for example to add GPU clusters
@@ -76,6 +76,15 @@ region  = "se-sto"
 # project = "REPLACE_WITH_YOUR_PROJECT"
 ```
 
+For AWS the credentials come from the AWS SDK chain (`AWS_PROFILE`,
+environment, SSO; [AWS credentials](../examples/aws/README.md#aws-credentials)),
+exported in the shell that runs `cluster.sh`. The file holds the region:
+
+```hcl
+# clusters/common-aws.tfvars (mode 600)
+region = "eu-central-1"
+```
+
 The files under `clusters/` are gitignored and hold secrets: keep them at mode
 600 and never commit them. The same applies to the Terraform state in each
 cluster directory ([docs/security.md](../docs/security.md)).
@@ -114,6 +123,18 @@ VPC. Nothing in the repository depends on the ranges being different: the
 clusters talk to each other only through public load balancer addresses and DNS
 names, and the VPC range is used only inside one cluster. Vultr accepts
 several VPCs with the same subnet in one region (checked 2026-10-29).
+
+### AWS: quotas, zones and DNS names
+
+The plan checks that each zone offers the instance types, not the vCPU quota
+or capacity. A new account usually has a G and VT quota of 0, so request the
+quota for the GPU nodes before the first deploy. Each cluster has its own VPC,
+NAT gateway (one Elastic IP), two network load balancers and a jumphost that
+stays as SSH bastion; IAM names include `cluster_name`, which must be unique in
+the account. Single nodes and pools without `zone` run in the first entry of
+`zones`. Rancher and the RKE2 API use the load balancer DNS names, not sslip.io;
+with `ingress_domain` the wildcard record is a CNAME to the public load
+balancer DNS name.
 
 ### OCI: shapes and limits
 

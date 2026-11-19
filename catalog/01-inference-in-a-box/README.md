@@ -68,10 +68,11 @@ flowchart LR
 - Grow to HA: set `control_plane_count` from 1 to 3 and run `deploy` again. The existing node is kept; see [scaling](../../docs/scaling.md#control-plane). Shrinking back to 1 is not supported.
 - All control-plane nodes get the same plan. A 3-node cluster with a GPU plan on each node is costly; add a `gpu_pools` entry and use a smaller control-plane plan instead. Changing the plan of the single existing control-plane node replaces it, and the cluster is lost. This is not a supported path. Choose the plan before the first deploy. To change it later, redeploy the cluster or grow it to 3 control-plane nodes first.
 - `suse-storage` with `control_plane_count = 1` fails plan with the default `suse_storage_nodes`. For shared storage use [shape 02](../02-ha-storage/README.md).
-- Add `ingress_domain` for your own hostnames instead of sslip.io.
+- Add `ingress_domain` for your own hostnames instead of the provider default (sslip.io names; load balancer DNS names on AWS).
 
 ## Provider guides
 
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
 - [OCI](oci/README.md)
+- [AWS](aws/README.md)

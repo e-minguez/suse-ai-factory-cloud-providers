@@ -342,5 +342,6 @@ ingress; the provider guide lists the billed objects. Estimate: `tools/multiclus
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
 - [OCI](oci/README.md)
+- [AWS](aws/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).

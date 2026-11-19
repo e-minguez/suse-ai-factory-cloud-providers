@@ -1,0 +1,20 @@
+# Shape 01, inference in a box. Shared values (region, admin_cidrs, password
+# hashes, ssh keys, aif_release) go in clusters/common-*.tfvars; AWS credentials
+# come from the AWS CLI configuration or environment.
+
+cluster_name = "aif-box"
+
+# Rancher, AI Factory and the GPU stack on one node. Changing components
+# rebuilds the image and replaces every node.
+components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# One node that is control plane and GPU worker. No gpu_pools, no worker_pools.
+control_plane_count = 1
+
+# 16 vCPU, 64 GB, one A10G (24 GB). Needs a "Running On-Demand G and VT
+# instances" vCPU quota of at least 16. The node runs in the first zone; plan
+# fails when that zone does not offer the type (set zones = ["b", ...] then).
+control_plane_instance_type = "g5.4xlarge"
+
+# Optional. Default is the DNS name of the public load balancer.
+# ingress_domain = "aif.example.com"  # CNAME: *.<domain> -> public load balancer DNS name

@@ -82,7 +82,7 @@ Do not add `local-path-provisioner`: both components set the default StorageClas
 - More storage: raise the `storage` count or add a pool and list it in `suse_storage_nodes`. The selection is in each node's Ignition, so it does not rebuild the image ([scaling](../../docs/scaling.md#storage)).
 - More control-plane nodes: 3 to 5, odd numbers only. Shrinking is not supported.
 - Less cost: use `suse_storage_nodes = ["control_plane"]` and drop the `storage` pool. Control-plane nodes then hold the disks.
-- Add `ingress_domain` for your own hostnames instead of sslip.io.
+- Add `ingress_domain` for your own hostnames instead of the provider default (sslip.io names; load balancer DNS names on AWS).
 - Single node without HA: [shape 01](../01-inference-in-a-box/README.md).
 
 ## Provider guides
@@ -90,3 +90,4 @@ Do not add `local-path-provisioner`: both components set the default StorageClas
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
 - [OCI](oci/README.md)
+- [AWS](aws/README.md)
