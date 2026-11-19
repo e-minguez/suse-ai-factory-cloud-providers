@@ -254,4 +254,19 @@ reset
 has "$(cat "$FAKE_SSH_LOG")" "jumphost tail"
 noleftover
 
+# --- no jumphost address (none, or powered off once the image exists): direct ssh, no fallback
+export FAKE_TF_STATE="$T/sample-state.json"
+nojh="$W/nojh.json"
+jq '.jumphost.value.public_ip = null | .jumphost.value.private_ip = null | .build_status.value = null
+  | .image = {value: {build_id: "new123", ids: {r: "img"}}}' "$FAKE_TF_JSON" >"$nojh"
+cfg=$(FAKE_TF_JSON="$nojh" "$S/ssh.sh" --config 2>"$W/err")
+hasnt "$cfg" "Host jumphost"
+hasnt "$cfg" "ProxyJump"
+has "$cfg" "Host t-cp-01"
+hasnt "$(cat "$W/err")" "build_access"
+# same outputs before the image exists: the apply is running, state fallback applies
+jq '.image.value.ids = {}' "$nojh" >"$W/nojh-building.json"
+has "$(FAKE_TF_JSON="$W/nojh-building.json" "$S/ssh.sh" --config 2>/dev/null)" "HostName 203.0.113.50"
+unset FAKE_TF_STATE
+
 echo ok

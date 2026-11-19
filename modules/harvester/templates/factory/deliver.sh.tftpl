@@ -1,0 +1,55 @@
+# Writes the raw image to the blank virtio disk the image target volume is
+# attached as (the provider sets no disk serial: the target is the only whole
+# disk without partitions or a signature that is large enough).
+resolve_target_disk() {
+  local d n matches="" size
+  size=$(stat -c %s "$1")
+  for d in /sys/block/vd*; do
+    [ -e "$d" ] || continue
+    n=/dev/$(basename "$d")
+    [ -z "$(ls -d "$d/$(basename "$d")"[0-9]* 2>/dev/null)" ] || continue
+    [ -z "$(blkid -p -o value -s TYPE -s PTTYPE "$n" 2>/dev/null)" ] || continue
+    [ "$(blockdev --getsize64 "$n")" -ge "$size" ] || continue
+    matches="$matches $n"
+  done
+  matches=$${matches# }
+  [ -n "$matches" ] || return 1
+  [ "$matches" = "$${matches%% *}" ] || return 2
+  printf '%s\n' "$matches"
+}
+
+# The device can show up after this script starts: wait up to 20 x 15 s.
+TARGET=""
+for attempt in $(seq 1 20); do
+  rc=0
+  TARGET=$(resolve_target_disk "$1") || rc=$?
+  [ "$rc" -eq 0 ] && break
+  TARGET=""
+  if [ "$rc" -eq 2 ]; then
+    log "ERROR: more than one blank virtio disk is large enough, refusing to guess"
+    exit 1
+  fi
+  log "target disk not found yet (attempt $attempt/20), waiting 15s"
+  sleep 15
+done
+if [ -z "$TARGET" ]; then
+  log "ERROR: no blank virtio disk large enough for $1 appeared"
+  exit 1
+fi
+log "target disk: $TARGET"
+
+# No conv=sparse: zero regions must be written so nothing of earlier content shows through.
+dd if="$1" of="$TARGET" bs=4M conv=fsync
+sync
+blockdev --flushbufs "$TARGET"
+
+SIG=$(dd if="$TARGET" bs=1 skip=512 count=8 status=none)
+if [ "$SIG" != "EFI PART" ]; then
+  log "ERROR: no GPT signature at offset 512 on $TARGET, got: $SIG"
+  exit 1
+fi
+log "GPT signature confirmed"
+
+# Published here, not from on_step finished: on_step failures only warn.
+echo "$BUILD_ID" > "$DONE_FILE"
+publish done "image written to $TARGET"

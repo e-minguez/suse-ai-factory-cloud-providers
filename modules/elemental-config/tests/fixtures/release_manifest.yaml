@@ -27,3 +27,8 @@ components:
           global:
             psp:
               enabled: "false"
+    repositories:
+      - name: "jetstack"
+        url: "https://charts.jetstack.io"
+      - name: "rancher-prime"
+        url: "https://charts.rancher.com/server-charts/prime"

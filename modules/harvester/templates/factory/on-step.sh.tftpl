@@ -1,0 +1,16 @@
+# Status file served by image-status.service: "<build_id> <state> <detail>", state
+# building|done|failed. Written to a temp file and renamed, so a poll never reads half a line.
+# Functions defined here are global; deliver_raw reuses publish.
+STATUS_DIR="${status_dir}"
+
+publish() {
+  mkdir -p "$STATUS_DIR"
+  printf '%s %s %s\n' "$BUILD_ID" "$1" "$2" > "$STATUS_DIR/.status.tmp"
+  mv -f "$STATUS_DIR/.status.tmp" "$STATUS_DIR/status"
+}
+
+case "$1" in
+  finished) ;;
+  failed) publish failed "$2" ;;
+  *) publish building "$1: $2" ;;
+esac

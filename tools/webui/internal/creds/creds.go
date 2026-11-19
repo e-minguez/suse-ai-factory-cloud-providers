@@ -25,6 +25,12 @@ var ErrUnknown = errors.New("unknown provider")
 // file lives under <clusters>/.home/.evroc (HOME of children, see HomeDir).
 const evrocRel = ".home/.evroc/config.yaml"
 
+// harvester: the kubeconfig is stored as a file under <clusters>/.home/.kube
+// and its path goes to common-harvester.tfvars (harvester_kubeconfig_path).
+const harvesterRel = ".home/.kube/harvester.yaml"
+
+func harvesterKubeconfig(c string) string { return filepath.Join(c, harvesterRel) }
+
 func field(name, label, help string, sensitive bool) schema.Field {
 	return schema.Field{
 		Name: name, Type: "string", Description: help, Sensitive: sensitive,
@@ -43,6 +49,10 @@ func Fields(p string) []schema.Field {
 		}
 	case "evroc":
 		f := field("config", "evroc config file", "Content of ~/.evroc/config.yaml written by `evroc login`.", true)
+		f.Widget = "text"
+		return []schema.Field{f}
+	case "harvester":
+		f := field("harvester_kubeconfig", "Harvester kubeconfig", "Content of the kubeconfig of the Harvester cluster (Support > Download KubeConfig).", true)
 		f.Widget = "text"
 		return []schema.Field{f}
 	case "vultr":
@@ -80,6 +90,12 @@ func Status(clustersDir, p string) (map[string]bool, error) {
 			return nil, err
 		}
 		out["config"] = len(strings.TrimSpace(string(b))) > 0
+	case "harvester":
+		b, err := os.ReadFile(harvesterKubeconfig(clustersDir))
+		if err != nil && !os.IsNotExist(err) {
+			return nil, err
+		}
+		out["harvester_kubeconfig"] = len(strings.TrimSpace(string(b))) > 0
 	case "vultr", "exoscale":
 		vals, err := tfvars.Read(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider))
 		if err != nil {
@@ -109,6 +125,19 @@ func Save(clustersDir, p string, values map[string]string) error {
 			return err
 		}
 		return writeFile(filepath.Join(clustersDir, evrocRel), []byte(cfg+"\n"))
+	case "harvester":
+		cfg := strings.TrimSpace(values["harvester_kubeconfig"])
+		if cfg == "" {
+			return nil
+		}
+		if err := checkKubeconfig(cfg); err != nil {
+			return err
+		}
+		path := harvesterKubeconfig(clustersDir)
+		if err := writeFile(path, []byte(cfg+"\n")); err != nil {
+			return err
+		}
+		return tfvars.Write(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider), map[string]any{"harvester_kubeconfig_path": path}, nil)
 	case "vultr", "exoscale":
 		set := map[string]any{}
 		for _, f := range Fields(p) {
@@ -181,6 +210,19 @@ func SecretValues(clustersDir, p string) ([]string, error) {
 		}
 	case "evroc":
 		b, err := os.ReadFile(filepath.Join(clustersDir, evrocRel))
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		var v any
+		if err := yaml.Unmarshal(b, &v); err != nil {
+			return nil, nil
+		}
+		collectSecrets(v, false, &out)
+	case "harvester":
+		b, err := os.ReadFile(harvesterKubeconfig(clustersDir))
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
@@ -336,6 +378,21 @@ func checkEvrocConfig(cfg string) error {
 		return fmt.Errorf("evroc config: currentProfile %q is not under profiles", c.CurrentProfile)
 	case p.User.RefreshToken == "":
 		return fmt.Errorf("evroc config: profile %q has no user.refreshToken; run `evroc login` and paste the file again", c.CurrentProfile)
+	}
+	return nil
+}
+
+// checkKubeconfig accepts a kubeconfig with at least one cluster and one context.
+func checkKubeconfig(cfg string) error {
+	var c struct {
+		Clusters []any `yaml:"clusters"`
+		Contexts []any `yaml:"contexts"`
+	}
+	if err := yaml.Unmarshal([]byte(cfg), &c); err != nil {
+		return errors.New("kubeconfig is not valid YAML")
+	}
+	if len(c.Clusters) == 0 || len(c.Contexts) == 0 {
+		return errors.New("kubeconfig needs at least one cluster and one context")
 	}
 	return nil
 }

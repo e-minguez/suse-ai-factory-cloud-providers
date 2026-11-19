@@ -115,11 +115,12 @@ RUN set -eu; \
     done
 
 # ----------------------------------------------------------------- clis
-# aws and evroc CLIs for the aws precheck and the leftovers checks. Nothing is
+# aws, evroc and kubectl CLIs for the aws precheck and the leftovers checks. Nothing is
 # executed here, so the stage runs on the build platform.
 FROM --platform=$BUILDPLATFORM registry.suse.com/bci/bci-base:16.0 AS clis
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG AWSCLI_VERSION=2.37.10
+ARG KUBECTL_VERSION=v1.34.2
 ARG TARGETARCH
 # AWS CLI team key, https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 # The keyserver copy can carry an older expiry date; VALIDSIG still checks the fingerprint.
@@ -148,6 +149,14 @@ RUN set -eu; \
     curl -fsSL --retry 5 --retry-all-errors "${url}.sha256" -o evroc.sha256; \
     echo "$(cut -d' ' -f1 evroc.sha256)  evroc" | sha256sum -c -; \
     install -m 0755 evroc /out/bin/evroc
+
+# kubectl for tools/leftovers/harvester.sh; dl.k8s.io publishes a sha256 next to each binary.
+RUN set -eu; \
+    url="https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl"; \
+    curl -fsSL --retry 5 --retry-all-errors "${url}" -o kubectl; \
+    curl -fsSL --retry 5 --retry-all-errors "${url}.sha256" -o kubectl.sha256; \
+    echo "$(cut -d' ' -f1 kubectl.sha256)  kubectl" | sha256sum -c -; \
+    install -m 0755 kubectl /out/bin/kubectl
 
 # --------------------------------------------------------------- rootfs
 FROM registry.suse.com/bci/bci-micro:16.0 AS micro

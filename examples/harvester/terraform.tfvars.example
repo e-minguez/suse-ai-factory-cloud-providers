@@ -1,0 +1,90 @@
+# Per-cluster values. Loaded last, so it wins over ../../common-all.tfvars and
+# ../common-harvester.tfvars (deploy.sh layers them, later wins). Values every
+# provider declares (admin_cidrs, password hashes, ssh_authorized_keys,
+# registry credentials, aif_release) can live in common-all.tfvars instead; the
+# kubeconfig, namespace, network and vpc_cidr fit common-harvester.tfvars.
+
+# Kubeconfig of the Harvester cluster: unset reads KUBECONFIG, then ~/.kube/config.
+# Its server URL must verify against the kubeconfig CA (use the IP URL if the
+# certificate has IP SANs only).
+# harvester_kubeconfig_path = "/home/REPLACE/.kube/harvester.yaml"
+# harvester_kubecontext   = "local"
+
+# Existing namespace for every object of the cluster, and an existing VM
+# network as <namespace>/<name> with DHCP and egress. vpc_cidr is its real subnet.
+harvester_namespace = "REPLACE_WITH_YOUR_NAMESPACE"
+vpc_id              = "harvester-public/vlan-2006"
+vpc_cidr            = "10.114.128.0/25"
+
+# Static addresses inside vpc_cidr and outside the DHCP range, unused and
+# different for every cluster. MetalLB holds them: nothing else may answer there.
+api_vip     = "10.114.128.40"
+ingress_vip = "10.114.128.41"
+
+# admin_cidrs is accepted but not enforced: VLAN networks have no security groups.
+admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
+
+# Generate both with `openssl passwd -6`. They must differ.
+root_password_hash      = "REPLACE_WITH_OUTPUT_OF_openssl_passwd_-6"
+node_user_password_hash = "REPLACE_WITH_A_DIFFERENT_OUTPUT_OF_openssl_passwd_-6"
+
+# At least one public key, installed for node_username and on the build host.
+ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
+
+# Login on the nodes; escalate with `su -` (no sudo in the image).
+# node_username = "suse"
+
+# --- Registry credentials -------------------------------------------------
+
+# Application Collection is required with local-path-provisioner (in the
+# default components) or suse-storage; the SUSE registry and NVIDIA NGC ones
+# are optional. With aif-operator, set all of them.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# --- Sizes ----------------------------------------------------------------
+# "<vcpu>x<memory_gib>", for example "8x32". Control planes default to "8x32",
+# the build host to "4x8"; pools must set it.
+#
+# GPU pools need a device entry per pool key: the KubeVirt resource name of the
+# passed-through device and the count per node. The device must be enabled for
+# passthrough (pcidevices-controller add-on). The key "cp" attaches devices to
+# every control plane (single-node GPU box, no gpu_pools). Untested on hardware.
+# gpu_pools = {
+#   gpu = { instance_type = "30x240", count = 1 }
+# }
+# gpu_devices = {
+#   gpu = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+# }
+# worker_pools = {
+#   wrk = { instance_type = "8x32", count = 2 }
+# }
+
+# --- Optional -------------------------------------------------------------
+
+# AI Factory: a version X.Y.Z (tag aif-operator-<version>, 2.1.0 or newer) or
+# a manifest URL (branch, fork or mirror).
+# aif_release = "2.4.0"
+
+# Changing components rebuilds the image and replaces every node.
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# rancher_hostname = null  # defaults to "rancher.<ingress_vip>.sslip.io"
+# ingress_domain   = "aif.example.com"
+# api_cidrs        = ["0.0.0.0/0"]  # accepted, not enforced
+# ingress_cidrs    = ["0.0.0.0/0"]  # accepted, not enforced
+
+# cluster_name                = "suse-ai-factory"
+# control_plane_count         = 3  # 1, or odd and at least 3
+# control_plane_instance_type = "8x32"
+# jumphost_instance_type      = "4x8"
+# StorageClass of the image target volume and the images (default: cluster default).
+# storage_class_name          = "harvester-longhorn"
+# Existing build host image as <namespace>/<name> (default: downloads Leap 16.0).
+# jumphost_image              = "harvester-public/leap-16"
+# tags replaces (not merges with) any tags map in common-*.tfvars.
+# tags                        = { env = "test" }
+# image_id                    = "harvester-public/my-node-image"  # boot an existing image instead of building

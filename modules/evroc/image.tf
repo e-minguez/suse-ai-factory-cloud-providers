@@ -100,11 +100,12 @@ module "config" {
   node_username           = var.node_username
   permit_root_ssh         = var.permit_root_ssh
 
-  elemental_image    = var.elemental_image
-  image_disk_size    = var.image_disk_size
-  fips               = var.fips
-  components         = var.components
-  suse_storage_nodes = var.suse_storage_nodes
+  elemental_image      = var.elemental_image
+  image_disk_size      = var.image_disk_size
+  fips                 = var.fips
+  etcd_unsafe_no_fsync = var.etcd_unsafe_no_fsync
+  components           = var.components
+  suse_storage_nodes   = var.suse_storage_nodes
 
   aif_release            = var.aif_release
   core_platform_override = var.core_platform_override

@@ -1,0 +1,30 @@
+# Shape 02, HA cluster with storage. Shared values go in clusters/common-*.tfvars;
+# the Harvester kubeconfig, namespace and network go in clusters/common-harvester.tfvars.
+
+cluster_name = "aif-ha"
+components   = ["rancher", "gpu-operator", "suse-storage", "aif-operator"]
+
+# Static VIPs for the Kubernetes API and ingress: inside vpc_cidr, outside the
+# DHCP range, not used by any other VM.
+api_vip     = "10.114.128.40"
+ingress_vip = "10.114.128.41"
+
+control_plane_count         = 3
+control_plane_instance_type = "8x32"
+
+gpu_pools = {
+  gpu = { instance_type = "30x240", count = 1 }
+}
+
+# One passthrough GPU per GPU node. The name is the KubeVirt device resource.
+gpu_devices = {
+  gpu = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+}
+
+worker_pools = {
+  general = { instance_type = "8x16", count = 2 }
+  storage = { instance_type = "8x16", count = 3 }
+}
+
+# Pool "storage" hosts SUSE Storage (Longhorn) on its root disk.
+suse_storage_nodes = ["storage"]

@@ -1,0 +1,656 @@
+# Asserts the nodes: hostnames, VM sizes, host devices, fixed MACs, user_data
+# secrets, the buildhost lifecycle and the node outputs. Harvester mocked; no cluster calls.
+
+mock_provider "harvester" {
+  override_during = plan
+}
+mock_provider "http" {}
+
+override_data {
+  target = module.config.data.http.aif_release_manifest
+  values = {
+    status_code   = 200
+    response_body = file("../elemental-config/tests/fixtures/release_manifest.yaml")
+  }
+}
+
+override_data {
+  target          = data.harvester_network.this
+  override_during = plan
+  values = {
+    id                   = "harvester-public/vlan-2006"
+    cluster_network_name = "mgmt"
+    config               = "{\"cniVersion\":\"0.3.1\",\"name\":\"vlan-2006\",\"type\":\"bridge\",\"bridge\":\"mgmt-br\",\"vlan\":2006}"
+    description          = null
+    labels               = {}
+    tags                 = {}
+    message              = null
+    route_cidr           = null
+    route_connectivity   = null
+    route_dhcp_server_ip = null
+    route_gateway        = null
+    route_mode           = null
+    state                = "Active"
+    vlan_id              = 2006
+  }
+}
+
+override_data {
+  target          = data.harvester_storageclass.this
+  override_during = plan
+  values = {
+    id                     = "fast"
+    allow_volume_expansion = true
+    allowed_topologies     = []
+    description            = null
+    is_default             = false
+    labels                 = {}
+    tags                   = {}
+    message                = null
+    parameters             = { migratable = "true", numberOfReplicas = "3" }
+    reclaim_policy         = "Delete"
+    state                  = null
+    volume_binding_mode    = "Immediate"
+    volume_provisioner     = "driver.longhorn.io"
+  }
+}
+
+override_data {
+  target          = data.harvester_image.buildhost
+  override_during = plan
+  values = {
+    id                        = "harvester-public/leap-16"
+    backend                   = "backing-image"
+    state                     = "Active"
+    source_type               = "download"
+    labels                    = {}
+    tags                      = {}
+    storage_class_parameters  = { migratable = "true" }
+    volume_storage_class_name = "longhorn-leap-16"
+    storage_class_name        = null
+    url                       = null
+    checksum                  = null
+    description               = null
+    file_path                 = null
+    message                   = null
+    progress                  = 100
+    pvc_name                  = null
+    pvc_namespace             = null
+    security_parameters       = {}
+    size                      = 1
+  }
+}
+
+override_data {
+  target          = data.harvester_image.node
+  override_during = plan
+  values = {
+    id                        = "harvester-public/aif-node"
+    backend                   = "backing-image"
+    state                     = "Active"
+    source_type               = "export-from-volume"
+    labels                    = {}
+    tags                      = {}
+    storage_class_parameters  = { migratable = "true" }
+    volume_storage_class_name = "longhorn-aif-node"
+    storage_class_name        = null
+    url                       = null
+    checksum                  = null
+    description               = null
+    file_path                 = null
+    message                   = null
+    progress                  = 100
+    pvc_name                  = null
+    pvc_namespace             = null
+    security_parameters       = {}
+    size                      = 8
+  }
+}
+
+override_resource {
+  target          = harvester_image.buildhost
+  override_during = plan
+  values          = { id = "suse-ai-factory-on-harvester/buildhost-image" }
+}
+
+override_resource {
+  target          = harvester_image.node
+  override_during = plan
+  values          = { id = "suse-ai-factory-on-harvester/node-image" }
+}
+
+override_resource {
+  target          = harvester_virtualmachine.buildhost
+  override_during = plan
+  values = {
+    network_interface = {
+      interface_name = "default"
+      ip_address     = "10.114.128.50"
+    }
+  }
+}
+
+override_resource {
+  target          = harvester_virtualmachine.node
+  override_during = plan
+  values = {
+    id = "suse-ai-factory-on-harvester/node"
+    network_interface = {
+      interface_name = "default"
+      ip_address     = "10.114.128.60"
+    }
+  }
+}
+
+override_resource {
+  target          = time_static.created
+  override_during = plan
+  values          = { rfc3339 = "2026-11-18T12:34:56Z" }
+}
+
+variables {
+  harvester_namespace     = "suse-ai-factory-on-harvester"
+  vpc_id                  = "harvester-public/vlan-2006"
+  vpc_cidr                = "10.114.128.0/25"
+  api_vip                 = "10.114.128.40"
+  ingress_vip             = "10.114.128.41"
+  admin_cidrs             = ["198.51.100.0/24"]
+  root_password_hash      = "$6$DUMMYSALT$ROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASH0"
+  node_user_password_hash = "$6$DUMMYSALT$NODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASH0"
+  ssh_authorized_keys     = ["ssh-ed25519 AAAADUMMY test"]
+  appco_username          = "DUMMY-APPCO-USER"
+  appco_password          = "DUMMY-APPCO-PASSWORD"
+  suse_registry_username  = "DUMMY-REGCODE"
+  suse_registry_password  = "DUMMY-REGISTRY-PASSWORD"
+  nvidia_api_key          = "DUMMY-NVIDIA-API-KEY"
+  gpu_pools               = { gpu = { instance_type = "8x32", count = 2 } }
+  gpu_devices             = { gpu = { device_name = "nvidia.com/GA102GL_A10", count = 2 } }
+  worker_pools            = { wrk = { instance_type = "16x64", count = 1, disk_size_gb = 300 } }
+  control_plane_count     = 3
+  cluster_name            = "nodes-hv"
+  deploy_nodes            = true
+  # An existing image skips the download.
+  jumphost_image = "harvester-public/leap-16"
+}
+
+run "hostnames_and_roles" {
+  command = plan
+
+  assert {
+    condition = join(",", sort(keys(harvester_virtualmachine.node))) == join(",", [
+      "nodes-hv-cp-01", "nodes-hv-cp-02", "nodes-hv-cp-03",
+      "nodes-hv-gpu-01", "nodes-hv-gpu-02", "nodes-hv-wrk-01",
+    ])
+    error_message = "Nodes must be named <cluster>-<pool>-NN, control planes cp."
+  }
+
+  assert {
+    condition = alltrue([
+      for h, n in output.nodes : n.init == (h == "nodes-hv-cp-01") && n.public_ip == null && n.zone == null && n.ssh_user == "suse"
+    ]) && output.nodes["nodes-hv-gpu-01"].role == "gpu" && output.nodes["nodes-hv-wrk-01"].role == "worker" && output.nodes["nodes-hv-cp-02"].role == "control_plane"
+    error_message = "Only the first control plane is init; pools carry their role; nodes have no public IP or zone."
+  }
+
+  assert {
+    condition     = alltrue([for h, n in output.nodes : n.private_ip == "10.114.128.60" && n.id == "suse-ai-factory-on-harvester/node"])
+    error_message = "private_ip is the address the guest agent reports; id comes from the VM."
+  }
+}
+
+run "vm_shape" {
+  command = plan
+
+  assert {
+    condition = (
+      harvester_virtualmachine.node["nodes-hv-cp-01"].cpu == 8 &&
+      harvester_virtualmachine.node["nodes-hv-cp-01"].memory == "32Gi" &&
+      harvester_virtualmachine.node["nodes-hv-cp-01"].disk[0].size == "100Gi" &&
+      harvester_virtualmachine.node["nodes-hv-wrk-01"].cpu == 16 &&
+      harvester_virtualmachine.node["nodes-hv-wrk-01"].memory == "64Gi" &&
+      harvester_virtualmachine.node["nodes-hv-wrk-01"].disk[0].size == "300Gi" &&
+      harvester_virtualmachine.node["nodes-hv-gpu-01"].disk[0].size == "200Gi"
+    )
+    error_message = "Sizes parse as <vcpu>x<memory_gib>; disks follow the defaults and pool overrides."
+  }
+
+  assert {
+    condition = alltrue([
+      for h, v in harvester_virtualmachine.node :
+      v.efi && !v.secure_boot && v.machine_type == "q35" && v.disk[0].auto_delete && v.disk[0].bus == "virtio" &&
+      v.disk[0].image == "suse-ai-factory-on-harvester/node-image" &&
+      v.cloudinit[0].type == "noCloud" && v.cloudinit[0].user_data_secret_name == h
+    ])
+    error_message = "Nodes are EFI q35 VMs with an auto-deleted root disk from the node image, and a NoCloud secret named after them."
+  }
+}
+
+run "host_devices" {
+  command = plan
+
+  assert {
+    condition = (
+      length(harvester_virtualmachine.node["nodes-hv-gpu-01"].host_device) == 2 &&
+      harvester_virtualmachine.node["nodes-hv-gpu-01"].host_device[0].device_name == "nvidia.com/GA102GL_A10" &&
+      harvester_virtualmachine.node["nodes-hv-gpu-01"].host_device[0].name != harvester_virtualmachine.node["nodes-hv-gpu-01"].host_device[1].name &&
+      length(harvester_virtualmachine.node["nodes-hv-cp-01"].host_device) == 0 &&
+      length(harvester_virtualmachine.node["nodes-hv-wrk-01"].host_device) == 0
+    )
+    error_message = "Only GPU pool nodes get host devices, count of them, with distinct names."
+  }
+}
+
+run "cp_host_devices" {
+  command = plan
+
+  variables {
+    control_plane_count = 1
+    gpu_pools           = {}
+    gpu_devices         = { cp = { device_name = "nvidia.com/GA102GL_A10" } }
+  }
+
+  assert {
+    condition = (
+      length(harvester_virtualmachine.node["nodes-hv-cp-01"].host_device) == 1 &&
+      harvester_virtualmachine.node["nodes-hv-cp-01"].host_device[0].device_name == "nvidia.com/GA102GL_A10" &&
+      length(harvester_virtualmachine.node["nodes-hv-wrk-01"].host_device) == 0
+    )
+    error_message = "The reserved key cp attaches the device to every control plane (count defaults to 1)."
+  }
+}
+
+run "fixed_macs" {
+  command = plan
+
+  assert {
+    condition = (
+      length(distinct(values(output.provider_details.macs))) == 6 &&
+      alltrue([for h, m in output.provider_details.macs : can(regex("^02(:[0-9a-f]{2}){5}$", m))])
+    )
+    error_message = "Every VM gets its own locally administered MAC derived from cluster and VM name."
+  }
+}
+
+run "user_data" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for h, s in harvester_cloudinit_secret.node :
+      length(s.user_data) > 0 && length(s.user_data) < 900000 && startswith(s.user_data, "{") && s.namespace == "suse-ai-factory-on-harvester"
+    ])
+    error_message = "Each node carries plain Ignition JSON in its own secret."
+  }
+}
+
+run "labels" {
+  command = plan
+
+  assert {
+    condition = (
+      harvester_virtualmachine.node["nodes-hv-gpu-01"].labels["elemental-role"] == "gpu" &&
+      harvester_virtualmachine.node["nodes-hv-gpu-01"].labels["elemental-pool"] == "gpu" &&
+      harvester_virtualmachine.node["nodes-hv-cp-01"].labels["elemental-role"] == "control_plane" &&
+      harvester_virtualmachine.node["nodes-hv-cp-01"].labels["elemental-pool"] == "cp" &&
+      contains(keys(harvester_virtualmachine.node["nodes-hv-wrk-01"].labels), "elemental-build") &&
+      harvester_virtualmachine.node["nodes-hv-wrk-01"].labels["elemental-created"] == "20261118-123456" &&
+      harvester_virtualmachine.node["nodes-hv-wrk-01"].labels["elemental-cluster"] == "nodes-hv" &&
+      harvester_virtualmachine.node["nodes-hv-wrk-01"].labels["elemental-managed-by"] == "terraform" &&
+      harvester_virtualmachine.node["nodes-hv-wrk-01"].labels["elemental-module"] == "ai-factory" &&
+      !contains(keys(harvester_virtualmachine.buildhost[0].labels), "elemental-build") &&
+      harvester_virtualmachine.buildhost[0].labels["elemental-role"] == "builder" &&
+      harvester_volume.image_target[0].labels["elemental-role"] == "image" &&
+      contains(keys(harvester_image.node["default"].labels), "elemental-build") && contains(keys(harvester_volume.image_target[0].labels), "elemental-build")
+    )
+    error_message = "Nodes carry role, pool, build and the managed labels; the build host carries no build label."
+  }
+
+  assert {
+    condition     = alltrue([for k, v in harvester_virtualmachine.node["nodes-hv-wrk-01"].labels : !strcontains(k, "/")])
+    error_message = "Label keys contain no slash."
+  }
+}
+
+run "tags_merge" {
+  command = plan
+
+  variables {
+    tags = { team = "ai", "elemental-cluster" = "x" }
+  }
+
+  expect_failures = [var.tags]
+}
+
+run "build_pipeline" {
+  command = plan
+
+  assert {
+    condition = (
+      length(harvester_image.buildhost) == 0 &&
+      length(harvester_volume.image_target) == 1 &&
+      length(harvester_image.node) == 1 &&
+      length(terraform_data.image_ready) == 1 &&
+      harvester_image.node["default"].source_type == "export-from-volume" &&
+      harvester_image.node["default"].pvc_namespace == "suse-ai-factory-on-harvester" &&
+      harvester_volume.image_target[0].size == "8Gi" &&
+      harvester_volume.image_target[0].volume_mode == "Block"
+    )
+    error_message = "The node image is exported from the image target volume (image_disk_size in GiB); an existing buildhost image skips the download."
+  }
+
+  assert {
+    condition = (
+      length(harvester_virtualmachine.buildhost[0].disk) == 2 &&
+      harvester_virtualmachine.buildhost[0].disk[1].bus == "virtio" &&
+      harvester_virtualmachine.buildhost[0].disk[0].image == "harvester-public/leap-16" &&
+      harvester_virtualmachine.buildhost[0].cpu == 4 && harvester_virtualmachine.buildhost[0].memory == "8Gi"
+    )
+    error_message = "The buildhost boots the buildhost image and holds the image target volume as its second disk."
+  }
+
+  assert {
+    condition = (
+      terraform_data.build_access[0].input.build_status.method == "http-status" &&
+      terraform_data.build_access[0].input.build_status.url_or_key == "http://10.114.128.50:8080/status" &&
+      join(",", terraform_data.build_access[0].input.build_status.hosts) == "10.114.128.50" &&
+      terraform_data.build_access[0].input.jumphost.public_ip == "10.114.128.50" && terraform_data.build_access[0].input.jumphost.private_ip == "10.114.128.50" &&
+      output.jumphost.public_ip == null && output.jumphost.private_ip == null && output.jumphost.ssh_user == "suse"
+    )
+    error_message = "build_status and build_access point at the build host VLAN address; the jumphost output has none, as the build host powers off in the same apply."
+  }
+}
+
+run "buildhost_image_download" {
+  command = plan
+
+  variables {
+    jumphost_image     = null
+    storage_class_name = "fast"
+  }
+
+  assert {
+    condition = (
+      length(harvester_image.buildhost) == 1 &&
+      harvester_image.buildhost[0].source_type == "download" &&
+      startswith(harvester_image.buildhost[0].url, "https://download.opensuse.org/") &&
+      harvester_image.buildhost[0].storage_class_name == "fast" &&
+      harvester_volume.image_target[0].storage_class_name == "fast" &&
+      harvester_image.node["default"].storage_class_name == "fast"
+    )
+    error_message = "Without jumphost_image the buildhost image is downloaded; storage_class_name applies to images and the target volume."
+  }
+}
+
+run "image_id_no_buildhost" {
+  command = plan
+
+  variables {
+    image_id = "harvester-public/aif-node"
+  }
+
+  assert {
+    condition = alltrue([
+      length(harvester_image.node) == 0,
+      length(harvester_volume.image_target) == 0,
+      length(harvester_virtualmachine.buildhost) == 0,
+      length(terraform_data.image_ready) == 0,
+      length(harvester_virtualmachine.node) == 6,
+    ])
+    error_message = "With image_id nothing is built and no buildhost exists: nodes are reached directly."
+  }
+
+  assert {
+    condition = alltrue([
+      for h, v in harvester_virtualmachine.node : v.disk[0].image == "harvester-public/aif-node"
+    ]) && output.jumphost.public_ip == null && output.build_status == null
+    error_message = "Nodes boot the pinned image; the buildhost addresses are null."
+  }
+}
+
+run "no_nodes_no_buildhost_with_image_id" {
+  command = plan
+
+  variables {
+    image_id     = "harvester-public/aif-node"
+    deploy_nodes = false
+  }
+
+  assert {
+    condition     = length(harvester_virtualmachine.buildhost) == 0 && length(harvester_virtualmachine.node) == 0 && output.jumphost.public_ip == null && length(output.nodes) == 0
+    error_message = "image_id without nodes needs no buildhost."
+  }
+}
+
+run "buildhost_powers_off" {
+  command = plan
+
+  assert {
+    condition     = strcontains(module.image_factory.script_stripped, "systemctl poweroff") && harvester_virtualmachine.buildhost[0].labels["elemental-role"] == "builder"
+    error_message = "By default the builder powers off after a successful build."
+  }
+}
+
+run "buildhost_power_off_disabled" {
+  command = plan
+
+  variables {
+    buildhost_power_off = false
+  }
+
+  assert {
+    condition     = !strcontains(module.image_factory.script_stripped, "poweroff") && output.jumphost.public_ip == "10.114.128.50"
+    error_message = "buildhost_power_off = false keeps the build host running and its address in the jumphost output."
+  }
+}
+
+run "powered_off_buildhost_has_no_address" {
+  command = plan
+
+  variables {
+    buildhost_power_off = false
+  }
+
+  override_resource {
+    target          = harvester_virtualmachine.buildhost
+    override_during = plan
+    values = {
+      network_interface = {
+        interface_name = ""
+        ip_address     = ""
+      }
+    }
+  }
+
+  assert {
+    condition     = output.jumphost.public_ip == null && output.jumphost.private_ip == null
+    error_message = "A build host stopped by hand (buildhost_power_off = false) reports an empty address after a refresh: the output carries null, so scripts/ssh.sh connects directly."
+  }
+}
+
+run "disk_cache_mode_default_and_set" {
+  command = plan
+
+  variables {
+    disk_cache_mode = "writeback"
+  }
+
+  assert {
+    condition     = alltrue([for h, v in harvester_virtualmachine.node : v.disk[0].cache_mode == "writeback"])
+    error_message = "disk_cache_mode sets the cache mode of every node root disk."
+  }
+}
+
+run "disk_cache_mode_rejects_unsafe" {
+  command = plan
+
+  variables {
+    disk_cache_mode = "unsafe"
+  }
+
+  expect_failures = [var.disk_cache_mode]
+}
+
+run "migratable_class_keeps_rwx" {
+  command = plan
+
+  variables {
+    storage_class_name = "fast"
+  }
+
+  assert {
+    condition = (
+      harvester_volume.image_target[0].access_mode == "ReadWriteMany" &&
+      alltrue([for h, v in harvester_virtualmachine.node : v.disk[0].access_mode == "ReadWriteMany"]) &&
+      harvester_virtualmachine.buildhost[0].disk[0].access_mode == "ReadWriteMany"
+    )
+    error_message = "A migratable class keeps ReadWriteMany (live migration)."
+  }
+}
+
+run "non_migratable_class_uses_rwo" {
+  command = plan
+
+  variables {
+    storage_class_name = "fast"
+  }
+
+  override_data {
+    target          = data.harvester_storageclass.this
+    override_during = plan
+    values = {
+      id                     = "fast"
+      allow_volume_expansion = true
+      allowed_topologies     = []
+      description            = null
+      is_default             = false
+      labels                 = {}
+      tags                   = {}
+      message                = null
+      parameters             = { migratable = "false", numberOfReplicas = "1", dataLocality = "best-effort" }
+      reclaim_policy         = "Delete"
+      state                  = null
+      volume_binding_mode    = "Immediate"
+      volume_provisioner     = "driver.longhorn.io"
+    }
+  }
+
+  assert {
+    condition = (
+      harvester_volume.image_target[0].access_mode == "ReadWriteOnce" &&
+      alltrue([for h, v in harvester_virtualmachine.node : v.disk[0].access_mode == "ReadWriteOnce"])
+    )
+    error_message = "Longhorn serves ReadWriteMany through NFS unless the class is migratable: the target volume and node disks need ReadWriteOnce."
+  }
+
+  assert {
+    condition     = local.extra_build_inputs["target_access_mode"] == "ReadWriteOnce"
+    error_message = "The access mode is immutable on the claim: ReadWriteOnce feeds build_hash, so it gets a new volume."
+  }
+
+  assert {
+    condition     = harvester_virtualmachine.buildhost[0].disk[0].access_mode == "ReadWriteMany"
+    error_message = "The buildhost disk follows its own (migratable) image class."
+  }
+}
+
+run "node_storage_classes_per_group" {
+  command = plan
+
+  variables {
+    node_storage_classes = { cp = "yolo", wrk = "yolo" }
+  }
+
+  override_data {
+    target          = data.harvester_storageclass.extra
+    override_during = plan
+    values = {
+      id                     = "yolo"
+      allow_volume_expansion = true
+      allowed_topologies     = []
+      description            = null
+      is_default             = false
+      labels                 = {}
+      tags                   = {}
+      message                = null
+      parameters             = { migratable = "false", numberOfReplicas = "1", dataLocality = "best-effort" }
+      reclaim_policy         = "Delete"
+      state                  = null
+      volume_binding_mode    = "Immediate"
+      volume_provisioner     = "driver.longhorn.io"
+    }
+  }
+
+  assert {
+    condition = (
+      join(",", sort(keys(harvester_image.node))) == "default,yolo" &&
+      harvester_image.node["yolo"].storage_class_name == "yolo" &&
+      harvester_image.node["yolo"].source_type == "export-from-volume"
+    )
+    error_message = "Each StorageClass the nodes use gets its own export of the same build volume."
+  }
+
+  assert {
+    condition = (
+      local.node_image_key["nodes-hv-cp-01"] == "yolo" && local.node_image_key["nodes-hv-wrk-01"] == "yolo" &&
+      local.node_image_key["nodes-hv-gpu-01"] == "default"
+    )
+    error_message = "Control planes and the wrk pool boot from the yolo export, the gpu pool from the default one."
+  }
+
+  assert {
+    condition = (
+      harvester_virtualmachine.node["nodes-hv-cp-01"].disk[0].access_mode == "ReadWriteOnce" &&
+      harvester_virtualmachine.node["nodes-hv-gpu-01"].disk[0].access_mode == "ReadWriteMany"
+    )
+    error_message = "Access modes follow each group's class (non-migratable yolo: ReadWriteOnce)."
+  }
+
+  assert {
+    condition     = harvester_volume.image_target[0].access_mode == "ReadWriteMany" && !contains(keys(local.extra_build_inputs), "storage_class")
+    error_message = "The build volume stays on storage_class_name (default class here)."
+  }
+}
+
+run "node_storage_classes_buildhost_download" {
+  command = plan
+
+  variables {
+    jumphost_image       = null
+    node_storage_classes = { buildhost = "slow" }
+  }
+
+  assert {
+    condition     = harvester_image.buildhost[0].storage_class_name == "slow" && keys(harvester_image.node) == ["default"]
+    error_message = "The buildhost key sets the class of the downloaded buildhost image only."
+  }
+}
+
+run "node_storage_classes_unknown_key" {
+  command = plan
+
+  variables {
+    node_storage_classes = { nope = "yolo" }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "node_storage_classes_with_image_id" {
+  command = plan
+
+  variables {
+    image_id             = "harvester-public/aif-node"
+    node_storage_classes = { cp = "yolo" }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "node_storage_classes_buildhost_with_image" {
+  command = plan
+
+  variables {
+    node_storage_classes = { buildhost = "yolo" }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}

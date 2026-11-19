@@ -1,0 +1,61 @@
+#cloud-config
+disable_root: false
+ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+  - ${key}
+%{ endfor ~}
+%{ if jumphost_username != "" ~}
+
+users:
+  - default
+  - name: ${jumphost_username}
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+      - ${key}
+%{ endfor ~}
+%{ endif ~}
+%{ if build ~}
+
+write_files:
+  - path: /opt/elemental-config.sh
+    encoding: gz+b64
+    content: ${config_bundle}
+    owner: root:root
+    permissions: '0700'
+  - path: /opt/image-factory.sh
+    encoding: gz+b64
+    content: ${base64gzip(factory_script)}
+    owner: root:root
+    permissions: '0700'
+  - path: /etc/systemd/system/image-status.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=image-factory build status (read-only HTTP)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      ExecStart=/usr/bin/python3 -m http.server ${status_port} --bind 0.0.0.0 --directory ${status_dir}
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+%{ endif ~}
+
+runcmd:
+  - 'systemctl enable --now qemu-guest-agent.service'
+%{ if build ~}
+  - 'mkdir -p ${status_dir}'
+  - 'systemctl daemon-reload'
+  - 'systemctl enable --now image-status.service'
+  - 'if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then firewall-cmd --permanent --add-port=${status_port}/tcp && firewall-cmd --reload; fi'
+  - 'bash /opt/elemental-config.sh ${config_dir}'
+  - 'rm -f /opt/elemental-config.sh'
+  - 'nohup setsid /opt/image-factory.sh </dev/null >/dev/null 2>&1 &'
+%{ endif ~}

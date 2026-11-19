@@ -1,5 +1,7 @@
 # Runs on control planes only (hostPort 80/443) and requires PROXY protocol
-# from the VPC CIDR; /ping on 8080 is the health-check entrypoint.
+# from the VPC CIDR; /ping on 8080 is the health-check entrypoint. With
+# ingress_vip the Service is a MetalLB LoadBalancer (source IP kept by
+# externalTrafficPolicy Local) and no PROXY protocol is expected.
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
@@ -15,9 +17,20 @@ spec:
         effect: NoSchedule
       - key: CriticalAddonsOnly
         operator: Exists
+%{ if ingress_vip != null ~}
+    providers:
+      kubernetesIngress:
+        publishedService:
+          enabled: true
+    service:
+      spec:
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+%{ endif ~}
     ports:
       traefik:
         hostPort: 8080
+%{ if ingress_vip == null ~}
       web:
         proxyProtocol:
           trustedIPs:
@@ -26,3 +39,4 @@ spec:
         proxyProtocol:
           trustedIPs:
             - ${vpc_cidr}
+%{ endif ~}

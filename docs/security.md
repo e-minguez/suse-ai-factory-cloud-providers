@@ -106,6 +106,9 @@ meant to be tracked. `.deploy/` logs can contain sensitive values.
   only filter: worker and GPU nodes have no inbound rules, control planes admit
   only the load balancer ports, no node admits SSH from outside, and private
   network traffic is not filtered.
+- harvester: VLAN networks have no security groups, so `admin_cidrs`, `api_cidrs` and
+  `ingress_cidrs` are not enforced; filter at the network the VMs attach to
+  ([limitations](providers/harvester.md#limitations)). Nodes have no public IPs.
 - Kubernetes API (6443): the public listener admits `api_cidrs`, default
   `0.0.0.0/0`, so by default the API is protected by its certificates and
   tokens alone. Narrow it to keep the API off the internet.
@@ -122,6 +125,15 @@ meant to be tracked. `.deploy/` logs can contain sensitive values.
   `0.0.0.0/0`. Narrow it for clusters that are not public.
 - During an evroc image build, the status relay on the jumphost is readable from
   `admin_cidrs`.
+- During a harvester image build, the status file on the jumphost (port 8080) is
+  readable by anyone who reaches the VLAN.
+
+## etcd without fsync
+
+`etcd_unsafe_no_fsync = true` (every provider) is DANGEROUS: etcd skips fsync,
+so a host crash or power loss can corrupt etcd and lose the cluster. Every plan
+warns while it is set. Keep it to throwaway clusters on slow disks
+([harvester notes](providers/harvester.md#storage-latency-and-etcd)).
 
 ## Node access
 

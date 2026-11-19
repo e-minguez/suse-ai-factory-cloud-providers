@@ -10,10 +10,11 @@ import (
 
 // leftoverTools are the commands tools/leftovers/<provider>.sh needs on PATH.
 var leftoverTools = map[string][]string{
-	"aws":      {"aws"},
-	"evroc":    {"evroc", "jq"},
-	"exoscale": {"curl", "jq", "openssl"},
-	"vultr":    {"curl", "jq"},
+	"aws":       {"aws"},
+	"evroc":     {"evroc", "jq"},
+	"exoscale":  {"curl", "jq", "openssl"},
+	"harvester": {"kubectl", "jq"},
+	"vultr":     {"curl", "jq"},
 }
 
 // MissingToolError is returned when the leftovers script cannot run here.
@@ -56,6 +57,7 @@ type Leftovers struct {
 //	aws       <cluster_name> --region <region>   (region: tfvars, else AWS_REGION; AWS_* creds via creds.Env)
 //	evroc     <cluster_name> [--region R] [--project P]
 //	exoscale  <cluster_name> [--region R]        + EXOSCALE_API_KEY/SECRET from exoscale_api_key/secret
+//	harvester <cluster_name>                     --namespace --kubeconfig [--kubecontext] from harvester_namespace/_kubeconfig_path/_kubecontext (no secret: a path)
 //	vultr     <cluster_name>                     + VULTR_API_KEY from vultr_api_key
 //
 // The repo-root common-all.tfvars is the lowest layer, as in deploy.sh.
@@ -102,6 +104,16 @@ func LeftoverSpec(repo, clustersDir, provider, cluster string) Leftovers {
 		}
 		if vars["exoscale_api_secret"] != "" {
 			l.Env = append(l.Env, "EXOSCALE_API_SECRET="+vars["exoscale_api_secret"])
+		}
+	case "harvester":
+		for _, e := range [][2]string{
+			{"--namespace", "harvester_namespace"},
+			{"--kubeconfig", "harvester_kubeconfig_path"},
+			{"--kubecontext", "harvester_kubecontext"},
+		} {
+			if vars[e[1]] != "" {
+				l.Args = append(l.Args, e[0], vars[e[1]])
+			}
 		}
 	case "vultr":
 		if vars["vultr_api_key"] != "" {

@@ -34,6 +34,29 @@ locals {
     { systemd = merge(local.aif_components.systemd, { extensions = local.rewritten_extensions }) }, {}
   ))
 
+  # Helm part of the core platform manifest the flatten drops (corePlatform
+  # rke2-manifest:1.35.6-48.1): the charts elemental adds for a managed apiVIP.
+  # Carried only in managed mode, so external-mode manifests stay unchanged.
+  core_platform_helm = {
+    charts = [
+      { name = "MetalLB", chart = "metallb", version = "0.15.2", namespace = "metallb-system", repository = "metallb" },
+      { name = "Endpoint Copier Operator", chart = "endpoint-copier-operator", version = "0.3.0", namespace = "endpoint-copier-operator", repository = "suse-edge" },
+    ]
+    repositories = [
+      { name = "metallb", url = "https://metallb.github.io/metallb" },
+      { name = "suse-edge", url = "https://suse-edge.github.io/charts" },
+    ]
+  }
+  aif_helm = try(local.rewritten_aif_components.helm, null)
+  # jsondecode(string) keeps both branches the same type.
+  flattened_helm = jsondecode(var.api_vip_mode != "managed" ? jsonencode(local.aif_helm) : jsonencode(merge(
+    jsondecode(local.aif_helm == null ? "{}" : jsonencode(local.aif_helm)),
+    {
+      charts       = concat(local.core_platform_helm.charts, try(local.aif_helm.charts, []))
+      repositories = concat(local.core_platform_helm.repositories, try(local.aif_helm.repositories, []))
+    },
+  )))
+
   # The resolver only accepts file:// for the top-level manifest, so with a
   # core override the AIF manifest is flattened into one core manifest.
   flattened_yaml = var.core_platform_override == null ? "" : yamlencode({
@@ -46,7 +69,8 @@ locals {
         operatingSystem = { image = { base = var.core_platform_override.os_image_base, iso = var.core_platform_override.os_image_iso } }
         kubernetes      = { version = var.core_platform_override.kubernetes_version, image = var.core_platform_override.kubernetes_image }
       },
-      { for k in ["systemd", "helm"] : k => local.rewritten_aif_components[k] if try(local.rewritten_aif_components[k], null) != null },
+      { for k in ["systemd"] : k => local.rewritten_aif_components[k] if try(local.rewritten_aif_components[k], null) != null },
+      local.flattened_helm == null ? {} : { helm = local.flattened_helm },
     )
   })
 
