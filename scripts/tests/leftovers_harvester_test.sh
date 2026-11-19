@@ -86,11 +86,15 @@ run c1 --namespace ns1 --kubeconfig "$W/missing"
 [ "$RC" -eq 3 ] || fail "missing kubeconfig rc=$RC"
 [ ! -e "$W/f/calls.log" ] || fail "kubectl called without kubeconfig"
 
-# --- missing CLI is inconclusive, no usage line
+# --- missing CLI is inconclusive, no usage line. PATH holds only the basic tools the
+# script runs before its CLI check: CI runners ship kubectl in /usr/bin.
+mkdir -p "$W/nocli"
+for c in dirname mktemp rm; do ln -sf "$(command -v "$c")" "$W/nocli/$c"; done
 RC=0
-OUT=$(PATH="/usr/bin:/bin" "$BASH" "$TOOL" c1 "${A[@]}" 2>&1) || RC=$?
+PATH="$W/nocli" "$BASH" "$TOOL" c1 "${A[@]}" >"$W/out" 2>&1 || RC=$?
+OUT=$(cat "$W/out")
 [ "$RC" -eq 3 ] || fail "no CLI rc=$RC"
-has "$OUT" "not installed"
+has "$OUT" "kubectl not installed"
 hasnt "$OUT" "usage:"
 
 # --- usage errors
