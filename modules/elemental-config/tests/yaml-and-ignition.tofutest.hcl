@@ -6,7 +6,7 @@ override_data {
   target = data.http.aif_release_manifest
   values = {
     status_code   = 200
-    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n    repositories:\n      - name: \"jetstack\"\n        url: \"https://charts.jetstack.io\"\n      - name: \"rancher-prime\"\n        url: \"https://charts.rancher.com/server-charts/prime\"\n"
   }
 }
 
@@ -303,4 +303,33 @@ run "write_node_ip_pins_single_nic_when_asked" {
     ])
     error_message = "With pin_single_nic_node_ip, RKE2 units must require write-node-ip.service."
   }
+}
+
+run "etcd_fsync_stays_on_by_default" {
+  command = plan
+
+  assert {
+    condition     = !can(yamldecode(output.elemental_files["kubernetes/config/server.yaml"])["etcd-arg"])
+    error_message = "server.yaml must not pass etcd args unless etcd_unsafe_no_fsync is set."
+  }
+}
+
+run "etcd_unsafe_no_fsync_renders_etcd_arg" {
+  command = plan
+
+  variables {
+    etcd_unsafe_no_fsync = true
+  }
+
+  assert {
+    condition     = yamldecode(output.elemental_files["kubernetes/config/server.yaml"])["etcd-arg"] == ["unsafe-no-fsync=true"]
+    error_message = "etcd_unsafe_no_fsync must pass unsafe-no-fsync=true to etcd."
+  }
+
+  assert {
+    condition     = !strcontains(output.elemental_files["kubernetes/config/agent.yaml"], "unsafe-no-fsync")
+    error_message = "Agents run no etcd: agent.yaml must not carry the flag."
+  }
+
+  expect_failures = [check.etcd_unsafe_no_fsync_is_off]
 }

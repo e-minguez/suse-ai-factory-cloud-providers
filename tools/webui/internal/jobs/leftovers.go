@@ -10,12 +10,13 @@ import (
 
 // leftoverTools are the commands tools/leftovers/<provider>.sh needs on PATH.
 var leftoverTools = map[string][]string{
-	"aws":      {"aws"},
-	"evroc":    {"evroc", "jq"},
-	"exoscale": {"curl", "jq", "openssl"},
-	"gcp":      {"gcloud", "jq"},
-	"oci":      {"oci", "jq"},
-	"vultr":    {"curl", "jq"},
+	"aws":       {"aws"},
+	"evroc":     {"evroc", "jq"},
+	"exoscale":  {"curl", "jq", "openssl"},
+	"gcp":       {"gcloud", "jq"},
+	"harvester": {"kubectl", "jq"},
+	"oci":       {"oci", "jq"},
+	"vultr":     {"curl", "jq"},
 }
 
 // MissingToolError is returned when the leftovers script cannot run here.
@@ -60,6 +61,7 @@ type Leftovers struct {
 //	exoscale  <cluster_name> [--region R]        + EXOSCALE_API_KEY/SECRET from exoscale_api_key/secret
 //	gcp       <cluster_name> [--project P]       + gcloud credentials from creds.Env (ADC file)
 //	oci       <cluster_name> [--region R] [--compartment C]   (C: oci_compartment_ocid; CLI creds from $HOME/.oci/config)
+//	harvester <cluster_name>                     --namespace --kubeconfig [--kubecontext] from harvester_namespace/_kubeconfig_path/_kubecontext (no secret: a path)
 //	vultr     <cluster_name>                     + VULTR_API_KEY from vultr_api_key
 //
 // The repo-root common-all.tfvars is the lowest layer, as in deploy.sh.
@@ -115,6 +117,16 @@ func LeftoverSpec(repo, clustersDir, provider, cluster string) Leftovers {
 		region()
 		if vars["oci_compartment_ocid"] != "" {
 			l.Args = append(l.Args, "--compartment", vars["oci_compartment_ocid"])
+		}
+	case "harvester":
+		for _, e := range [][2]string{
+			{"--namespace", "harvester_namespace"},
+			{"--kubeconfig", "harvester_kubeconfig_path"},
+			{"--kubecontext", "harvester_kubecontext"},
+		} {
+			if vars[e[1]] != "" {
+				l.Args = append(l.Args, e[0], vars[e[1]])
+			}
 		}
 	case "vultr":
 		if vars["vultr_api_key"] != "" {

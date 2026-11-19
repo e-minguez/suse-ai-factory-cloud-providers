@@ -1,0 +1,11 @@
+# Shape 04, management cluster. Shared values go in clusters/common-*.tfvars;
+# the Harvester kubeconfig, namespace and network go in clusters/common-harvester.tfvars.
+
+cluster_name        = "aif-mgmt"
+control_plane_count = 3
+components          = ["rancher", "aif-operator", "local-path-provisioner"]
+
+# Static VIPs for the Kubernetes API and ingress: inside vpc_cidr, outside the
+# DHCP range, not used by any other VM or cluster.
+api_vip     = "10.114.128.40"
+ingress_vip = "10.114.128.41"

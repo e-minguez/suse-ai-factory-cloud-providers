@@ -33,6 +33,8 @@ Price sources:
 - oci (added with the provider): public price list API (no auth), cached like
   vultr, USD. Flex shapes are OCPU-hours plus memory GB-hours; the network
   load balancer, reserved IP and NAT gateway are free rows.
+- harvester: not supported (on-premises, no price list); `--provider harvester`
+  says so and exits with the configuration error code.
 
 Amounts stay in the provider's native currency; there is no conversion, so
 there is no exchange-rate source to maintain. Resources that exist only while

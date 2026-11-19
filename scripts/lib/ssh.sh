@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Sourced by scripts/{ssh,kubeconfig,build-logs}.sh. Builds a throwaway
 # ssh_config + known_hosts from `terraform output -json`.
-# Nodes without a private_ip (no VPC address exposed) are reached on public_ip.
+# Nodes without a private_ip (no VPC address exposed) are reached on public_ip;
+# without a jumphost address (none, or powered off) every host is reached directly.
 # Login user: nodes[*].ssh_user, overridden by -u or NODE_USERNAME. build_status.hosts
 # entries that are not nodes get a Host entry behind the jumphost.
 #
@@ -86,19 +87,22 @@ ssh_setup() {
   SSH_CONFIG="$SSH_TMP/ssh_config"
 
   # Values land in an ssh_config: allow only host-like characters.
+  # No jumphost address (none exists, or it is powered off): every host is reached directly.
   jq -r --arg user "$SSH_NODE_USER" --arg kh "$SSH_KNOWN_HOSTS" --arg extra "$SSH_EXTRA_HOST" '
     def ok: if type == "string" and test("^[A-Za-z0-9._:-]+$") then . else error("unsafe or missing value: \(tojson)") end;
     (.jumphost.value // error("output jumphost missing")) as $j
+    | ($j.public_ip != null) as $via
+    | (if $via then "\n  ProxyJump jumphost" else "" end) as $pj
     | (.nodes.value // {}) as $nodes
-    | "Host jumphost\n  HostName \($j.public_ip | ok)\n  User \($j.ssh_user | ok)\n",
+    | (if $via then "Host jumphost\n  HostName \($j.public_ip | ok)\n  User \($j.ssh_user | ok)\n" else empty end),
       ($nodes | to_entries[]
         | (if $user != "" then $user else (.value.ssh_user | ok) end) as $u
         | if .value.private_ip != null
-          then "Host \(.key | ok)\n  HostName \(.value.private_ip | ok)\n  User \($u)\n  ProxyJump jumphost\n"
+          then "Host \(.key | ok)\n  HostName \(.value.private_ip | ok)\n  User \($u)\($pj)\n"
           else "Host \(.key | ok)\n  HostName \(.value.public_ip | ok)\n  User \($u)\n" end),
       (((.build_status.value.hosts // []) + (if $extra != "" then [$extra] else [] end) | unique[]) as $h
         | select($h != "jumphost" and $h != $j.public_ip and $h != $j.private_ip and ($nodes | has($h) | not))
-        | "Host \($h | ok)\n  HostName \($h)\n  User \(if $user != "" then $user else $j.ssh_user end)\n  ProxyJump jumphost\n"),
+        | "Host \($h | ok)\n  HostName \($h)\n  User \(if $user != "" then $user else ($j.ssh_user | ok) end)\($pj)\n"),
       "Host *\n  UserKnownHostsFile \"\($kh)\"\n  GlobalKnownHostsFile /dev/null\n  StrictHostKeyChecking accept-new\n  UpdateHostKeys no\n  ConnectTimeout 15"
   ' <<<"$TF_JSON" >"$SSH_CONFIG" || ssh_die "cannot build ssh_config from terraform outputs"
 }
@@ -106,10 +110,12 @@ ssh_setup() {
 # Outputs reach the state file only when a later resource completes, so during
 # an apply they can be missing or left from the previous build. A module's
 # terraform_data.build_access holds the current jumphost and build hosts: use it
-# when the outputs lack the jumphost or carry another build_id.
+# when the outputs lack the jumphost while no image exists yet, or carry another
+# build_id. Once the image exists a missing jumphost address is final (powered off).
 ssh__state_fallback() {
   local need state access merged
-  need=$(jq -r --arg mode "$SSH_STATE_FALLBACK" '(.jumphost.value.public_ip // null) == null
+  need=$(jq -r --arg mode "$SSH_STATE_FALLBACK" '((.jumphost.value.public_ip // null) == null
+      and ((.image.value.ids // {}) | length) == 0)
     or ($mode == "build" and (.build_status.value // null) == null)' <<<"$TF_JSON")
   [ "$need" = true ] || return 0
   state=$(cd "$1" && "$TF_BIN" show -json 2>/dev/null) || return 0
@@ -117,7 +123,8 @@ ssh__state_fallback() {
     and .name? == "build_access") | .values.input) // empty' <<<"$state")
   [ -n "$access" ] || return 0
   merged=$(jq --argjson a "$access" '((.image.value.build_id // null) != $a.build_id) as $stale
-    | if $stale or (.jumphost.value.public_ip // null) == null then .jumphost = {value: $a.jumphost} else . end
+    | (((.image.value.ids // {}) | length) == 0) as $building
+    | if $stale or ($building and (.jumphost.value.public_ip // null) == null) then .jumphost = {value: $a.jumphost} else . end
     | if $stale then .build_status = {value: $a.build_status} else . end' <<<"$TF_JSON")
   [ "$(jq -S . <<<"$merged")" != "$(jq -S . <<<"$TF_JSON")" ] || return 0
   TF_JSON=$merged

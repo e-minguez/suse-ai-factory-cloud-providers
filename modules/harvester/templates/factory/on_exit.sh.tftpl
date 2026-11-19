@@ -1,0 +1,18 @@
+%{ if power_off ~}
+# After a successful build, power off once the status file was fetched after
+# "done" (Terraform saw it), or after 30 minutes. A failed build stays up for build-logs.sh.
+if [ "$1" -eq 0 ] && [ "$(cat "$DONE_FILE" 2>/dev/null)" = "$BUILD_ID" ]; then
+  log "powering off once the done status has been read (30 minutes at most)"
+  nohup setsid bash -c '
+    since=$(date +%s)
+    for _ in $(seq 1 360); do
+      journalctl -u image-status.service --since "@$since" -o cat 2>/dev/null | grep -q "GET /status" && break
+      sleep 5
+    done
+    sleep 5
+    systemctl poweroff
+  ' </dev/null >/dev/null 2>&1 &
+fi
+%{ else ~}
+:
+%{ endif ~}

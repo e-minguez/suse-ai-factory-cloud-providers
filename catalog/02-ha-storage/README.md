@@ -92,3 +92,4 @@ Do not add `local-path-provisioner`: both components set the default StorageClas
 - [GCP](gcp/README.md)
 - [OCI](oci/README.md)
 - [AWS](aws/README.md)
+- [Harvester](harvester/README.md)

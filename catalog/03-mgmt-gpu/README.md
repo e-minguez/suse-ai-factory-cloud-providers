@@ -114,5 +114,6 @@ ingress; the provider guide lists the billed objects. The estimate for your valu
 - [GCP](gcp/README.md)
 - [OCI](oci/README.md)
 - [AWS](aws/README.md)
+- [Harvester](harvester/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).

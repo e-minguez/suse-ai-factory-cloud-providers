@@ -12,3 +12,8 @@ tls-san:
   - ${s}
 %{ endfor ~}
 %{ endif ~}
+%{ if etcd_unsafe_no_fsync ~}
+# DANGEROUS (etcd_unsafe_no_fsync): etcd skips fsync; a crash can corrupt it.
+etcd-arg:
+  - unsafe-no-fsync=true
+%{ endif ~}

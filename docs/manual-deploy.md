@@ -91,6 +91,18 @@ to fail early on invalid credentials, and probes `iam:CreateRole` unless
 are set. The CLI is
 required anyway: `modules/aws/scripts/wait-for-raw.sh` uses it during apply.
 
+## oci and harvester: 1 pass
+
+Same commands as aws: nothing waits on a created instance
+([providers/oci.md](providers/oci.md#passes-1-and-why),
+[providers/harvester.md](providers/harvester.md#passes-1-and-why)). Harvester reads its
+kubeconfig from `KUBECONFIG` (or `harvester_kubeconfig_path`); `terraform plan` waits
+for the build status served on the jumphost during apply (`wait-for-image.sh`).
+
+```bash
+terraform plan -input=false "${VF[@]}" -out=tfplan && terraform apply tfplan
+```
+
 ## vultr: 2 passes
 
 **Why:** `vultr_load_balancer` carries its backends (`attached_instances`) and

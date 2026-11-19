@@ -51,13 +51,17 @@ gpu_pools = {
   and public IP quota; vultr: plan in stock; exoscale: type offered and
   available to the organization, instance, load balancer and GPU quota; gcp:
   machine type offered in the zone, and the region and project quotas the
-  Compute API reports, such as CPUs, GPUs and SSD GB). A failing check stops the plan
+  Compute API reports, such as CPUs, GPUs and SSD GB; harvester: namespace,
+  network, StorageClass, images and VIPs exist, host capacity is not checked).
+  A failing check stops the plan
   before anything is created. Account quotas the provider does not expose are
   not checked; see `docs/providers/<provider>.md`.
 - **Shrink a pool or remove it:** Terraform destroys the highest-numbered
   nodes (or the whole pool) without draining them. Drain and delete them from
   Kubernetes first (`kubectl drain`, `kubectl delete node`), and with
   `suse-storage` make sure no volume has its only healthy replica there.
+- harvester: `instance_type` is `<vcpu>x<memory_gib>`; `zone`, `public_ip`, `placement` and
+  `kind = "bare_metal"` are rejected, and a GPU pool needs a `gpu_devices` entry.
 - Changing a pool's `instance_type` replaces or resizes its nodes, depending on
   the provider; check the `deploy.sh` plan.
 

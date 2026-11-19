@@ -66,6 +66,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitConfig
 	}
 
+	if *providerName == "harvester" {
+		fmt.Fprintln(stderr, "cost estimate is not supported for harvester (on-premises, no price list)")
+		return exitConfig
+	}
 	prov, err := provider.Get(*providerName)
 	if err != nil {
 		fmt.Fprintln(stderr, err)

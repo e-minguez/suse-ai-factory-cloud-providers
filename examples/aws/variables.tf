@@ -388,3 +388,9 @@ variable "private_subnet_ids" {
   default     = {}
   description = "Existing private subnets of vpc_id keyed by zone suffix, with a NAT (or other non-internet-gateway) default route. Required with vpc_id."
 }
+
+variable "etcd_unsafe_no_fsync" {
+  type        = bool
+  default     = false
+  description = "DANGEROUS: disables fsync in etcd (etcd --unsafe-no-fsync), so a host crash or power loss can corrupt etcd and lose the cluster. Only for throwaway clusters on disks too slow for etcd."
+}

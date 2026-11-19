@@ -65,6 +65,7 @@ flowchart LR
 | **evroc** | 2 (+1 optional) | Raw image written to a disk, one snapshot per zone | sslip.io | [evroc.md](docs/providers/evroc.md) |
 | **exoscale** | 2 | Raw image converted to qcow2, served over HTTP, template per zone | sslip.io | [exoscale.md](docs/providers/exoscale.md); every node has a public IPv4, single zone ([limitations](docs/providers/exoscale.md#limitations)) |
 | **gcp** | 1 | Raw image written to a disk, snapshot, global custom image | sslip.io | [gcp.md](docs/providers/gcp.md); **experimental**: first deploys passed (3 control planes, L4 GPU) |
+| **harvester** | 1 | Raw image written to a volume and exported as an image, MetalLB VIPs; existing VLAN network only | sslip.io | [harvester.md](docs/providers/harvester.md); on-premises, no cost estimate |
 | **oci** | 1 | Raw image converted to qcow2, uploaded through write-only pre-authenticated requests, custom image with a UEFI capability schema | sslip.io | [oci.md](docs/providers/oci.md) |
 | **vultr** | 2 | Raw image served over HTTP, account-wide snapshot from the URL | sslip.io | [vultr.md](docs/providers/vultr.md) |
 
@@ -73,6 +74,7 @@ Each provider has an example root with its own README:
 [examples/evroc](examples/evroc/README.md),
 [examples/exoscale](examples/exoscale/README.md),
 [examples/gcp](examples/gcp/README.md),
+[examples/harvester](examples/harvester/README.md),
 [examples/oci](examples/oci/README.md),
 [examples/vultr](examples/vultr/README.md).
 
@@ -81,7 +83,8 @@ Each provider has an example root with its own README:
 **Requirements:** Terraform 1.16.5 or later (or [OpenTofu](#opentofu) 1.13.1 or later, experimental), `jq`, `ssh`
 and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
 exoscale `curl` and `openssl` (signed API checks), gcp `gcloud auth application-default login`
-(Application Default Credentials; `gcloud` is also needed for the leftover check).
+(Application Default Credentials; `gcloud` is also needed for the leftover check), harvester
+`kubectl` (leftover check) and a kubeconfig.
 
 **1. Shared values.** Copy `common-all.tfvars.example` to `common-all.tfvars` at
 the repo root and fill in what every cluster shares: admin CIDRs, SSH keys
@@ -169,6 +172,8 @@ depends on the platform:
 - **exoscale, 2 passes.** The load balancer targets an instance pool, whose
   members share one configuration. Pass 1 starts the control plane pool with
   one member that initializes the cluster; pass 2 switches it to the join
+- **oci and harvester, 1 pass.** The load balancer address (oci) or the static VIPs
+  (harvester) are known before the image, so nothing waits on a created node.
   configuration and scales it up.
 
 Diagrams of each pass, the image pipeline and the network:
@@ -216,8 +221,8 @@ Ready-made shapes, from a single GPU node to a four-cluster platform, with diagr
 
 ### Hostnames
 
-aws uses the NLB DNS names; evroc, exoscale, gcp, oci and vultr use sslip.io names on the load
-balancer IP. For production set `rancher_hostname` and `api_host` to your own DNS
+aws uses the NLB DNS names; evroc, exoscale, gcp, harvester, oci and vultr use sslip.io names on the load
+balancer IP (harvester: the ingress VIP). For production set `rancher_hostname` and `api_host` to your own DNS
 names that resolve to the load balancer. `api_host` goes into the RKE2 API
 certificate (`network.apiHost`); aws also adds both load balancer names and the
 API VIP as `tls-san`.
@@ -321,7 +326,7 @@ disk. See [docs/webui.md](docs/webui.md).
 | `tools/multicluster` | Several clusters from one checkout, imported into a management Rancher ([above](#multi-cluster)). |
 | `tools/observability` | Optional OpenTelemetry Operator, `Instrumentation` and demo app manifests, rendered from a cluster's outputs ([tools/observability](tools/observability/README.md)). |
 | `make cost PROVIDER=<p> TFVARS="..."` | Cost estimate from tfvars before a deploy; an estimate, not a quote ([tools/cost](tools/cost/README.md)). |
-| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, gcp optional `--project` with the `gcloud` CLI, oci optional `--region` and `--compartment` with the `oci` CLI, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
+| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, gcp optional `--project` with the `gcloud` CLI, harvester uses `kubectl` with the kubeconfig and namespace, oci optional `--region` and `--compartment` with the `oci` CLI, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
 | `tools/orphans/evroc [--adopt]` | Run in `examples/evroc` (or the cluster directory): lists evroc objects missing from the state, for example after an interrupted apply, and writes `import` blocks for them (`--adopt` writes `imports.tf` directly). |
 | `tools/vultr/passthrough-stock.sh [region ...]` | Vultr GPU passthrough plans in stock per region. Needs `VULTR_API_KEY`, `curl` and `jq`. |
 
@@ -344,7 +349,7 @@ Details in [docs/security.md](docs/security.md).
 |---|---|
 | [Web UI](docs/webui.md) | The localhost runner: run, profiles, forms, deploy, backups |
 | [Architecture](docs/architecture.md) | Diagrams: deploy flow, image pipeline, passes and network per provider |
-| [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [evroc](docs/providers/evroc.md), [exoscale](docs/providers/exoscale.md), [gcp](docs/providers/gcp.md), [oci](docs/providers/oci.md), [vultr](docs/providers/vultr.md) |
+| [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [evroc](docs/providers/evroc.md), [exoscale](docs/providers/exoscale.md), [gcp](docs/providers/gcp.md), [harvester](docs/providers/harvester.md), [oci](docs/providers/oci.md), [vultr](docs/providers/vultr.md) |
 | [Conventions](docs/conventions.md) | Variable names, labels, the output set, checklist for a new provider |
 | [SUSE Observability and SUSE Security](docs/observability-and-security.md) | User guide for the `observability-*` and `security-*` components: topologies, variables, DNS, TLS, sizing, checks |
 | [Scaling](docs/scaling.md) | Adding nodes and pools, storage changes |

@@ -42,13 +42,14 @@ module "elemental_config" {
   ssh_authorized_keys     = var.ssh_authorized_keys
   permit_root_ssh         = var.permit_root_ssh
 
-  elemental_image    = var.elemental_image
-  image_disk_size    = var.image_disk_size
-  fips               = var.fips
-  components         = var.components
-  suse_storage_nodes = var.suse_storage_nodes
-  ingress_controller = var.ingress_controller
-  api_vip_mode       = "external"
+  elemental_image      = var.elemental_image
+  image_disk_size      = var.image_disk_size
+  fips                 = var.fips
+  etcd_unsafe_no_fsync = var.etcd_unsafe_no_fsync
+  components           = var.components
+  suse_storage_nodes   = var.suse_storage_nodes
+  ingress_controller   = var.ingress_controller
+  api_vip_mode         = "external"
 
   aif_release            = var.aif_release
   core_platform_override = var.core_platform_override
