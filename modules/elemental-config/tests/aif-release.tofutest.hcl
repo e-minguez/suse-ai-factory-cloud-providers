@@ -6,7 +6,7 @@ override_data {
   target = data.http.aif_release_manifest
   values = {
     status_code   = 200
-    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.3.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
   }
 }
 
@@ -80,7 +80,7 @@ run "different_release_changes_url" {
   }
 
   assert {
-    condition     = output.release_manifest_url != "https://raw.githubusercontent.com/SUSE/aif/refs/tags/aif-operator-2.3.0/uc-release-manifest/release_manifest.yaml"
+    condition     = output.release_manifest_url != "https://raw.githubusercontent.com/SUSE/aif/refs/tags/aif-operator-2.4.0/uc-release-manifest/release_manifest.yaml"
     error_message = "A different aif_release must change the manifest URL."
   }
 }

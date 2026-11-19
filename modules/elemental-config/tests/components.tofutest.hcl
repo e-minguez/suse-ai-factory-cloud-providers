@@ -6,7 +6,7 @@ override_data {
   target = data.http.aif_release_manifest
   values = {
     status_code   = 200
-    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.3.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
   }
 }
 
@@ -87,7 +87,7 @@ run "component_order_does_not_change_the_render" {
   }
 
   assert {
-    condition     = output.build_hash == "ec5b76bd70b53b4d1c08a8782ff77dcbd0be5ac15a38e967b561cd5f96300ed4"
+    condition     = output.build_hash == "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
     error_message = "Reordering components must not change build_hash."
   }
 }
@@ -251,7 +251,7 @@ run "suse_storage_nodes_keep_hash" {
   }
 
   assert {
-    condition     = output.build_hash == "6634a9284a138abd6f5e9e52b882f38021cc400ea3e0a6fd2d4e91152af7be34"
+    condition     = output.build_hash == "0e9e8c9358ed475dfec13e5890b8067fc1319ffc3274c164a9ff424e2c525891"
     error_message = "suse_storage_nodes must not change build_hash."
   }
 }

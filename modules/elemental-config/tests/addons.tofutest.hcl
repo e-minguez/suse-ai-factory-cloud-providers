@@ -10,7 +10,7 @@ override_data {
   target = data.http.aif_release_manifest
   values = {
     status_code   = 200
-    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.3.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
   }
 }
 
@@ -383,7 +383,7 @@ run "neuvector_version_unknown_minor" {
     target = data.http.aif_release_manifest
     values = {
       status_code   = 200
-      response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.3.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.99.1\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+      response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.99.1\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
     }
   }
 
@@ -488,7 +488,7 @@ run "sizing_profile_changes_build_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "f9a4ca3793783ef4e3914827ad1a6cfc5fbe610872d3061a78f0efe223d66631"
+    condition     = output.build_hash != "7bff6b22f3479af7bfa795ffcf3cd3d9b29e30679238e3761077420394e19234"
     error_message = "observability_sizing_profile must change build_hash."
   }
 }

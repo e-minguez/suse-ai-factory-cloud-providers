@@ -1,6 +1,6 @@
 # Jumphost user_data size: EC2 limits it to 16384 bytes after gzip. The worst
 # realistic component set (management cluster plus cert-manager and suse-storage,
-# two ssh keys, real AIF 2.3.0 manifest, PEM-sized TLS fixtures) must keep headroom.
+# two ssh keys, real AIF 2.4.0 manifest, PEM-sized TLS fixtures) must keep headroom.
 
 variables {
   region                  = "us-east-1"

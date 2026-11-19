@@ -351,7 +351,7 @@ variable "fips" {
 
 variable "aif_release" {
   type        = string
-  default     = "2.3.0"
+  default     = "2.4.0"
   description = "AI Factory release: a manifest URL (http:// or https://), or a version X.Y.Z[-pre] resolved to the SUSE/aif tag aif-operator-<version>."
 
   validation {
