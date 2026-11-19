@@ -84,6 +84,12 @@ type formView struct {
 	Disabled        bool
 }
 
+// noCost lists providers the tools/cost estimator does not cover.
+var noCost = map[string]bool{"harvester": true}
+
+// HasCost reports whether the form offers the live cost estimate.
+func (v formView) HasCost() bool { return !noCost[v.Provider] }
+
 // outcome of parsing one field from the submitted form.
 type outcome struct {
 	kind   byte // 0 keep, 's' set, 'r' remove
@@ -790,6 +796,10 @@ func (s *Server) costFragment(w http.ResponseWriter, data map[string]any) {
 func (s *Server) handleCost(w http.ResponseWriter, r *http.Request) {
 	fc, ok := s.loadCtx(w, r)
 	if !ok {
+		return
+	}
+	if noCost[fc.cluster.Provider] {
+		s.costFragment(w, map[string]any{"Error": "No cost estimate for this provider."})
 		return
 	}
 	if !fc.parseForm(w, r) {

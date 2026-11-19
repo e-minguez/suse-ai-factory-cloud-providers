@@ -312,3 +312,28 @@ run "suse_storage_unknown_pool_rejected" {
 
   expect_failures = [var.suse_storage_nodes]
 }
+
+run "managed_vip_charts_first" {
+  command = plan
+
+  variables {
+    api_vip_mode = "managed"
+  }
+
+  assert {
+    condition = (
+      [for c in yamldecode(output.elemental_files["release.yaml"]).components.helm : c.chart] ==
+      ["metallb", "endpoint-copier-operator", "rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+    )
+    error_message = "With a managed apiVIP, metallb and endpoint-copier-operator come first in release.yaml."
+  }
+}
+
+run "external_vip_no_vip_charts" {
+  command = plan
+
+  assert {
+    condition     = !strcontains(output.elemental_files["release.yaml"], "metallb") && !strcontains(output.elemental_files["release.yaml"], "endpoint-copier-operator")
+    error_message = "External apiVIP mode lists no VIP charts."
+  }
+}

@@ -64,10 +64,11 @@ module "ai_factory" {
   public_subnet_ids  = var.public_subnet_ids
   private_subnet_ids = var.private_subnet_ids
 
-  image_rebuild      = var.image_rebuild
-  aif_release        = var.aif_release
-  components         = var.components
-  suse_storage_nodes = var.suse_storage_nodes
+  image_rebuild        = var.image_rebuild
+  aif_release          = var.aif_release
+  etcd_unsafe_no_fsync = var.etcd_unsafe_no_fsync
+  components           = var.components
+  suse_storage_nodes   = var.suse_storage_nodes
 
   root_password_hash      = var.root_password_hash
   node_username           = var.node_username

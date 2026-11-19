@@ -411,3 +411,9 @@ variable "jumphost_disk_size_gb" {
   default     = null
   description = "Boot volume size in GB of the jumphost. Null uses 100."
 }
+
+variable "etcd_unsafe_no_fsync" {
+  type        = bool
+  default     = false
+  description = "DANGEROUS: disables fsync in etcd (etcd --unsafe-no-fsync), so a host crash or power loss can corrupt etcd and lose the cluster. Only for throwaway clusters on disks too slow for etcd."
+}

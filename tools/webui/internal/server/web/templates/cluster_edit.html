@@ -10,7 +10,7 @@
 {{if .Disabled}}<div class="flash warn" role="status">A job is running for this cluster; saving is disabled until it finishes.</div>{{end}}
 {{if .Errors}}<div class="flash err" role="alert"><strong>Fix these values:</strong><ul>{{range .Errors}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
 {{if .Missing}}<div class="flash warn" role="status">Required before a deploy: {{range $i, $m := .Missing}}{{if $i}}, {{end}}{{$m}}{{end}}.</div>{{end}}
-<div class="edit-layout">
+<div class="edit-layout{{if not .HasCost}} no-cost{{end}}">
 <form method="post" action="/clusters/{{.Cluster.Name}}/edit" id="cluster-form" class="cluster-form" autocomplete="off" data-once>
   <section class="basic">
     {{range .Basic}}{{template "field" .}}{{end}}
@@ -32,12 +32,12 @@
     <a href="/clusters/{{.Cluster.Name}}">Back to the cluster</a>
   </div>
 </form>
-<aside class="cost-side panel" aria-label="Cost estimate">
+{{if .HasCost}}<aside class="cost-side panel" aria-label="Cost estimate">
   <div id="cost" hx-post="/clusters/{{.Cluster.Name}}/cost" hx-trigger="load, change from:#cluster-form delay:800ms" hx-include="#cluster-form" hx-swap="innerHTML">
     <h3>Estimate</h3>
     <div class="skeleton" aria-busy="true"><span></span><span></span><span></span><span class="visually-hidden">Loading the estimate</span></div>
   </div>
-</aside>
+</aside>{{end}}
 </div>
 {{end}}
 {{end}}

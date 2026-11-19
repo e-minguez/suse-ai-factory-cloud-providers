@@ -32,9 +32,10 @@ module "config" {
   components         = var.components
   suse_storage_nodes = var.suse_storage_nodes
 
-  elemental_image = var.elemental_image
-  image_disk_size = var.image_disk_size
-  fips            = var.fips
+  elemental_image      = var.elemental_image
+  image_disk_size      = var.image_disk_size
+  fips                 = var.fips
+  etcd_unsafe_no_fsync = var.etcd_unsafe_no_fsync
 
   root_password_hash      = var.root_password_hash
   node_user_password_hash = var.node_user_password_hash

@@ -237,3 +237,38 @@ func TestEvrocConfigChecks(t *testing.T) {
 		}
 	}
 }
+
+const testKubeconfig = "apiVersion: v1\nclusters:\n- name: h\n  cluster:\n    server: https://10.0.0.1\ncontexts:\n- name: h\n  context: {cluster: h, user: u}\nusers:\n- name: u\n  user:\n    token: harvestertoken123\n    client-key-data: clientkeydata456\n"
+
+func TestHarvesterKubeconfig(t *testing.T) {
+	d := t.TempDir()
+	if st, err := Status(d, "harvester"); err != nil || anySet(st) {
+		t.Fatalf("before save: %v %v", st, err)
+	}
+	if err := Save(d, "harvester", map[string]string{"harvester_kubeconfig": "not: a kubeconfig"}); err == nil {
+		t.Fatal("invalid kubeconfig accepted")
+	}
+	if err := Save(d, "harvester", map[string]string{"harvester_kubeconfig": testKubeconfig}); err != nil {
+		t.Fatal(err)
+	}
+	f := harvesterKubeconfig(d)
+	if mode(t, f) != 0o600 {
+		t.Error("kubeconfig mode")
+	}
+	if st, _ := Status(d, "harvester"); !st["harvester_kubeconfig"] {
+		t.Error("not set after save")
+	}
+	b, err := os.ReadFile(filepath.Join(d, "common-harvester.tfvars"))
+	if err != nil || !strings.Contains(string(b), f) || strings.Contains(string(b), "harvestertoken123") {
+		t.Fatalf("tfvars %q %v", b, err)
+	}
+	if v, err := SecretValues(d, "harvester"); err != nil || len(v) != 2 {
+		t.Fatalf("secrets %v %v", v, err)
+	}
+	if err := Save(d, "harvester", map[string]string{"harvester_kubeconfig": ""}); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := Status(d, "harvester"); !st["harvester_kubeconfig"] {
+		t.Error("empty value must keep the stored one")
+	}
+}

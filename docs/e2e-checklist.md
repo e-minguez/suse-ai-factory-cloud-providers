@@ -1,6 +1,6 @@
 # End-to-end checks not yet run
 
-Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16).
+Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16); harvester has not run yet.
 Run these from the cluster directory (`examples/<provider>` or
 `clusters/<name>`); `make ci` must pass first.
 
@@ -51,6 +51,26 @@ joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only, nodes boot.
 - [ ] As a multicluster downstream: `cluster.sh register` with the NAT address in the management `ingress_cidrs`.
 - [ ] Expired PARs after 24 hours: `oci os preauth-request list --bucket-name <cluster>-build`.
+
+## harvester
+
+Nothing has run yet on the test cluster (Harvester 1.8.2, namespace
+`suse-ai-factory-on-harvester`). Platform checks passed (plan, Step 0). Run, in
+order:
+
+- [ ] Image build: status served on the jumphost, `export-from-volume` image
+      `Imported`, rebuild with `deploy.sh --rebuild` replaces every node.
+- [ ] One control plane boots (first boot 5 to 7 minutes), joins through `api_vip`,
+      Rancher answers on `ingress_vip` (sslip.io names).
+- [ ] Three control planes join; a plan afterwards shows no changes.
+- [ ] A worker pool and a rise of its `count`; nothing is replaced.
+- [ ] `image_id` set to an existing image: the jumphost is a bastion only.
+- [ ] Rancher local-path volume and aif-operator.
+- [ ] GPU pool (`gpu_devices`, `pcidevices-controller` enabled): `nvidia-smi` in the
+      driver pod. Not run: no GPUs on the test cluster.
+- [ ] DHCP reservations by MAC: a restarted control plane keeps its address.
+- [ ] Destroy and `tools/leftovers/harvester.sh`.
+- [ ] Catalog shapes (`catalog/*/harvester`) with distinct VIP pairs.
 
 ## Multicluster
 

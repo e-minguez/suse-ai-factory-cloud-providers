@@ -132,6 +132,34 @@ exoscale:
     - exoscale_api_key
     - exoscale_api_secret
 
+harvester:
+  examples:
+    worker_pools: |
+      {"wrk": {"instance_type": "8x32", "count": 2}}
+    gpu_devices: |
+      {"gpu": {"device_name": "nvidia.com/GA102GL_A10", "count": 1}}
+    node_storage_classes: |
+      {"cp": "yolo"}
+  basic:
+    - {name: region, label: Region label (free-form), widget: text}
+    - {name: harvester_namespace, label: Harvester namespace}
+    - {name: vpc_id, label: VM network (namespace/name)}
+    - {name: vpc_cidr, label: Network CIDR}
+    - {name: api_vip, label: API VIP (static, outside DHCP)}
+    - {name: ingress_vip, label: Ingress VIP (static, outside DHCP)}
+  groups:
+    Provider:
+      - harvester_kubecontext
+      - storage_class_name
+      - {name: node_storage_classes, widget: json}
+      - disk_cache_mode
+      - buildhost_image_url
+      - buildhost_power_off
+      - jumphost_image
+      - {name: gpu_devices, widget: json}
+  managed:
+    - harvester_kubeconfig_path
+
 oci:
   examples:
     worker_pools: |

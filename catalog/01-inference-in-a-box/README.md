@@ -75,3 +75,4 @@ flowchart LR
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
 - [OCI](oci/README.md)
+- [Harvester](harvester/README.md)

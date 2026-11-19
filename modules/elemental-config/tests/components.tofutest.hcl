@@ -6,7 +6,7 @@ override_data {
   target = data.http.aif_release_manifest
   values = {
     status_code   = 200
-    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n    repositories:\n      - name: \"jetstack\"\n        url: \"https://charts.jetstack.io\"\n      - name: \"rancher-prime\"\n        url: \"https://charts.rancher.com/server-charts/prime\"\n"
   }
 }
 
@@ -87,7 +87,7 @@ run "component_order_does_not_change_the_render" {
   }
 
   assert {
-    condition     = output.build_hash == "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash == "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "Reordering components must not change build_hash."
   }
 }
@@ -251,7 +251,7 @@ run "suse_storage_nodes_keep_hash" {
   }
 
   assert {
-    condition     = output.build_hash == "0e9e8c9358ed475dfec13e5890b8067fc1319ffc3274c164a9ff424e2c525891"
+    condition     = output.build_hash == "7d28722e90cf7ab332d22b02a7d50b93754cf879de563515034a1588e8e599dc"
     error_message = "suse_storage_nodes must not change build_hash."
   }
 }
@@ -313,4 +313,29 @@ run "suse_storage_unknown_pool_rejected" {
   }
 
   expect_failures = [var.suse_storage_nodes]
+}
+
+run "managed_vip_charts_first" {
+  command = plan
+
+  variables {
+    api_vip_mode = "managed"
+  }
+
+  assert {
+    condition = (
+      [for c in yamldecode(output.elemental_files["release.yaml"]).components.helm : c.chart] ==
+      ["metallb", "endpoint-copier-operator", "rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+    )
+    error_message = "With a managed apiVIP, metallb and endpoint-copier-operator come first in release.yaml."
+  }
+}
+
+run "external_vip_no_vip_charts" {
+  command = plan
+
+  assert {
+    condition     = !strcontains(output.elemental_files["release.yaml"], "metallb") && !strcontains(output.elemental_files["release.yaml"], "endpoint-copier-operator")
+    error_message = "External apiVIP mode lists no VIP charts."
+  }
 }

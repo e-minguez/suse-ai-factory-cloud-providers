@@ -349,6 +349,12 @@ variable "fips" {
   description = "Set cryptoPolicy: fips in install.yaml. Every node must be FIPS-ready."
 }
 
+variable "etcd_unsafe_no_fsync" {
+  type        = bool
+  default     = false
+  description = "DANGEROUS: disables fsync in etcd (etcd --unsafe-no-fsync), so a host crash or power loss can corrupt etcd and lose the cluster. Only for throwaway clusters on disks too slow for etcd."
+}
+
 variable "aif_release" {
   type        = string
   default     = "2.4.0"

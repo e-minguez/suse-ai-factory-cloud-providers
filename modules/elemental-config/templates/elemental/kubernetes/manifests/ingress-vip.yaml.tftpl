@@ -1,0 +1,27 @@
+# Needs the MetalLB CRDs, so it is a non-priority manifest: elemental applies it
+# after every chart job, when MetalLB is installed.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: ingress-ippool
+  namespace: metallb-system
+spec:
+  addresses:
+    - ${ingress_vip}/32
+  avoidBuggyIPs: true
+  serviceAllocation:
+    priority: 100
+    namespaces:
+      - kube-system
+    serviceSelectors:
+      - matchExpressions:
+          - {key: app.kubernetes.io/name, operator: In, values: [${service_names}]}
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: ingress-l2-adv
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - ingress-ippool

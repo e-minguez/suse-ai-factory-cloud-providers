@@ -351,3 +351,9 @@ variable "image_rebuild" {
   default     = 0
   description = "Rebuild counter mixed into the image build hash. deploy.sh --rebuild bumps it in rebuild.auto.tfvars.json; do not set it by hand or in terraform.tfvars."
 }
+
+variable "etcd_unsafe_no_fsync" {
+  type        = bool
+  default     = false
+  description = "DANGEROUS: disables fsync in etcd (etcd --unsafe-no-fsync), so a host crash or power loss can corrupt etcd and lose the cluster. Only for throwaway clusters on disks too slow for etcd."
+}

@@ -60,6 +60,32 @@ variable "ingress_controller" {
   }
 }
 
+variable "ingress_vip" {
+  type        = string
+  default     = null
+  description = "IPv4 MetalLB assigns to the ingress controller Service (L2). Needs api_vip_mode = managed and an ingress_controller other than none."
+
+  validation {
+    condition     = var.ingress_vip == null || can(regex("^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$", var.ingress_vip))
+    error_message = "ingress_vip must be a valid IPv4 address."
+  }
+
+  validation {
+    condition     = var.ingress_vip == null || var.api_vip_mode == "managed"
+    error_message = "ingress_vip requires api_vip_mode = managed (MetalLB)."
+  }
+
+  validation {
+    condition     = var.ingress_vip == null || var.ingress_vip != var.api_vip
+    error_message = "ingress_vip must differ from api_vip."
+  }
+
+  validation {
+    condition     = var.ingress_vip == null || var.ingress_controller != "none"
+    error_message = "ingress_vip requires ingress_controller traefik or ingress-nginx."
+  }
+}
+
 variable "rke2_token" {
   type        = string
   sensitive   = true
@@ -139,6 +165,12 @@ variable "fips" {
   type        = bool
   default     = false
   description = "Set cryptoPolicy: fips in install.yaml. Every node must be FIPS-ready."
+}
+
+variable "etcd_unsafe_no_fsync" {
+  type        = bool
+  default     = false
+  description = "DANGEROUS: disables fsync in etcd (etcd --unsafe-no-fsync), so a host crash or power loss can corrupt etcd and lose the cluster. Only for throwaway clusters on disks too slow for etcd."
 }
 
 variable "components" {

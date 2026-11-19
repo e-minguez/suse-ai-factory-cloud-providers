@@ -1,0 +1,480 @@
+# Asserts the common output set (docs/conventions.md#outputs), the derived
+# hostnames, and the plan-time input checks. Harvester mocked; no cluster calls.
+
+mock_provider "harvester" {
+  override_during = plan
+}
+mock_provider "http" {}
+
+override_data {
+  target = module.config.data.http.aif_release_manifest
+  values = {
+    status_code   = 200
+    response_body = file("../elemental-config/tests/fixtures/release_manifest.yaml")
+  }
+}
+
+override_data {
+  target          = data.harvester_network.this
+  override_during = plan
+  values = {
+    id                   = "harvester-public/vlan-2006"
+    cluster_network_name = "mgmt"
+    config               = "{\"cniVersion\":\"0.3.1\",\"name\":\"vlan-2006\",\"type\":\"bridge\",\"bridge\":\"mgmt-br\",\"vlan\":2006}"
+    description          = null
+    labels               = {}
+    tags                 = {}
+    message              = null
+    route_cidr           = null
+    route_connectivity   = null
+    route_dhcp_server_ip = null
+    route_gateway        = null
+    route_mode           = null
+    state                = "Active"
+    vlan_id              = 2006
+  }
+}
+
+override_data {
+  target          = data.harvester_storageclass.this
+  override_during = plan
+  values = {
+    id                     = "fast"
+    allow_volume_expansion = true
+    allowed_topologies     = []
+    description            = null
+    is_default             = false
+    labels                 = {}
+    tags                   = {}
+    message                = null
+    parameters             = { migratable = "true", numberOfReplicas = "3" }
+    reclaim_policy         = "Delete"
+    state                  = null
+    volume_binding_mode    = "Immediate"
+    volume_provisioner     = "driver.longhorn.io"
+  }
+}
+
+override_data {
+  target          = data.harvester_image.buildhost
+  override_during = plan
+  values = {
+    id                        = "harvester-public/leap-16"
+    backend                   = "backing-image"
+    state                     = "Active"
+    source_type               = "download"
+    labels                    = {}
+    tags                      = {}
+    storage_class_parameters  = { migratable = "true" }
+    volume_storage_class_name = "longhorn-leap-16"
+    storage_class_name        = null
+    url                       = null
+    checksum                  = null
+    description               = null
+    file_path                 = null
+    message                   = null
+    progress                  = 100
+    pvc_name                  = null
+    pvc_namespace             = null
+    security_parameters       = {}
+    size                      = 1
+  }
+}
+
+override_data {
+  target          = data.harvester_image.node
+  override_during = plan
+  values = {
+    id                        = "harvester-public/aif-node"
+    backend                   = "backing-image"
+    state                     = "Active"
+    source_type               = "export-from-volume"
+    labels                    = {}
+    tags                      = {}
+    storage_class_parameters  = { migratable = "true" }
+    volume_storage_class_name = "longhorn-aif-node"
+    storage_class_name        = null
+    url                       = null
+    checksum                  = null
+    description               = null
+    file_path                 = null
+    message                   = null
+    progress                  = 100
+    pvc_name                  = null
+    pvc_namespace             = null
+    security_parameters       = {}
+    size                      = 8
+  }
+}
+
+override_resource {
+  target          = harvester_image.buildhost
+  override_during = plan
+  values          = { id = "suse-ai-factory-on-harvester/buildhost-image" }
+}
+
+override_resource {
+  target          = harvester_image.node
+  override_during = plan
+  values          = { id = "suse-ai-factory-on-harvester/node-image" }
+}
+
+override_resource {
+  target          = harvester_virtualmachine.buildhost
+  override_during = plan
+  values = {
+    network_interface = {
+      interface_name = "default"
+      ip_address     = "10.114.128.50"
+    }
+  }
+}
+
+override_resource {
+  target          = harvester_virtualmachine.node
+  override_during = plan
+  values = {
+    id = "suse-ai-factory-on-harvester/node"
+    network_interface = {
+      interface_name = "default"
+      ip_address     = "10.114.128.60"
+    }
+  }
+}
+
+override_resource {
+  target          = time_static.created
+  override_during = plan
+  values          = { rfc3339 = "2026-11-18T12:34:56Z" }
+}
+
+variables {
+  harvester_namespace     = "suse-ai-factory-on-harvester"
+  vpc_id                  = "harvester-public/vlan-2006"
+  vpc_cidr                = "10.114.128.0/25"
+  api_vip                 = "10.114.128.40"
+  ingress_vip             = "10.114.128.41"
+  admin_cidrs             = ["198.51.100.0/24"]
+  root_password_hash      = "$6$DUMMYSALT$ROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASH0"
+  node_user_password_hash = "$6$DUMMYSALT$NODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASH0"
+  ssh_authorized_keys     = ["ssh-ed25519 AAAADUMMY test"]
+  appco_username          = "DUMMY-APPCO-USER"
+  appco_password          = "DUMMY-APPCO-PASSWORD"
+  suse_registry_username  = "DUMMY-REGCODE"
+  suse_registry_password  = "DUMMY-REGISTRY-PASSWORD"
+  nvidia_api_key          = "DUMMY-NVIDIA-API-KEY"
+  gpu_pools               = { gpu = { instance_type = "8x32", count = 2 } }
+  gpu_devices             = { gpu = { device_name = "nvidia.com/GA102GL_A10", count = 2 } }
+  worker_pools            = { wrk = { instance_type = "16x64", count = 1, disk_size_gb = 300 } }
+  control_plane_count     = 3
+}
+
+run "outputs" {
+  command = plan
+
+  assert {
+    condition     = !contains(keys(local.extra_build_inputs), "storage_class") && !contains(keys(local.extra_build_inputs), "target_access_mode")
+    error_message = "Without storage_class_name the build inputs stay unchanged."
+  }
+
+  variables {
+    cluster_name   = "out-hv"
+    jumphost_image = "harvester-public/leap-16"
+  }
+
+  assert {
+    condition = (
+      output.provider == "harvester" &&
+      output.cluster_name == "out-hv" &&
+      output.region == "harvester" &&
+      output.api_vip == "10.114.128.40" &&
+      output.api_host == "10.114.128.40.sslip.io" &&
+      output.kubernetes_api_endpoint == "https://10.114.128.40.sslip.io:6443" &&
+      output.ingress_endpoint == "https://10.114.128.41" &&
+      output.rancher_hostname == "rancher.10.114.128.41.sslip.io" &&
+      output.rancher_url == "https://rancher.10.114.128.41.sslip.io" &&
+      length(output.egress_ips) == 0 &&
+      output.network.vpc_cidr == "10.114.128.0/25" &&
+      length(output.network.subnet_cidrs) == 1
+    )
+    error_message = "Outputs follow the VIPs, sslip.io names and the network."
+  }
+
+  assert {
+    condition = (
+      join(",", sort(keys(output.provider_details))) == "api_vip,buildhost_image,ingress_vip,macs,namespace,network,node_image,node_images,storage_class" &&
+      output.provider_details.namespace == "suse-ai-factory-on-harvester" &&
+      output.provider_details.network == "harvester-public/vlan-2006" &&
+      output.provider_details.storage_class == null &&
+      output.provider_details.ingress_vip == "10.114.128.41" &&
+      output.provider_details.buildhost_image == "harvester-public/leap-16" &&
+      output.provider_details.node_image == "suse-ai-factory-on-harvester/node-image"
+    )
+    error_message = "provider_details carries namespace, network, storage class, images, VIPs and the MACs."
+  }
+
+  assert {
+    condition     = output.image.ids["harvester"] == "suse-ai-factory-on-harvester/node-image" && output.build_status == null
+    error_message = "image.ids is keyed by the region label; build_status is null once the image exists."
+  }
+
+  assert {
+    condition     = output.security == null && output.observability == null
+    error_message = "Without security or observability components those outputs are null."
+  }
+}
+
+run "hostnames_from_inputs" {
+  command = plan
+
+  variables {
+    rancher_hostname   = "rancher.example.com"
+    api_host           = "api.example.com"
+    ingress_controller = "none"
+  }
+
+  assert {
+    condition = (
+      output.api_host == "api.example.com" &&
+      output.rancher_hostname == "rancher.example.com" &&
+      output.ingress_endpoint == null
+    )
+    error_message = "Explicit hostnames win; ingress_endpoint is null without an ingress controller."
+  }
+}
+
+run "ingress_domain" {
+  command = plan
+
+  variables {
+    ingress_domain = "aif.example.com"
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.aif.example.com"
+    error_message = "ingress_domain derives rancher.<domain>."
+  }
+}
+
+run "storage_class_in_details" {
+  command = plan
+
+  variables {
+    storage_class_name = "fast"
+  }
+
+  assert {
+    condition     = output.provider_details.storage_class == "fast"
+    error_message = "A set StorageClass shows in provider_details."
+  }
+
+  assert {
+    condition     = local.extra_build_inputs["storage_class"] == "fast"
+    error_message = "The target volume's StorageClass is immutable: a StorageClass change must give a new build_id and so a new volume."
+  }
+}
+
+run "reject_control_plane_public_ip" {
+  command = plan
+
+  variables {
+    control_plane_public_ip = true
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reject_pool_public_ip" {
+  command = plan
+
+  variables {
+    worker_pools = { wrk = { instance_type = "4x16", public_ip = true } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reject_bare_metal" {
+  command = plan
+
+  variables {
+    worker_pools = { wrk = { instance_type = "4x16", kind = "bare_metal" } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reject_placement" {
+  command = plan
+
+  variables {
+    worker_pools = { wrk = { instance_type = "4x16", placement = "pg" } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reject_disk_smaller_than_image" {
+  command = plan
+
+  variables {
+    image_disk_size = "40G"
+    worker_pools    = { wrk = { instance_type = "4x16", disk_size_gb = 30 } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reject_zones" {
+  command = plan
+
+  variables {
+    zones = ["a"]
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reject_pool_zone" {
+  command = plan
+
+  variables {
+    worker_pools = { wrk = { instance_type = "4x16", zone = "a" } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reject_bad_instance_type" {
+  command = plan
+
+  variables {
+    control_plane_instance_type = "VM.Standard.E5.Flex:4x32"
+    worker_pools                = { wrk = { instance_type = "8" } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "vpc_cidr_required" {
+  command = plan
+
+  variables {
+    vpc_cidr = null
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "vip_outside_cidr" {
+  command = plan
+
+  variables {
+    ingress_vip = "10.114.129.41"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "vip_equal" {
+  command = plan
+
+  variables {
+    ingress_vip = "10.114.128.40"
+  }
+
+  expect_failures = [var.ingress_vip]
+}
+
+run "vip_network_address" {
+  command = plan
+
+  variables {
+    api_vip = "10.114.128.0"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "vip_broadcast_address" {
+  command = plan
+
+  variables {
+    ingress_vip = "10.114.128.127"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "vip_not_ipv4" {
+  command = plan
+
+  variables {
+    api_vip = "api.example.com"
+  }
+
+  expect_failures = [var.api_vip]
+}
+
+run "gpu_pool_without_device" {
+  command = plan
+
+  variables {
+    gpu_devices = {}
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "gpu_device_for_unknown_pool" {
+  command = plan
+
+  variables {
+    gpu_devices = {
+      gpu   = { device_name = "nvidia.com/GA102GL_A10" }
+      other = { device_name = "nvidia.com/GA102GL_A10" }
+    }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "gpu_device_count_zero" {
+  command = plan
+
+  variables {
+    gpu_devices = { gpu = { device_name = "nvidia.com/GA102GL_A10", count = 0 } }
+  }
+
+  expect_failures = [var.gpu_devices]
+}
+
+run "malformed_image_reference" {
+  command = plan
+
+  variables {
+    image_id = "just-a-name"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "malformed_vpc_id" {
+  command = plan
+
+  variables {
+    vpc_id = "vlan-2006"
+  }
+
+  expect_failures = [var.vpc_id]
+}
+
+run "mtu_too_large" {
+  command = plan
+
+  variables {
+    vpc_mtu = 9100
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
