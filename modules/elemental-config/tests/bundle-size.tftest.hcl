@@ -1,5 +1,5 @@
 # Realistic management cluster (rancher, security, observability, AIF, GPU), two
-# ed25519 keys, real AIF 2.3.0 manifest. vultr, exoscale and evroc deliver the
+# ed25519 keys, real AIF 2.4.0 manifest. vultr, exoscale and evroc deliver the
 # config as this one bundle inside user_data (32 KiB limit; exoscale counts the
 # base64 of the whole user_data), so it must keep headroom.
 
