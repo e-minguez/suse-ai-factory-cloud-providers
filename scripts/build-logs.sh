@@ -88,6 +88,17 @@ if [ "$(wc -w <<<"$hosts")" -eq 1 ]; then
 fi
 
 pids=()
+# Background jobs ignore SIGINT in a script, so stop them (and their ssh and sed) on exit,
+# then run the ssh.sh cleanup this trap replaces.
+# shellcheck disable=SC2329 # called from the EXIT trap
+stop_jobs() {
+  local p
+  for p in ${pids[@]+"${pids[@]}"}; do
+    pkill -P "$p" 2>/dev/null || true
+    kill "$p" 2>/dev/null || true
+  done
+}
+trap 'stop_jobs; ssh_cleanup' EXIT
 for h in $hosts; do
   # shellcheck disable=SC2086
   { ssh_run "$h" tail $tail_args /var/log/elemental-factory.log 2>&1 | sed "s|^|[$h] |"; } &
