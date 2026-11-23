@@ -66,6 +66,13 @@ module "elemental_config" {
 }
 ```
 
+## Lifecycle manager
+
+`elemental-lifecycle-manager` (`lifecycle-manager.tf`) is a `release.yaml`
+chart, not a priority manifest. The chart pins are in that file. With the
+default `core_platform_override`, `beta-overrides.tf` injects the charts into
+the flattened release manifest; see `docs/lifecycle-manager.md`.
+
 ## Add-on components
 
 `observability-server`, `observability-plugin`, `observability-agent`,

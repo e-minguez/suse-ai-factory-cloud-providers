@@ -43,6 +43,14 @@ locals {
       sysext            = null
     },
     {
+      name              = "elemental-lifecycle-manager"
+      values_template   = null
+      values_vars       = {}
+      chart_credentials = false
+      pull_secret_ns    = null
+      sysext            = null
+    },
+    {
       name              = "rancher"
       values_template   = "rancher.yaml.tftpl"
       values_vars       = { hostname = var.rancher_hostname, bootstrap_password = local.rancher_bootstrap_password }

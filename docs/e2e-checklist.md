@@ -59,6 +59,19 @@ joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
 - [ ] `cluster.sh register <mgmt> <second>` adds the second downstream and keeps
       the first.
 
+## Elemental Lifecycle Manager
+
+[Guide](lifecycle-manager.md), [ADR 013](decisions/013-elemental-lifecycle-manager.md). Not run yet:
+
+- [ ] `elemental-lifecycle-manager` in `components` builds and boots.
+- [ ] `kubectl -n elemental-system get pods,helmcharts`: all pods ready.
+- [ ] `kubectl get crd releases.lifecycle.suse.com` exists.
+- [ ] With `rancher`: no extra `system-upgrade-controller` chart is installed.
+- [ ] Without `rancher`: SUC 109.0.2 is installed in `cattle-system`.
+- [ ] Manual `Release` on a throwaway cluster, after inspecting the target
+      manifest: plans run control plane first, then workers; the `Release`
+      status ends successful.
+
 ## SUSE Security and SUSE Observability
 
 [ADR 010](decisions/010-security-observability.md). Not run yet:

@@ -70,6 +70,11 @@ output "release_manifest" {
     condition     = length(local.unknown_sysext_overrides) == 0
     error_message = "sysext_image_overrides names extension(s) absent from the release manifest: ${join(", ", local.unknown_sysext_overrides)}. The manifest declares: ${join(", ", local.manifest_extension_names)}. Fix the name or set sysext_image_overrides = {}."
   }
+
+  precondition {
+    condition     = local.lcm_cert_manager_ok
+    error_message = "elemental-lifecycle-manager needs cert-manager, which the AIF release manifest does not list and a core_platform_override leaves no core platform to provide. Use a manifest that lists cert-manager or set core_platform_override = null."
+  }
 }
 
 output "release_manifest_url" {
