@@ -153,6 +153,7 @@ jobs:
           docker exec aif tofu version
           docker exec aif aws --version
           docker exec aif evroc version
+          docker exec aif oci --version
 
   docs:
     runs-on: ubuntu-26.04

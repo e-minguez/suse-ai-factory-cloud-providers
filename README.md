@@ -294,13 +294,13 @@ The scripts run `terraform` by default, or `tofu` when `terraform` is not instal
 
 ## Web UI
 
-**Alpha** (`alpha-0.0.2`). A local web interface creates, deploys and destroys clusters from forms, with
+**Alpha** (`alpha-0.0.3`). A local web interface creates, deploys and destroys clusters from forms, with
 no Terraform on your machine. It runs in a container and uses the same
 `deploy.sh` flow, including the plan review before every apply. Open the URL
 with the token from `docker logs aif`.
 
 ```sh
-docker run -d --init --name aif -p 127.0.0.1:8080:8080 --read-only --tmpfs /tmp --stop-timeout 600 -v ~/aif-clusters:/opt/aif/clusters ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.2
+docker run -d --init --name aif -p 127.0.0.1:8080:8080 --read-only --tmpfs /tmp --stop-timeout 600 -v ~/aif-clusters:/opt/aif/clusters ghcr.io/e-minguez/suse-ai-factory-cloud-providers:alpha-0.0.3
 ```
 
 The folder holds credentials and state: back it up and keep it on an encrypted

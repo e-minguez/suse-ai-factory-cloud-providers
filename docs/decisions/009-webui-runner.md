@@ -2,7 +2,7 @@
 
 ## Status
 Accepted. The web UI is alpha (version in `tools/webui/VERSION`, currently
-`alpha-0.0.2`): interfaces and the volume layout may change between releases.
+`alpha-0.0.3`): interfaces and the volume layout may change between releases.
 
 ## Context
 Deploying needs Terraform, the provider plugins, `jq`, `ssh`, `openssl` and
@@ -93,6 +93,11 @@ copied into `FROM scratch`. This keeps the image small with no package manager
 or shell tooling beyond what the scripts use. The aws CLI (pinned, GPG verified)
 and the evroc CLI (checksum verified; evroc publishes only a `latest` download)
 are added so the aws precheck and the leftovers checks work for every provider.
+The oci CLI is a Python package: the image carries `python313` from the BCI
+repository and the oci CLI wheels for the target arch, each pinned by sha256 in
+`tools/webui/oci-cli/requirements.txt` (regenerated with `lock.sh`). It adds
+about 400 MB; bytecode is not shipped and is cached under `/tmp` at run time
+(`PYTHONPYCACHEPREFIX`), as the root file system is read-only.
 
 ## Consequences
 - The UI is a front end for the existing scripts: a deploy started from the
