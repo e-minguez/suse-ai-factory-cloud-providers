@@ -304,6 +304,16 @@ Compute, Cloud GPU and VX1 instances only.
   `admin_cidrs`) or no public NIC at all.
 - The API load balancer admits 6443 from `api_cidrs` (default `0.0.0.0/0`) and
   9345 from the NAT gateway and the public agent addresses only.
+- Image import: while `image_import_port_open` is true, the jumphost serves the
+  image over plain HTTP on tcp/80 to `0.0.0.0/0` so the snapshot fetcher can reach
+  it. The image holds the RKE2 join
+  token, the password hashes and the rest of the Ignition configuration. The URL
+  path has 128 random bits and the directory listing is hidden, so the image is
+  not reachable without the URL, but the URL and the image cross the network
+  unencrypted, and the URL is in the state and the build log. The image is
+  deleted from the jumphost after `image_serve_seconds` (3600) and the rule is
+  removed in the second pass
+  ([#75](https://github.com/e-minguez/suse-ai-factory-cloud-providers/issues/75)).
 - Control-plane nodes are `vpc_only`. The jumphost accepts SSH from `admin_cidrs` and tcp/80 during an import. See also
   [security](../security.md).
 

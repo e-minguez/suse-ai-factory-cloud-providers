@@ -65,7 +65,7 @@ variable "control_plane_instance_type" {
 variable "control_plane_public_ip" {
   type        = bool
   default     = false
-  description = "Give the control-plane nodes a public IP. Nodes are not deployed by this module version yet."
+  description = "Must be false on OCI: nodes sit in the private subnet and reach the internet through the NAT gateway."
 }
 
 variable "jumphost_instance_type" {
