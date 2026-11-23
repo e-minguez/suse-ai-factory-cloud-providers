@@ -136,7 +136,8 @@ mkdir -p "$W/nocli"
 for d in /usr/bin /bin; do
   for f in "$d"/*; do
     n=${f##*/}
-    [ "$n" = az ] || [ -e "$W/nocli/$n" ] || ln -s "$f" "$W/nocli/$n"
+    # -L too: /bin can be /usr/bin, and dangling links fail -e.
+    [ "$n" = az ] || [ -L "$W/nocli/$n" ] || [ -e "$W/nocli/$n" ] || ln -s "$f" "$W/nocli/$n"
   done
 done
 RC=0
