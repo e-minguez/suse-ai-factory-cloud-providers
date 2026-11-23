@@ -52,6 +52,8 @@ func Fields(p string) []schema.Field {
 			field("exoscale_api_key", "API key", "Exoscale IAM API key.", true),
 			field("exoscale_api_secret", "API secret", "Secret of the API key.", true),
 		}
+	case "oci":
+		return ociFields()
 	}
 	return nil
 }
@@ -80,6 +82,10 @@ func Status(clustersDir, p string) (map[string]bool, error) {
 			return nil, err
 		}
 		out["config"] = len(strings.TrimSpace(string(b))) > 0
+	case "oci":
+		if err := ociStatus(clustersDir, out); err != nil {
+			return nil, err
+		}
 	case "vultr", "exoscale":
 		vals, err := tfvars.Read(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider))
 		if err != nil {
@@ -109,6 +115,8 @@ func Save(clustersDir, p string, values map[string]string) error {
 			return err
 		}
 		return writeFile(filepath.Join(clustersDir, evrocRel), []byte(cfg+"\n"))
+	case "oci":
+		return ociSave(clustersDir, values)
 	case "vultr", "exoscale":
 		set := map[string]any{}
 		for _, f := range Fields(p) {
@@ -158,6 +166,9 @@ func Env(clustersDir, p string) []string {
 		// Nothing: the provider and the CLI read $HOME/.evroc/config.yaml (CLI
 		// format); EVROC_CONFIG_FILE would make the provider expect the SDK format.
 		return nil
+	case "oci":
+		// Nothing: the oci CLI reads $HOME/.oci/config and Terraform reads common-oci.tfvars.
+		return nil
 	}
 	return nil
 }
@@ -192,6 +203,8 @@ func SecretValues(clustersDir, p string) ([]string, error) {
 			return nil, nil
 		}
 		collectSecrets(v, false, &out)
+	case "oci":
+		return ociSecretValues(clustersDir)
 	case "vultr", "exoscale":
 		vals, err := tfvars.Read(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider))
 		if err != nil {

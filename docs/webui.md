@@ -81,7 +81,8 @@ Terraform state, which contains secrets
 ## Account profiles
 
 Open `Profiles` and pick a provider. Enter its credentials once (aws access key,
-evroc configuration, vultr API key, exoscale API key and secret). The page edits
+evroc configuration, vultr API key, exoscale API key and secret, oci API key).
+The page edits
 credentials only. Credentials are write-only: the page shows "set" or "not set",
 and an empty field keeps the stored value. They stay on the volume so that a
 later destroy works.
@@ -91,6 +92,14 @@ including `currentProfile`; the page checks that the current profile has a
 refresh token. The container keeps its own copy, read by the provider and the
 evroc CLI as `$HOME/.evroc/config.yaml`. If evroc later rejects the token (for
 example after a new `evroc login` elsewhere), paste the current file again.
+
+For oci, enter the tenancy and user OCIDs, the API key fingerprint, the
+unencrypted PEM private key and a default region for the oci CLI (usually the
+home region; each cluster still uses its own `region`). The key is stored as
+`clusters/.home/.oci/oci_api_key.pem`, mode 600. The OCIDs, the fingerprint and
+the key path go to `clusters/common-oci.tfvars` for Terraform, and the page
+writes `clusters/.home/.oci/config` for the oci CLI once every value is set. The
+compartment (`oci_compartment_ocid`) is a cluster setting in the form.
 
 Values shared by clusters (`clusters/common-all.tfvars`,
 `clusters/common-<provider>.tfvars`) are edited by hand on the volume or with the
@@ -149,6 +158,7 @@ The keys count against the `user_data` limit. The UI shows the running total:
 |---|---|
 | aws | 16 KiB (compressed) |
 | exoscale | about 24 KiB |
+| oci | about 21 KiB (metadata limit 32000 bytes) |
 | vultr | 32 KiB |
 | evroc | 768 KiB |
 
@@ -171,8 +181,9 @@ under "Other actions" on the cluster page.
 confirm once, then shows the same plan review.
 Afterwards a button runs `tools/leftovers/<provider>.sh` (read-only) in the
 container and shows the result. The image ships the aws and evroc CLIs the aws
-and evroc checks need. Outside the image, when a CLI is not in `PATH`, the page
-shows the command to run on a machine that has it. Check the result before
+and evroc checks need, but not the oci CLI. When a CLI is not in `PATH` (oci in
+the image, or any CLI outside it), the page shows the command to run on a machine
+that has it. Check the result before
 assuming the account is clean.
 
 ## Rancher bootstrap password

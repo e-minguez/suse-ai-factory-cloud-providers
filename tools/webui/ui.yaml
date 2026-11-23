@@ -141,11 +141,12 @@ oci:
       label: OCI region
       widget: text
       options: [eu-frankfurt-1, us-ashburn-1]
-    - {name: oci_tenancy_ocid, label: Tenancy OCID}
-    - {name: oci_user_ocid, label: User OCID}
-    - {name: oci_fingerprint, label: API key fingerprint}
-    - {name: oci_private_key_path, label: API private key path (inside the container)}
     - {name: oci_compartment_ocid, label: Compartment OCID}
+  managed:
+    - oci_tenancy_ocid
+    - oci_user_ocid
+    - oci_fingerprint
+    - oci_private_key_path
   groups:
     Provider:
       - vpc_id
