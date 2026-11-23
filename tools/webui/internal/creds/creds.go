@@ -52,6 +52,14 @@ func Fields(p string) []schema.Field {
 			field("exoscale_api_key", "API key", "Exoscale IAM API key.", true),
 			field("exoscale_api_secret", "API secret", "Secret of the API key.", true),
 		}
+	case "azure":
+		// Service principal: the container has no az CLI to log in with.
+		return []schema.Field{
+			field("azure_subscription_id", "Subscription ID", "Subscription that holds the clusters.", true),
+			field("azure_tenant_id", "Tenant ID", "Microsoft Entra tenant of the service principal.", true),
+			field("azure_client_id", "Client ID", "Application (client) ID of the service principal.", true),
+			field("azure_client_secret", "Client secret", "Secret of the service principal.", true),
+		}
 	}
 	return nil
 }
@@ -80,7 +88,7 @@ func Status(clustersDir, p string) (map[string]bool, error) {
 			return nil, err
 		}
 		out["config"] = len(strings.TrimSpace(string(b))) > 0
-	case "vultr", "exoscale":
+	case "vultr", "exoscale", "azure":
 		vals, err := tfvars.Read(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider))
 		if err != nil {
 			return nil, err
@@ -109,7 +117,7 @@ func Save(clustersDir, p string, values map[string]string) error {
 			return err
 		}
 		return writeFile(filepath.Join(clustersDir, evrocRel), []byte(cfg+"\n"))
-	case "vultr", "exoscale":
+	case "vultr", "exoscale", "azure":
 		set := map[string]any{}
 		for _, f := range Fields(p) {
 			if v := strings.TrimSpace(values[f.Name]); v != "" {
@@ -201,6 +209,15 @@ func SecretValues(clustersDir, p string) ([]string, error) {
 			if s, _ := vals[f.Name].(string); s != "" {
 				out = append(out, s)
 			}
+		}
+	case "azure":
+		// Only the client secret is secret; the IDs appear in resource IDs of every plan.
+		vals, err := tfvars.Read(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider))
+		if err != nil {
+			return nil, err
+		}
+		if s, _ := vals["azure_client_secret"].(string); s != "" {
+			out = append(out, s)
 		}
 	default:
 		return nil, ErrUnknown

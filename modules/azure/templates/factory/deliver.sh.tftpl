@@ -1,0 +1,69 @@
+# Converts the raw to a fixed VHD and uploads it as a page blob through the
+# write-only container SAS: create the blob at full size, then Put Page the
+# 4 MiB chunks that are not all zeros, in parallel. The SAS is not logged. The
+# done marker is written last: it means "upload complete".
+VHD="$(dirname "$1")/${image_base}.vhd"
+CONTAINER_URL="${container_url}"
+SAS="${write_sas}"
+MSV="x-ms-version: 2021-08-06"
+CHUNK=$((4 * 1024 * 1024))
+WORKERS=8
+
+# A fixed VHD needs a virtual size that is a multiple of 1 MiB; its footer adds 512 bytes.
+size=$(stat -c %s "$1")
+vsize=$(( (size + 1048575) / 1048576 * 1048576 ))
+if [ "$vsize" -ne "$size" ]; then
+  qemu-img resize -f raw "$1" "$vsize"
+fi
+qemu-img convert -f raw -O vpc -o subformat=fixed,force_size "$1" "$VHD"
+rm -f "$1"
+total=$(stat -c %s "$VHD")
+nchunks=$(( (total + CHUNK - 1) / CHUNK ))
+BLOB="$CONTAINER_URL/${image_base}.vhd"
+log "uploading ${image_base}.vhd: $total bytes ($nchunks chunks of 4 MiB, $WORKERS parallel)"
+
+curl -fsS -o /dev/null --retry 5 --retry-delay 15 --retry-all-errors -X PUT \
+  -H "$MSV" -H "x-ms-blob-type: PageBlob" -H "x-ms-blob-content-length: $total" \
+  -H "Content-Length: 0" "$BLOB?$SAS"
+
+# Worker $1 handles chunks $1, $1+WORKERS, ... from its own chunk file.
+upload_slice() {
+  local w=$1 i off len chunk="$VHD.chunk$1"
+  for ((i = w; i < nchunks; i += WORKERS)); do
+    off=$((i * CHUNK))
+    len=$((total - off))
+    [ "$len" -le "$CHUNK" ] || len=$CHUNK
+    dd if="$VHD" of="$chunk" bs="$CHUNK" skip="$i" count=1 iflag=fullblock status=none
+    # An all-zero chunk is a hole in the page blob already.
+    if [ -z "$(tr -d '\0' <"$chunk" | head -c 1)" ]; then
+      continue
+    fi
+    curl -fsS -o /dev/null --retry 5 --retry-delay 15 --retry-all-errors -X PUT \
+      -H "$MSV" -H "x-ms-page-write: update" -H "x-ms-range: bytes=$off-$((off + len - 1))" \
+      -T "$chunk" "$BLOB?comp=page&$SAS"
+    if [ "$w" -eq 0 ] && [ $(((i / WORKERS) % 128)) -eq 0 ]; then
+      log "uploading: chunk $i of $nchunks"
+    fi
+  done
+  rm -f "$chunk"
+}
+
+pids=()
+for ((w = 0; w < WORKERS; w++)); do
+  upload_slice "$w" &
+  pids+=("$!")
+done
+failed=0
+for pid in "$${pids[@]}"; do
+  wait "$pid" || failed=1
+done
+if [ "$failed" -ne 0 ]; then
+  log "ERROR: a page upload failed"
+  return 1
+fi
+
+printf '%s' "$BUILD_ID" > "$VHD.done"
+curl -fsS -o /dev/null --retry 5 --retry-delay 15 --retry-all-errors -X PUT \
+  -H "$MSV" -H "x-ms-blob-type: BlockBlob" -T "$VHD.done" "$CONTAINER_URL/${image_base}.done?$SAS"
+log "upload complete"
+rm -f "$VHD" "$VHD.done"

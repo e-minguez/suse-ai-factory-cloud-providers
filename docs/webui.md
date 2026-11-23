@@ -81,10 +81,14 @@ Terraform state, which contains secrets
 ## Account profiles
 
 Open `Profiles` and pick a provider. Enter its credentials once (aws access key,
-evroc configuration, vultr API key, exoscale API key and secret). The page edits
+evroc configuration, vultr API key, exoscale API key and secret, azure service principal). The page edits
 credentials only. Credentials are write-only: the page shows "set" or "not set",
 and an empty field keeps the stored value. They stay on the volume so that a
 later destroy works.
+
+For azure, enter the subscription ID and a service principal (tenant ID, client ID and
+client secret): the image has no `az` CLI, so `az login` is not available inside
+the container. The service principal needs Contributor on the subscription.
 
 For evroc, paste the whole `~/.evroc/config.yaml` written by `evroc login`,
 including `currentProfile`; the page checks that the current profile has a
@@ -151,6 +155,7 @@ The keys count against the `user_data` limit. The UI shows the running total:
 | exoscale | about 24 KiB |
 | vultr | 32 KiB |
 | evroc | 768 KiB |
+| azure | about 45 KiB |
 
 ## Deploy
 
@@ -171,7 +176,7 @@ under "Other actions" on the cluster page.
 confirm once, then shows the same plan review.
 Afterwards a button runs `tools/leftovers/<provider>.sh` (read-only) in the
 container and shows the result. The image ships the aws and evroc CLIs the aws
-and evroc checks need. Outside the image, when a CLI is not in `PATH`, the page
+and evroc checks need. The azure check needs the `az` CLI, which the image does not ship, so the page shows the command to run by hand. Outside the image, when a CLI is not in `PATH`, the page
 shows the command to run on a machine that has it. Check the result before
 assuming the account is clean.
 

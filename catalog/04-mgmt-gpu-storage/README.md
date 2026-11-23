@@ -131,6 +131,7 @@ estimate for your values: `tools/multicluster/cluster.sh cost <name>`.
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
 - [OCI](oci/README.md)
+- [Azure](azure/README.md)
 - [AWS](aws/README.md)
 
 Shared prerequisites for all shapes: [../README.md#shared-prerequisites](../README.md#shared-prerequisites).

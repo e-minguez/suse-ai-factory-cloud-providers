@@ -7,7 +7,7 @@ and ends with this statement, and the JSON report carries it in a top-level
 `disclaimer` field.
 
 `cost` reads the same tfvars files as `deploy.sh`, applies the module
-defaults, prices the resources the module would create (aws, evroc, exoscale,
+defaults, prices the resources the module would create (aws, azure, evroc, exoscale,
 oci or vultr), and prints a per-resource table for 1h, 8h, 24h, 7d and 30d. It
 reads no plan, no state and no live resources, so it works before anything
 exists. Credentials in the tfvars files are never read.
@@ -18,7 +18,7 @@ of Go files.
 ## Usage
 
 ```
-make cost PROVIDER=<aws|evroc|exoscale|oci|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
+make cost PROVIDER=<aws|azure|evroc|exoscale|oci|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
 tools/multicluster/cluster.sh cost <name> [cost args]
 cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 ```
@@ -28,9 +28,9 @@ cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--provider NAME` | required | `aws`, `evroc`, `exoscale`, `oci` or `vultr` |
+| `--provider NAME` | required | `aws`, `azure`, `evroc`, `exoscale`, `oci` or `vultr` |
 | `--var-file F` | none | tfvars file; repeatable, later wins |
-| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; evroc, exoscale and oci prices do not depend on it, and a null evroc region shows as `(evroc CLI context)`) |
+| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; azure defaults to `westeurope`; evroc, exoscale and oci prices do not depend on it, and a null evroc region shows as `(evroc CLI context)`) |
 | `--json` | off | print a JSON report instead of a table |
 | `--catalog FILE` | none | use this provider catalog file instead of the network or cache |
 | `--no-network` | off | never call the network; use `--catalog` or a warm cache |
@@ -69,7 +69,7 @@ column per duration. `ROLE` and `POOL` use the label vocabulary in
   with `count = 0`, disabled public IPs); a footer note says when node rows
   went.
 - `*` marks a row capped at the monthly rate (vultr monthly-invoiced plans).
-- Amounts are in the provider's native currency (aws and vultr USD, evroc EUR;
+- Amounts are in the provider's native currency (aws, azure and vultr USD, evroc EUR;
   exoscale EUR, one of the three currencies it publishes; oci USD). There is no
   conversion.
 - `Not included` lists resources that exist but are not priced, each with the
@@ -94,6 +94,33 @@ and network load balancer hours. Results are cached per region.
 
 Not included: data transfer, NLB capacity units (LCU), NAT gateway per-GB
 processing, the raw image in S3.
+
+### azure
+
+Prices come from the public Azure Retail Prices API
+(`https://prices.azure.com/api/retail/prices`, USD, `priceType` Consumption,
+filtered by `armRegionName`). No key is needed and nothing from your account is
+read. The estimator pages through the Virtual Machines meters of the region
+(about ten requests of 1000 items) and keeps Linux on-demand ones; Windows,
+Spot and Low Priority meters are dropped. Results are cached per region
+(`azure-pricing-<region>.json`); `--catalog` takes a saved
+`{"Items": [...]}` copy of the API response. The region is an `armRegionName`
+(`westeurope`); a display name such as `West Europe` is normalised.
+
+VM sizes are priced per hour by `armSkuName` (`Standard_D8s_v5`). OS disks are
+Premium SSD (`Premium_LRS`) and billed as the smallest tier that holds the
+size: 100 GB is P10 (128 GiB), 200 GB is P15 (256 GiB), 500 GB is P20; a size
+above 32767 GiB fails with exit code 2. Static Standard public IPv4 addresses
+are counted for the load balancer, the NAT gateway and the jumphost. The
+Standard load balancer is priced at the included-rules rate (up to 5 rules, the
+module uses 4); the NAT gateway per hour. The load balancer, its public IP and
+the NAT gateway are assumed to exist whenever the module is applied; with
+`vpc_id` the existing network provides egress, so no NAT gateway or address is
+priced. A size without a price fails with exit code 3 (`--allow-unknown-plans` prices it as 0).
+
+Not included: outbound traffic, load balancer and NAT gateway data processed,
+the SLES pay-as-you-go licence of the jumphost image (a separate per-vCPU-tier
+meter) and image storage (page blob and compute gallery version).
 
 ### evroc
 

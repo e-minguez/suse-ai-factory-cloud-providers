@@ -1,0 +1,22 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: azure   Region: westeurope   Cluster: suse-ai-factory   Catalog: file
+
+  RESOURCE                 ROLE      POOL  QTY  TYPE                  USD/hr    1h    8h   24h     7d     30d
+  jumphost                 jumphost          1  Standard_D4s_v5       0.2300  0.23  1.84  5.52  38.64  165.60
+  jumphost disk (128 GB)   jumphost          1  disk:P10         0.000232/GB  0.03  0.24  0.71   4.99   21.38
+  jumphost public ip       jumphost          1  public-ipv4           0.0050  0.01  0.04  0.12   0.84    3.60
+  load balancer (rules)    network           1  lb                    0.0250  0.03  0.20  0.60   4.20   18.00
+  load balancer public ip  network           1  public-ipv4           0.0050  0.01  0.04  0.12   0.84    3.60
+  nat gateway              network           1  nat-gateway           0.0450  0.05  0.36  1.08   7.56   32.40
+  nat gateway public ip    network           1  public-ipv4           0.0050  0.01  0.04  0.12   0.84    3.60
+                                                                       TOTAL  0.34  2.76  8.27  57.91  248.18
+
+  All amounts in USD.
+  deploy_nodes = false: node rows omitted.
+  Not included:
+    - outbound traffic: traffic-dependent; the first 100 GB per month are free
+    - load balancer and NAT gateway data processed: traffic-dependent; per GB
+    - jumphost SLES licence: marketplace pay-as-you-go image; billed per hour by vCPU tier as a separate meter
+    - image storage: page blob in the storage account and the compute gallery image version; small, and the blob is deleted unless keep_build_artifacts
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.

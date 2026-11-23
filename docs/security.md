@@ -132,5 +132,9 @@ it rebuilds the image.
 
 ## Object storage
 
-Instances do not read from S3 or other object storage. The only exception is the
-aws jumphost, which uploads the raw image.
+Instances do not read from S3 or other object storage. The only exceptions are
+the aws jumphost, which uploads the raw image, the oci jumphost, which uploads
+the qcow2 through write-only pre-authenticated requests, and the azure jumphost,
+which uploads the VHD through a write-only container SAS (create and write, no
+read, list or delete; 24 hours). The SAS is in the jumphost's `custom_data` and
+in state.

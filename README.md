@@ -62,6 +62,7 @@ flowchart LR
 | Provider | Passes | Image | Default hostnames | Notes |
 |---|:---:|---|---|---|
 | **aws** | 1 | Raw image uploaded to S3, imported as an EBS snapshot and AMI | NLB DNS names | [aws.md](docs/providers/aws.md) |
+| **azure** | 1 | Raw image converted to a fixed VHD, uploaded as a page blob through a write-only SAS, Generation 2 Compute Gallery image | sslip.io | [azure.md](docs/providers/azure.md); untested against a real subscription |
 | **evroc** | 2 (+1 optional) | Raw image written to a disk, one snapshot per zone | sslip.io | [evroc.md](docs/providers/evroc.md) |
 | **exoscale** | 2 | Raw image converted to qcow2, served over HTTP, template per zone | sslip.io | [exoscale.md](docs/providers/exoscale.md); every node has a public IPv4, single zone ([limitations](docs/providers/exoscale.md#limitations)) |
 | **oci** | 1 | Raw image converted to qcow2, uploaded through write-only pre-authenticated requests, custom image with a UEFI capability schema | sslip.io | [oci.md](docs/providers/oci.md) |
@@ -69,14 +70,16 @@ flowchart LR
 
 Each provider has an example root with its own README:
 [examples/aws](examples/aws/README.md),
+[examples/azure](examples/azure/README.md),
 [examples/evroc](examples/evroc/README.md),
 [examples/exoscale](examples/exoscale/README.md),
+[examples/oci](examples/oci/README.md),
 [examples/vultr](examples/vultr/README.md).
 
 ## Quickstart
 
 **Requirements:** Terraform 1.16.5 or later (or [OpenTofu](#opentofu) 1.13.1 or later, experimental), `jq`, `ssh`
-and provider credentials. aws also needs the AWS CLI, evroc the evroc CLI login,
+and provider credentials. aws also needs the AWS CLI, azure the Azure CLI login (or a service principal) and `curl`, evroc the evroc CLI login,
 exoscale `curl` and `openssl` (signed API checks).
 
 **1. Shared values.** Copy `common-all.tfvars.example` to `common-all.tfvars` at
@@ -92,7 +95,7 @@ cp terraform.tfvars.example terraform.tfvars
 $EDITOR terraform.tfvars
 ```
 
-**3. Optional: estimate the cost** (from the repo root; aws, evroc and vultr).
+**3. Optional: estimate the cost** (from the repo root; aws, azure, evroc, exoscale, oci and vultr).
 
 ```bash
 make cost PROVIDER=<provider> TFVARS="common-all.tfvars examples/<provider>/terraform.tfvars"
@@ -153,6 +156,9 @@ depends on the platform:
 
 - **aws, 1 pass.** The API address is known at plan time and load balancer
   attachments are separate resources, so nothing depends on a created instance.
+- **azure, 1 pass.** The load balancer and its static IP exist before the
+  image, and backend pool membership is a separate resource per NIC, so
+  nothing depends on a created VM.
 - **vultr, 2 passes.** The load balancer backends depend on nodes built from an
   image whose serving address depends on the load balancer. Pass 1 creates the
   infrastructure and the image; pass 2 attaches the backends.
@@ -209,7 +215,7 @@ Ready-made shapes, from a single GPU node to a four-cluster platform, with diagr
 
 ### Hostnames
 
-aws uses the NLB DNS names; evroc, exoscale and vultr use sslip.io names on the load
+aws uses the NLB DNS names; azure, evroc, exoscale, oci and vultr use sslip.io names on the load
 balancer IP. For production set `rancher_hostname` and `api_host` to your own DNS
 names that resolve to the load balancer. `api_host` goes into the RKE2 API
 certificate (`network.apiHost`); aws also adds both load balancer names and the
@@ -314,7 +320,7 @@ disk. See [docs/webui.md](docs/webui.md).
 | `tools/multicluster` | Several clusters from one checkout, imported into a management Rancher ([above](#multi-cluster)). |
 | `tools/observability` | Optional OpenTelemetry Operator, `Instrumentation` and demo app manifests, rendered from a cluster's outputs ([tools/observability](tools/observability/README.md)). |
 | `make cost PROVIDER=<p> TFVARS="..."` | Cost estimate from tfvars before a deploy; an estimate, not a quote ([tools/cost](tools/cost/README.md)). |
-| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, oci optional `--region` and `--compartment` with the `oci` CLI, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
+| `tools/leftovers/<provider>.sh <cluster_name>` | Read-only check for cluster objects still in the account after a destroy (aws `--region`, azure `--project <subscription>` with the `az` CLI, evroc optional `--region`, exoscale optional `--region` and needs `EXOSCALE_API_KEY` and `EXOSCALE_API_SECRET`, oci optional `--region` and `--compartment` with the `oci` CLI, vultr needs `VULTR_API_KEY`). Exit 0 nothing live, 1 live or unknown, 2 usage, 3 inconclusive. |
 | `tools/orphans/evroc [--adopt]` | Run in `examples/evroc` (or the cluster directory): lists evroc objects missing from the state, for example after an interrupted apply, and writes `import` blocks for them (`--adopt` writes `imports.tf` directly). |
 | `tools/vultr/passthrough-stock.sh [region ...]` | Vultr GPU passthrough plans in stock per region. Needs `VULTR_API_KEY`, `curl` and `jq`. |
 
@@ -337,7 +343,7 @@ Details in [docs/security.md](docs/security.md).
 |---|---|
 | [Web UI](docs/webui.md) | The localhost runner: run, profiles, forms, deploy, backups |
 | [Architecture](docs/architecture.md) | Diagrams: deploy flow, image pipeline, passes and network per provider |
-| [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [evroc](docs/providers/evroc.md), [exoscale](docs/providers/exoscale.md), [vultr](docs/providers/vultr.md) |
+| [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [azure](docs/providers/azure.md), [evroc](docs/providers/evroc.md), [exoscale](docs/providers/exoscale.md), [oci](docs/providers/oci.md), [vultr](docs/providers/vultr.md) |
 | [Conventions](docs/conventions.md) | Variable names, labels, the output set, checklist for a new provider |
 | [SUSE Observability and SUSE Security](docs/observability-and-security.md) | User guide for the `observability-*` and `security-*` components: topologies, variables, DNS, TLS, sizing, checks |
 | [Scaling](docs/scaling.md) | Adding nodes and pools, storage changes |
@@ -388,6 +394,23 @@ adds nothing:
 
 ```bash
 gh api repos/$R/rulesets/$id | jq --arg c opentofu '
+  {name, target, enforcement, conditions, bypass_actors,
+   rules: [.rules[] | if .type == "required_status_checks" then
+     .parameters.required_status_checks += [{context: $c} +
+       (.parameters.required_status_checks[0] | if .integration_id then {integration_id} else {} end)]
+     | .parameters.required_status_checks |= unique_by(.context)
+   else . end]}' > /tmp/protect-main.json
+gh api -X PUT repos/$R/rulesets/$id --input /tmp/protect-main.json --jq '.name'
+```
+
+Currently 18 checks: 17 CI jobs (the `validate (<provider>)` matrix has `validate (aws)`,
+`validate (azure)`, `validate (evroc)`, `validate (exoscale)`, `validate (oci)` and
+`validate (vultr)`) plus `conventional-title`. After the merge that adds a
+provider, add its check, here `validate (azure)`, with the command above and
+`--arg c "validate (azure)"`:
+
+```bash
+gh api repos/$R/rulesets/$id | jq --arg c "validate (azure)" '
   {name, target, enforcement, conditions, bypass_actors,
    rules: [.rules[] | if .type == "required_status_checks" then
      .parameters.required_status_checks += [{context: $c} +

@@ -1,0 +1,21 @@
+#cloud-config
+# The login user and its SSH keys come from the VM's admin_username and
+# admin_ssh_key (osProfile); this file only unpacks and starts the build.
+%{ if build ~}
+write_files:
+  - path: /opt/elemental-config.sh
+    encoding: gz+b64
+    content: ${config_bundle}
+    owner: root:root
+    permissions: '0700'
+  - path: /opt/image-factory.sh
+    encoding: gz+b64
+    content: ${base64gzip(factory_script)}
+    owner: root:root
+    permissions: '0700'
+
+runcmd:
+  - 'bash /opt/elemental-config.sh ${config_dir}'
+  - 'rm -f /opt/elemental-config.sh'
+  - 'nohup setsid /opt/image-factory.sh </dev/null >/dev/null 2>&1 &'
+%{ endif ~}

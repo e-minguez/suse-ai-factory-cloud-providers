@@ -1,0 +1,586 @@
+# Asserts the nodes: hostnames, zones, VM settings, user_data, load balancer backends, labels and the
+# image_id shortcut. Azure mocked; no cloud calls.
+
+mock_provider "azurerm" {
+  override_during = plan
+}
+mock_provider "azapi" {
+  override_during = plan
+}
+mock_provider "http" {}
+
+override_data {
+  target = module.config.data.http.aif_release_manifest
+  values = {
+    status_code   = 200
+    response_body = file("../elemental-config/tests/fixtures/release_manifest.yaml")
+  }
+}
+
+# VM sizes the subscription sees in the region: size, family, zones, restrictions, capabilities.
+override_data {
+  target          = data.azapi_resource_list.skus
+  override_during = plan
+  values = {
+    output = {
+      sizes = [
+        {
+          name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+        {
+          name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+        {
+          name         = "Standard_D8ds_v6", family = "standardDDSv6Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI, NVMe" }]
+        },
+        {
+          name         = "Standard_NC24ads_A100_v4", family = "standardNCADSA100v4Family", zones = ["1", "2"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "24" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_action.compute_usages
+  override_during = plan
+  values = {
+    output = {
+      usages = [
+        { name = "cores", current = 10, limit = 200 },
+        { name = "standardDSv5Family", current = 0, limit = 100 },
+        { name = "standardDDSv6Family", current = 0, limit = 100 },
+        { name = "standardNCADSA100v4Family", current = 0, limit = 100 },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_action.network_usages
+  override_during = plan
+  values = {
+    output = {
+      usages = [
+        { name = "StandardSkuPublicIPAddresses", current = 0, limit = 100 },
+        { name = "StandardSkuLoadBalancers", current = 0, limit = 100 },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_vms
+  override_during = plan
+  values          = { output = { vms = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_public_ips
+  override_during = plan
+  values          = { output = { ips = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_lbs
+  override_during = plan
+  values          = { output = { lbs = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_action.locations
+  override_during = plan
+  values          = { output = { zones = ["1", "2", "3"] } }
+}
+
+override_data {
+  target          = data.azurerm_storage_account_blob_container_sas.write[0]
+  override_during = plan
+  values          = { sas = "?sv=2022-11-02&sig=WRITESIG" }
+}
+
+override_data {
+  target          = data.azurerm_storage_account_blob_container_sas.operator[0]
+  override_during = plan
+  values          = { sas = "?sv=2022-11-02&sig=OPERATORSIG" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.lb
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/lb", ip_address = "203.0.113.10" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.nat[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/nat", ip_address = "203.0.113.20" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.jumphost[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/jumphost", ip_address = "203.0.113.11" }
+}
+
+override_resource {
+  target          = azurerm_network_interface.jumphost[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkInterfaces/jumphost", private_ip_address = "10.20.0.5" }
+}
+
+override_resource {
+  target          = azurerm_network_interface.node
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkInterfaces/node", private_ip_address = "10.20.8.10" }
+}
+
+override_resource {
+  target          = azurerm_shared_image_version.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/dummy_gallery/images/dummy-elemental/versions/1.0.1" }
+}
+
+override_resource {
+  target          = random_password.token
+  override_during = plan
+  values          = { result = "dummytokendummytokendummytoken1234" }
+}
+
+override_resource {
+  target          = azurerm_application_security_group.this["control_plane"]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/applicationSecurityGroups/control-plane" }
+}
+
+override_resource {
+  target          = azurerm_application_security_group.this["agent"]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/applicationSecurityGroups/agent" }
+}
+
+override_resource {
+  target          = azurerm_resource_group.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy" }
+}
+
+override_resource {
+  target          = azurerm_virtual_network.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy" }
+}
+
+override_resource {
+  target          = azurerm_subnet.public[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy/subnets/public" }
+}
+
+override_resource {
+  target          = azurerm_subnet.private[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy/subnets/private" }
+}
+
+override_resource {
+  target          = azurerm_nat_gateway.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/natGateways/dummy" }
+}
+
+override_resource {
+  target          = azurerm_network_security_group.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkSecurityGroups/dummy" }
+}
+
+override_resource {
+  target          = azurerm_lb.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy" }
+}
+
+override_resource {
+  target          = azurerm_lb_backend_address_pool.control_plane
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy/backendAddressPools/control-plane" }
+}
+
+override_resource {
+  target          = azurerm_lb_probe.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy/probes/dummy" }
+}
+
+override_resource {
+  target          = azurerm_storage_account.build[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Storage/storageAccounts/dummy" }
+}
+
+override_resource {
+  target          = time_static.created
+  override_during = plan
+  values          = { rfc3339 = "2026-11-13T12:34:56Z" }
+}
+
+variables {
+  azure_subscription_id      = "00000000-1111-2222-3333-444444444444"
+  region                     = "westeurope"
+  admin_cidrs                = ["198.51.100.0/24"]
+  api_cidrs                  = ["198.51.100.0/24"]
+  root_password_hash         = "$6$DUMMYSALT$ROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASH0"
+  node_user_password_hash    = "$6$DUMMYSALT$NODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASH0"
+  ssh_authorized_keys        = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGUeJySRXuZUM/7X5U/XJA1igArCUc0Z8FrAZupL1y5O test"]
+  appco_username             = "DUMMY-APPCO-USER"
+  suse_registry_username     = "DUMMY-REGCODE"
+  suse_registry_password     = "DUMMY-REGISTRY-PASSWORD"
+  appco_password             = "DUMMY-APPCO-PASSWORD"
+  nvidia_api_key             = "DUMMY-NVIDIA-API-KEY"
+  rancher_bootstrap_password = "DUMMY-RANCHER-BOOTSTRAP"
+  cluster_name               = "nodes-az"
+  deploy_nodes               = true
+  gpu_pools                  = { gpu = { instance_type = "Standard_NC24ads_A100_v4", count = 2 } }
+  worker_pools               = { wrk = { instance_type = "Standard_D8ds_v6", count = 1, disk_size_gb = 300 } }
+  control_plane_count        = 3
+}
+
+run "hostnames_and_roles" {
+  command = plan
+
+  assert {
+    condition = join(",", sort(keys(azurerm_linux_virtual_machine.node))) == join(",", [
+      "nodes-az-cp-01", "nodes-az-cp-02", "nodes-az-cp-03",
+      "nodes-az-gpu-01", "nodes-az-gpu-02", "nodes-az-wrk-01",
+    ])
+    error_message = "Nodes must be named <cluster>-<pool>-NN, control planes cp."
+  }
+
+  assert {
+    condition = alltrue([
+      for h, n in output.nodes : n.init == (h == "nodes-az-cp-01")
+    ]) && output.nodes["nodes-az-gpu-01"].role == "gpu" && output.nodes["nodes-az-wrk-01"].role == "worker" && output.nodes["nodes-az-cp-02"].role == "control_plane"
+    error_message = "Only the first control plane is init; pools carry their role."
+  }
+
+  assert {
+    condition = alltrue([
+      for h, n in output.nodes :
+      n.public_ip == null && n.ssh_user == "suse" && n.private_ip == "10.20.8.10"
+    ]) && output.nodes["nodes-az-gpu-01"].instance_type == "Standard_NC24ads_A100_v4" && output.nodes["nodes-az-wrk-01"].instance_type == "Standard_D8ds_v6"
+    error_message = "nodes output fields are wrong."
+  }
+}
+
+run "vm_settings" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for h, v in azurerm_linux_virtual_machine.node :
+      !v.provision_vm_agent && !v.allow_extension_operations && v.disable_password_authentication &&
+      v.admin_username == "suse" && length(v.admin_ssh_key) == 1 && v.os_disk[0].storage_account_type == "Premium_LRS" &&
+      length(v.boot_diagnostics) == 1 && v.source_image_id == azurerm_shared_image_version.this[0].id &&
+      !v.secure_boot_enabled && !v.vtpm_enabled
+    ])
+    error_message = "Nodes run without the Azure agent or extensions, boot the gallery image and log in with node_username."
+  }
+
+  assert {
+    condition = (
+      azurerm_linux_virtual_machine.node["nodes-az-cp-01"].size == "Standard_D8s_v5" &&
+      azurerm_linux_virtual_machine.node["nodes-az-cp-01"].os_disk[0].disk_size_gb == 100 &&
+      azurerm_linux_virtual_machine.node["nodes-az-gpu-01"].os_disk[0].disk_size_gb == 200 &&
+      azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].os_disk[0].disk_size_gb == 300
+    )
+    error_message = "Sizes and disks follow the defaults and the pool overrides."
+  }
+
+  assert {
+    condition = alltrue([
+      for h, i in azurerm_network_interface.node :
+      length(i.ip_configuration) == 1 && i.ip_configuration[0].public_ip_address_id == null && i.accelerated_networking_enabled
+    ])
+    error_message = "Node NICs have no public IP and use accelerated networking when the size supports it."
+  }
+
+  assert {
+    condition     = alltrue([for h, v in azurerm_linux_virtual_machine.node : v.user_data != null])
+    error_message = "Each node carries its Ignition as user_data."
+  }
+}
+
+run "nvme_for_v6_sizes" {
+  command = plan
+
+  assert {
+    condition = (
+      azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].disk_controller_type == "NVMe" &&
+      azurerm_linux_virtual_machine.node["nodes-az-cp-01"].disk_controller_type == "SCSI" &&
+      azurerm_linux_virtual_machine.node["nodes-az-gpu-01"].disk_controller_type == "SCSI"
+    )
+    error_message = "_v6 sizes use the NVMe disk controller; the others SCSI."
+  }
+}
+
+run "zones_round_robin" {
+  command = plan
+
+  assert {
+    condition = (
+      output.nodes["nodes-az-cp-01"].zone == "1" && output.nodes["nodes-az-cp-02"].zone == "2" && output.nodes["nodes-az-cp-03"].zone == "3" &&
+      azurerm_linux_virtual_machine.node["nodes-az-cp-03"].zone == "3" &&
+      output.nodes["nodes-az-gpu-01"].zone == "1" && output.nodes["nodes-az-gpu-02"].zone == "2" &&
+      output.nodes["nodes-az-wrk-01"].zone == "1" &&
+      jsonencode(output.provider_details.zones) == jsonencode(["1", "2", "3"])
+    )
+    error_message = "Without zones every zone of the control-plane size is used, round-robin per group."
+  }
+}
+
+run "zones_variable" {
+  command = plan
+
+  variables {
+    zones        = ["1", "3"]
+    worker_pools = { wrk = { instance_type = "Standard_D8s_v5", count = 2 }, pin = { instance_type = "Standard_D8s_v5", count = 2, zone = "3" } }
+    gpu_pools    = {}
+  }
+
+  assert {
+    condition = (
+      output.nodes["nodes-az-cp-01"].zone == "1" && output.nodes["nodes-az-cp-02"].zone == "3" && output.nodes["nodes-az-cp-03"].zone == "1" &&
+      output.nodes["nodes-az-wrk-01"].zone == "1" && output.nodes["nodes-az-wrk-02"].zone == "3" &&
+      output.nodes["nodes-az-pin-01"].zone == "3" && output.nodes["nodes-az-pin-02"].zone == "3"
+    )
+    error_message = "Control planes and pools without zone go round-robin over zones; a pool zone pins its nodes."
+  }
+}
+
+run "pool_zone_outside_zones" {
+  command = plan
+
+  variables {
+    gpu_pools    = {}
+    worker_pools = { wrk = { instance_type = "Standard_D8s_v5", count = 1, zone = "4" } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "gpu_size_not_in_zone" {
+  command = plan
+
+  variables {
+    gpu_pools = { gpu = { instance_type = "Standard_NC24ads_A100_v4", count = 1, zone = "3" } }
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "gpu_spread_over_zone_without_size" {
+  command = plan
+
+  variables {
+    gpu_pools = { gpu = { instance_type = "Standard_NC24ads_A100_v4", count = 3 } }
+  }
+
+  # The third node lands in zone 3, which the size does not offer.
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "user_data_within_budget" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for h, i in azurerm_linux_virtual_machine.node : length(i.user_data) < 64 * 1024
+    ])
+    error_message = "Each node's base64 Ignition must stay under the 64 KB user_data limit."
+  }
+}
+
+run "control_plane_public_ip_rejected" {
+  command = plan
+
+  variables {
+    control_plane_public_ip = true
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "pool_public_ip_rejected" {
+  command = plan
+
+  variables {
+    worker_pools = { wrk = { instance_type = "Standard_D8s_v5", count = 1, public_ip = true } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "pool_placement_rejected" {
+  command = plan
+
+  variables {
+    worker_pools = { wrk = { instance_type = "Standard_D8s_v5", count = 1, placement = "group" } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "pool_bare_metal_rejected" {
+  command = plan
+
+  variables {
+    worker_pools = { wrk = { instance_type = "Standard_D8s_v5", count = 1, kind = "bare_metal" } }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "reserved_node_username_rejected" {
+  command = plan
+
+  variables {
+    node_username = "admin"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "lb_backends_are_control_planes" {
+  command = plan
+
+  assert {
+    condition = (
+      length(azurerm_network_interface_backend_address_pool_association.control_plane) == 3 &&
+      alltrue([for h, a in azurerm_network_interface_backend_address_pool_association.control_plane : strcontains(h, "-cp-") && a.ip_configuration_name == "internal"]) &&
+      length([for h, a in azurerm_network_interface_backend_address_pool_association.control_plane : h if strcontains(h, "-gpu-") || strcontains(h, "-wrk-")]) == 0
+    )
+    error_message = "Only the control planes join the load balancer backend pool."
+  }
+
+  assert {
+    condition = alltrue([
+      for k, r in azurerm_lb_rule.this :
+      r.frontend_port == r.backend_port && !r.floating_ip_enabled && r.disable_outbound_snat && r.protocol == "Tcp"
+    ]) && join(",", sort([for k, r in azurerm_lb_rule.this : tostring(r.frontend_port)])) == "443,6443,80,9345"
+    error_message = "Rules forward 6443, 9345, 80 and 443 unchanged, without floating IP and without outbound SNAT."
+  }
+
+  assert {
+    condition = (
+      azurerm_lb.this.sku == "Standard" &&
+      azurerm_lb_probe.this["api"].protocol == "Tcp" && azurerm_lb_probe.this["api"].port == 6443 &&
+      azurerm_lb_probe.this["https"].protocol == "Http" && azurerm_lb_probe.this["https"].port == 8080 && azurerm_lb_probe.this["https"].request_path == "/ping" &&
+      azurerm_public_ip.lb.sku == "Standard" && azurerm_public_ip.lb.allocation_method == "Static" &&
+      azurerm_public_ip.lb.zones == null
+    )
+    error_message = "Standard load balancer with a TCP probe of the API and an HTTP /ping probe for the ingress, on a static IP that does not pin zones."
+  }
+}
+
+run "lb_backends_follow_ingress" {
+  command = plan
+
+  variables {
+    ingress_controller = "none"
+  }
+
+  assert {
+    condition     = join(",", sort(keys(azurerm_lb_rule.this))) == "kube_api,supervisor"
+    error_message = "Without an ingress controller only the API and supervisor have rules."
+  }
+
+  assert {
+    condition     = length(azurerm_lb_probe.this) == 1
+    error_message = "Without an ingress controller only the API probe exists."
+  }
+}
+
+run "labels" {
+  command = plan
+
+  assert {
+    condition = (
+      azurerm_linux_virtual_machine.node["nodes-az-gpu-01"].tags["elemental-role"] == "gpu" &&
+      azurerm_linux_virtual_machine.node["nodes-az-gpu-01"].tags["elemental-pool"] == "gpu" &&
+      azurerm_linux_virtual_machine.node["nodes-az-cp-01"].tags["elemental-role"] == "control_plane" &&
+      azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].tags["elemental-role"] == "worker" &&
+      contains(keys(azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].tags), "elemental-build") &&
+      azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].tags["elemental-created"] == "20261113-123456" &&
+      azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].tags["elemental-cluster"] == "nodes-az" &&
+      azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].tags["elemental-managed-by"] == "terraform" &&
+      azurerm_linux_virtual_machine.node["nodes-az-wrk-01"].tags["elemental-module"] == "ai-factory" &&
+      azurerm_network_interface.node["nodes-az-wrk-01"].tags["elemental-pool"] == "wrk"
+    )
+    error_message = "Nodes and their NICs carry role, pool, build and the managed labels."
+  }
+
+  assert {
+    condition = alltrue([
+      azurerm_linux_virtual_machine.jumphost[0].tags["elemental-role"] == "jumphost",
+      azurerm_lb.this.tags["elemental-role"] == "lb",
+      azurerm_public_ip.lb.tags["elemental-role"] == "lb",
+      azurerm_virtual_network.this[0].tags["elemental-role"] == "network",
+      azurerm_network_security_group.this["control_plane"].tags["elemental-role"] == "control_plane",
+      azurerm_shared_image_gallery.this[0].tags["elemental-role"] == "image",
+      azurerm_storage_account.build[0].tags["elemental-role"] == "image",
+      azurerm_resource_group.this[0].tags["elemental-cluster"] == "nodes-az",
+      azurerm_resource_group.this[0].tags["elemental-created"] == "20261113-123456",
+    ])
+    error_message = "Every resource carries the managed labels and its role."
+  }
+}
+
+run "extra_tags" {
+  command = plan
+
+  variables {
+    tags = { team = "ai" }
+  }
+
+  assert {
+    condition = (
+      azurerm_linux_virtual_machine.node["nodes-az-cp-01"].tags["team"] == "ai" &&
+      azurerm_lb.this.tags["team"] == "ai" &&
+      azurerm_linux_virtual_machine.node["nodes-az-cp-01"].tags["elemental-cluster"] == "nodes-az"
+    )
+    error_message = "var.tags is merged into every resource's tags."
+  }
+}
+
+run "image_id_keeps_bastion" {
+  command = plan
+
+  variables {
+    image_id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/g/images/i/versions/1.0.1"
+  }
+
+  assert {
+    condition = alltrue([
+      length(azurerm_shared_image_version.this) == 0,
+      length(azurerm_shared_image_gallery.this) == 0,
+      length(azurerm_storage_account.build) == 0,
+      length(terraform_data.image_ready) == 0,
+      length(terraform_data.vhd_cleanup) == 0,
+      length(azurerm_linux_virtual_machine.jumphost) == 1,
+      length(azurerm_linux_virtual_machine.node) == 6,
+    ])
+    error_message = "With image_id and nodes the jumphost stays as the bastion and nothing is built."
+  }
+
+  assert {
+    condition = alltrue([
+      for h, v in azurerm_linux_virtual_machine.node : v.source_image_id == var.image_id
+    ]) && output.build_status == null && output.provider_details.image_id == var.image_id
+    error_message = "Nodes boot the pinned image."
+  }
+}
