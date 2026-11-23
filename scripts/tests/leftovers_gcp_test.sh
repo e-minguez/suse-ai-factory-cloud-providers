@@ -135,7 +135,9 @@ reset
 # /usr/bin minus gcloud: CI runner images ship gcloud in /usr/bin.
 mkdir -p "$W/nocli"
 for f in /usr/bin/* /bin/*; do
-  [ "${f##*/}" = gcloud ] || [ -e "$W/nocli/${f##*/}" ] || ln -s "$f" "$W/nocli/${f##*/}"
+  n="$W/nocli/${f##*/}"
+  # -L too: dangling links exist on runner images and fail -e.
+  [ "${f##*/}" = gcloud ] || [ -e "$n" ] || [ -L "$n" ] || ln -s "$f" "$n"
 done
 RC=0
 OUT=$(PATH="$W/nocli" "$BASH" "$TOOL" c1 2>&1) || RC=$?
