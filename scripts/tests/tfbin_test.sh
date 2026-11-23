@@ -47,8 +47,11 @@ case "$(warn tofu-old)" in *"older than 1.13"*) ;; *) fail "old tofu must warn" 
 
 # No script may call terraform or tofu by name: a bare call ignores TF_BIN and mixes both tools in one deploy.
 ROOT="$(dirname "$(dirname "$T")")"
-pat='(^|\$\(|\(|\||&&|;|!|then|do|if) *(terraform|tofu) +(-[a-z]+(=[^ ]*)? +)*(init|plan|apply|show|output|state|console|fmt|validate|test)( |$)'
-bare=$(find "$ROOT" -name '*.sh' -not -path '*/tests/*' -not -path '*/.git/*' -not -path '*/.terraform/*' -print0 |
+pat='(^|\$\(|\(|\||&&|;|!|then|do|if) *(terraform|tofu) +(-[a-z]+(=[^ ]*)? +)*(init|plan|apply|show|output|state|console|providers|fmt|validate|test)( |$)'
+# Shell scripts: *.sh, plus executables without an extension that start with a shell shebang.
+is_script() { case "$1" in *.sh) return 0 ;; esac; [ -x "$1" ] && head -n1 "$1" | grep -qE '^#!.*(bash|sh)$'; }
+bare=$(find "$ROOT" -path "$ROOT/.claude" -prune -o -type f -not -path '*/tests/*' -not -path '*/.git/*' -not -path '*/.terraform/*' -print |
+  while IFS= read -r f; do is_script "$f" && printf '%s\0' "$f"; done |
   xargs -0 grep -nE "$pat" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' || true)
 [ -z "$bare" ] || fail "scripts must call \"\$TF_BIN\", not terraform or tofu by name:
 $bare"

@@ -2,12 +2,15 @@
 # Finds evroc objects that exist in the project but are missing from this directory's state,
 # and writes an import block for each. Run it in a cluster directory (examples/evroc).
 #
-#   tools/orphans/evroc [--adopt] [-- <terraform plan args>]
+#   tools/orphans/evroc [--adopt] [-- <plan args>]
 #
 # Exit: 0 none found (or adopted), 1 found (proposal written), 2 usage, 3 inconclusive.
 # Default writes orphan-imports.tf.proposed; --adopt writes imports.tf, which Terraform loads
 # on the next plan. Delete imports.tf once an apply has succeeded.
 set -euo pipefail
+
+# shellcheck source=../../scripts/lib/tfbin.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/tfbin.sh"
 
 adopt=0
 plan_args=()
@@ -31,7 +34,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-for c in terraform jq; do
+for c in "$TF_BIN" jq; do
   command -v "$c" >/dev/null 2>&1 || {
     echo "error: $c not found" >&2
     exit 2
@@ -53,10 +56,10 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/evroc-orphans.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 
 echo "==> planning (no refresh) to list what an apply would create"
-if ! terraform plan -input=false -no-color -refresh=false -out="$work/plan.bin" \
+if ! "$TF_BIN" plan -input=false -no-color -refresh=false -out="$work/plan.bin" \
   ${var_files[@]+"${var_files[@]}"} ${plan_args[@]+"${plan_args[@]}"} >"$work/plan.log" 2>&1 ||
-  ! terraform show -json "$work/plan.bin" >"$work/plan.json" 2>>"$work/plan.log" ||
-  ! terraform providers schema -json >"$work/schema.json" 2>>"$work/plan.log"; then
+  ! "$TF_BIN" show -json "$work/plan.bin" >"$work/plan.json" 2>>"$work/plan.log" ||
+  ! "$TF_BIN" providers schema -json >"$work/schema.json" 2>>"$work/plan.log"; then
   echo "inconclusive: planning failed. Last lines of the plan output:" >&2
   tail -n 15 "$work/plan.log" >&2
   exit 3
@@ -96,13 +99,13 @@ fi
 
 # The provider already installed here, pinned by the same lock file: no download.
 cp .terraform.lock.hcl "$work/root/"
-if ! terraform -chdir="$work/root" init -input=false -no-color -plugin-dir="$PWD/.terraform/providers" \
+if ! "$TF_BIN" -chdir="$work/root" init -input=false -no-color -plugin-dir="$PWD/.terraform/providers" \
   >>"$work/plan.log" 2>&1; then
   echo "inconclusive: could not initialise the lookup module." >&2
   exit 3
 fi
 # Fails whenever a lookup 404s, i.e. almost always: the diagnostics are the result.
-terraform -chdir="$work/root" plan -input=false -json >"$work/lookup.jsonl" 2>>"$work/plan.log" || true
+"$TF_BIN" -chdir="$work/root" plan -input=false -json >"$work/lookup.jsonl" 2>>"$work/plan.log" || true
 
 # A 404 on a lookup means the name is free; any other error makes the result inconclusive.
 result=$(jq -R -n --slurpfile spans "$work/spans.json" '
@@ -142,7 +145,7 @@ if [ "$adopt" -eq 1 ]; then
   echo "wrote $out (import blocks); the next plan imports them."
   exit 0
 fi
-echo "wrote $out. To adopt: review it, rename it to imports.tf, run terraform plan"
+echo "wrote $out. To adopt: review it, rename it to imports.tf, run $TF_BIN plan"
 echo "(expect only imports), apply, then delete imports.tf. Or use another cluster_name"
 echo "if they belong to another deployment."
 exit 1
