@@ -149,10 +149,10 @@ variable "components" {
   validation {
     condition = alltrue([
       for c in var.components : contains(
-        ["cert-manager", "rancher", "gpu-operator", "local-path-provisioner", "suse-storage", "aif-operator", "observability-server", "observability-plugin", "observability-agent", "security-management", "security-downstream"], c
+        ["cert-manager", "elemental-lifecycle-manager", "rancher", "gpu-operator", "local-path-provisioner", "suse-storage", "aif-operator", "observability-server", "observability-plugin", "observability-agent", "security-management", "security-downstream"], c
       )
     ])
-    error_message = "components entries must be one of: cert-manager, rancher, gpu-operator, local-path-provisioner, suse-storage, aif-operator, observability-server, observability-plugin, observability-agent, security-management, security-downstream."
+    error_message = "components entries must be one of: cert-manager, elemental-lifecycle-manager, rancher, gpu-operator, local-path-provisioner, suse-storage, aif-operator, observability-server, observability-plugin, observability-agent, security-management, security-downstream."
   }
 
   validation {

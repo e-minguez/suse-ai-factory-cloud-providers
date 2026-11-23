@@ -42,6 +42,9 @@ SLES · RKE2 · Rancher · SUSE AI Factory (powered by SUSE Elemental)
   `security-management`, `security-downstream`, `observability-server`,
   `observability-agent`, `observability-plugin`
   ([guide](docs/observability-and-security.md), [ADR 010](docs/decisions/010-security-observability.md)).
+- Optional Elemental Lifecycle Manager (`elemental-lifecycle-manager`, beta):
+  in-place OS, RKE2 and Helm chart upgrades from one `Release` resource
+  ([guide](docs/lifecycle-manager.md), [ADR 013](docs/decisions/013-elemental-lifecycle-manager.md)).
 - `tools/multicluster` creates several clusters from one checkout and imports
   them into the Rancher of a management cluster, across providers.
 - A tool estimates the cost of each cluster from its configuration before you
@@ -340,6 +343,7 @@ Details in [docs/security.md](docs/security.md).
 | [Provider notes](docs/providers/aws.md) | Platform behavior per provider: [aws](docs/providers/aws.md), [evroc](docs/providers/evroc.md), [exoscale](docs/providers/exoscale.md), [vultr](docs/providers/vultr.md) |
 | [Conventions](docs/conventions.md) | Variable names, labels, the output set, checklist for a new provider |
 | [SUSE Observability and SUSE Security](docs/observability-and-security.md) | User guide for the `observability-*` and `security-*` components: topologies, variables, DNS, TLS, sizing, checks |
+| [Elemental Lifecycle Manager](docs/lifecycle-manager.md) | The optional `elemental-lifecycle-manager` component: enable, verify, trigger and monitor upgrades, drift with Terraform |
 | [Scaling](docs/scaling.md) | Adding nodes and pools, storage changes |
 | [Manual deploy](docs/manual-deploy.md) | The `deploy.sh` passes as plain `terraform` commands |
 | [Security](docs/security.md) · [Workarounds](docs/workarounds.md) · [E2E checklist](docs/e2e-checklist.md) | Security model, upstream workarounds, end-to-end checks not yet run |

@@ -11,7 +11,7 @@ locals {
   }
 
   manifest_body    = data.http.aif_release_manifest.response_body
-  rewrite_manifest = var.core_platform_override != null || length(local.effective_sysext_overrides) > 0
+  rewrite_manifest = var.core_platform_override != null || length(local.effective_sysext_overrides) > 0 || local.lcm_enabled
 
   # jsondecode(string) keeps both branches the same type; nothing is decoded
   # when no rewrite is needed.
@@ -30,9 +30,14 @@ locals {
     for e in local.aif_extensions : merge(e, { image = lookup(local.effective_sysext_overrides, e.name, e.image) })
   ]
 
+  # Without a core override the core platform manifest wins on chart names it
+  # also lists (its own Lifecycle Manager version); the injected pins then only
+  # apply to charts and repositories the core manifest lacks.
   rewritten_aif_components = merge(local.aif_components, try(
     { systemd = merge(local.aif_components.systemd, { extensions = local.rewritten_extensions }) }, {}
-  ))
+    ),
+    local.lcm_helm_section
+  )
 
   # The resolver only accepts file:// for the top-level manifest, so with a
   # core override the AIF manifest is flattened into one core manifest.
