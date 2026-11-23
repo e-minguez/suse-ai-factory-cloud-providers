@@ -2,7 +2,7 @@
 # Sourced by every script that runs Terraform or OpenTofu. Sets and exports
 # TF_BIN, the binary all of them call: $TF_BIN if set (name or path), else
 # terraform, else tofu. Both must behave the same; the scripts only use init,
-# plan, apply, show, output, state and console.
+# plan, apply, show, output, state, console and providers schema.
 #
 #   TF_BIN=tofu ./deploy.sh      use OpenTofu although terraform is installed
 
