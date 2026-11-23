@@ -176,10 +176,12 @@ FROM registry.suse.com/bci/bci-base:16.0 AS rootfs
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY --from=micro / /rootfs
 # micro already has bash and coreutils-single (GNU coreutils, conflicts with coreutils).
+# libgcc_s1 and libstdc++6: the cryptography and frozenlist wheels of the oci CLI link them.
 # --gpg-auto-import-keys: the copied micro rpm database has no repository key yet
 # (pattern from https://opensource.suse.com/bci-docs/guides/deploy-using-zypper/).
 RUN zypper --installroot /rootfs --non-interactive --gpg-auto-import-keys install --no-recommends \
-      jq openssh-clients openssl curl ca-certificates sed grep gawk findutils gzip tar python313 && \
+      jq openssh-clients openssl curl ca-certificates sed grep gawk findutils gzip tar python313 \
+      libgcc_s1 libstdc++6 && \
     zypper --non-interactive --installroot /rootfs clean --all && \
     rm -rf /rootfs/var/cache/zypp /rootfs/var/log/* /rootfs/usr/share/doc /rootfs/usr/share/man && \
     echo 'aif:x:1000:1000:aif:/opt/aif/clusters/.home:/bin/bash' >> /rootfs/etc/passwd && \
