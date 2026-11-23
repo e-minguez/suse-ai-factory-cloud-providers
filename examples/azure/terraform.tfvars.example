@@ -1,0 +1,92 @@
+# Per-cluster values. Loaded last, so it wins over ../../common-all.tfvars and
+# ../common-azure.tfvars (deploy.sh layers them, later wins). Values every
+# provider declares (admin_cidrs, password hashes, ssh_authorized_keys,
+# registry credentials, aif_release) can live in common-all.tfvars instead;
+# the azure_* credentials and region fit common-azure.tfvars.
+
+# false builds the network, load balancer address and image only.
+# deploy_nodes = true
+
+# Location with availability zones and the GPU size you need.
+region = "westeurope"
+
+# Subscription that holds the cluster. Authentication is your `az login`
+# session unless a service principal is set (tenant_id, client_id and secret).
+azure_subscription_id = "00000000-0000-0000-0000-000000000000"
+# azure_tenant_id       = "REPLACE"
+# azure_client_id       = "REPLACE"
+# azure_client_secret   = "REPLACE"
+
+# CIDRs allowed to SSH into the jumphost, the only SSH entry: your admin IP(s)
+# or VPN range.
+admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
+
+# Generate both with `openssl passwd -6`. They must differ.
+root_password_hash      = "REPLACE_WITH_OUTPUT_OF_openssl_passwd_-6"
+node_user_password_hash = "REPLACE_WITH_A_DIFFERENT_OUTPUT_OF_openssl_passwd_-6"
+
+# At least one public key (ed25519 or RSA), installed for node_username and on
+# the jumphost.
+ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
+
+# Login on the nodes; escalate with `su -` (no sudo in the image). Azure
+# rejects reserved names such as root, admin or test.
+# node_username = "suse"
+
+# --- Registry credentials -------------------------------------------------
+
+# Application Collection is required with local-path-provisioner (in the
+# default components) or suse-storage; the SUSE registry and NVIDIA NGC ones
+# are optional. With aif-operator, set all of them.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# --- Sizes ----------------------------------------------------------------
+# VM sizes are Azure names ("Standard_NC4as_T4_v3"). Generation 2 sizes with
+# Premium SSD only; new subscriptions have no GPU quota until you request it.
+#
+gpu_pools = {
+  gpu = { instance_type = "Standard_NC4as_T4_v3", count = 1 }
+}
+# worker_pools = {
+#   wrk = { instance_type = "Standard_D8s_v5", count = 2 }
+# }
+
+# --- Optional -------------------------------------------------------------
+
+# AI Factory: a version X.Y.Z (tag aif-operator-<version>, 2.1.0 or newer) or
+# a manifest URL (branch, fork or mirror).
+# aif_release = "2.4.0"
+
+# Changing components rebuilds the image and replaces every node.
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# rancher_hostname = null  # defaults to "rancher-<load balancer IP>.sslip.io"
+# ingress_domain   = "aif.example.com"
+# api_cidrs        = ["0.0.0.0/0"]  # who may reach the Kubernetes API on 6443
+# ingress_cidrs    = ["0.0.0.0/0"]  # who may reach the ingress on 80/443
+
+# zones                       = ["1", "2", "3"]  # default: every zone the control-plane size offers
+# cluster_name                = "suse-ai-factory"
+# control_plane_count         = 3  # 1, or odd and at least 3
+# control_plane_instance_type = "Standard_D8s_v5"
+# jumphost_instance_type      = "Standard_D4s_v5"
+# jumphost_image              = "SUSE:sles-16-0-x86-64:gen2:latest"  # publisher:offer:sku:version
+# keep_build_artifacts        = false
+# tags replaces (not merges with) any tags map in common-*.tfvars.
+# tags                        = { env = "test" }
+# image_id                    = "/subscriptions/.../galleries/<gallery>/images/<image>/versions/<version>"  # boot an existing image instead of building
+
+# Resource group: null creates one named after cluster_name and deletes it on
+# destroy. An existing group is never deleted.
+# resource_group_name = "my-group"
+
+# Deploy into an existing virtual network instead of creating one: a public
+# subnet for the jumphost and a private subnet with a NAT gateway (with a
+# public IP) for the nodes. All three or none. Destroy leaves them in place.
+# vpc_id            = "/subscriptions/.../providers/Microsoft.Network/virtualNetworks/<name>"
+# public_subnet_id  = "/subscriptions/.../virtualNetworks/<name>/subnets/<public>"
+# private_subnet_id = "/subscriptions/.../virtualNetworks/<name>/subnets/<private>"

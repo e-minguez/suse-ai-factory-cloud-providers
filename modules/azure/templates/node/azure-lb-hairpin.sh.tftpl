@@ -1,0 +1,63 @@
+#!/usr/bin/bash
+# Control planes only: while the local API answers, traffic to the load balancer
+# frontend on the API ports is redirected to this node's IP (the frontend does not hairpin).
+# A timer reruns this; nft changes only when the wanted state changes.
+set -u
+
+VIP=${vip}
+API_PORTS="${api_ports}"
+TABLE=azure-lb-hairpin
+STATE=/run/$TABLE.state
+
+# NODETYPE is server on control planes, agent elsewhere.
+# shellcheck disable=SC1091
+. /var/lib/elemental/runtime.env 2>/dev/null || exit 0
+[ "$${NODETYPE:-}" = server ] || exit 0
+
+if ! command -v nft >/dev/null; then
+  echo "[$TABLE] nft not found, nothing to do" >&2
+  exit 0
+fi
+
+# The source address of the route to the frontend is this node's private IP.
+ip=$(ip -4 route get "$VIP" 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n 1)
+[ -n "$ip" ] || exit 0
+
+listening() { timeout 2 bash -c "exec 3<>/dev/tcp/$ip/$1" 2>/dev/null; }
+
+ports=""
+if listening 6443; then
+  ports="$API_PORTS"
+fi
+
+want="$ip $ports"
+# The state file alone is not trusted: the table must exist when ports are wanted.
+have_table() { nft list table ip "$TABLE" >/dev/null 2>&1; }
+if [ -f "$STATE" ] && [ "$(cat "$STATE")" = "$want" ]; then
+  if [ -z "$ports" ] || have_table; then
+    exit 0
+  fi
+fi
+
+if [ -z "$ports" ]; then
+  nft delete table ip "$TABLE" 2>/dev/null || true
+else
+  set_list=$${ports// /, }
+  # One transaction: declare, delete and recreate, so no packet sees a gap.
+  nft -f - <<EOF
+table ip $TABLE
+delete table ip $TABLE
+table ip $TABLE {
+  chain output {
+    type nat hook output priority -100; policy accept;
+    ip daddr $VIP tcp dport { $set_list } dnat to $ip
+  }
+  chain prerouting {
+    type nat hook prerouting priority -100; policy accept;
+    ip daddr $VIP tcp dport { $set_list } dnat to $ip
+  }
+}
+EOF
+fi
+echo "$want" >"$STATE"
+echo "[$TABLE] frontend $VIP -> $ip, ports: $${ports:-none}"

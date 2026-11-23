@@ -68,10 +68,21 @@ Exception: exoscale control planes are one instance pool, whose members
 Exoscale names `<cluster_name>-cp-<5 characters of the pool ID>-<random>`
 instead of `<cluster_name>-cp-NN` ([ADR 008](decisions/008-exoscale-module.md)).
 
+Naming exceptions on azure ([ADR 015](decisions/015-azure-module.md)): the
+storage account name has no hyphens (`aif<12 hex>`, 3-24 lowercase letters and
+digits, unique worldwide) and the Compute Gallery name uses `_`
+(`<cluster_name with _>_gallery`). `zones` are `"1"`, `"2"`, `"3"` (the
+availability zone numbers), `region` is the location name (`westeurope`), and
+`jumphost_image` is a marketplace URN `publisher:offer:sku:version`.
+`node_username` and `jumphost_username` must not be a name the platform reserves
+for the VM admin account (`root`, `admin`, `test`, ...). azure rejects a pool
+`public_ip`, `placement` and `kind = "bare_metal"`.
+
 ## Labels
 
 Every resource that can carry labels gets the same keys on every provider
-(Vultr stores them as `key=value` strings in `tags`). Values follow Kubernetes
+(Vultr stores them as `key=value` strings in `tags`; Azure uses resource
+`tags`). Values follow Kubernetes
 label value rules. `var.tags` is merged on top of the managed keys and must
 not use the `elemental-` prefix. Keys contain no `/`, because the evroc API
 rejects it; on evroc `var.tags` keys cannot contain `/` either.
@@ -107,7 +118,7 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 
 | Output | Type | Notes |
 |---|---|---|
-| `provider` | string | `aws`, `evroc`, `exoscale` or `vultr`; tools dispatch on it |
+| `provider` | string | `aws`, `azure`, `evroc`, `exoscale`, `oci` or `vultr`; tools dispatch on it |
 | `cluster_name`, `region` | string | |
 | `kubernetes_api_endpoint` | string | `https://<api_host>:6443` |
 | `api_host` | string | DNS name of the API for kubectl |

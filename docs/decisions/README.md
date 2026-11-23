@@ -26,3 +26,4 @@ with `# see docs/decisions/NNN-title.md`.
 - [009](009-webui-runner.md) web UI runner
 - [010](010-security-observability.md) SUSE Security and SUSE Observability components
 - [012](012-oci-module.md) oci module design
+- [015](015-azure-module.md) azure module design

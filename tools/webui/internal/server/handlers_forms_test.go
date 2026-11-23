@@ -48,7 +48,7 @@ func writeFile(t *testing.T, p string, b []byte, mode os.FileMode) {
 func formsServer(t *testing.T, costScript string) (*Server, *http.Cookie, string) {
 	t.Helper()
 	root, repo := realRoot(t), t.TempDir()
-	for _, p := range []string{"aws", "evroc", "exoscale", "vultr"} {
+	for _, p := range []string{"aws", "azure", "evroc", "exoscale", "vultr"} {
 		b, err := os.ReadFile(filepath.Join(root, "examples", p, "variables.tf"))
 		if err != nil {
 			t.Fatal(err)

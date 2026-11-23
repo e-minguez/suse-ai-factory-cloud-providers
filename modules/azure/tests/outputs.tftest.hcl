@@ -1,0 +1,815 @@
+# Asserts the common output set (docs/conventions.md#outputs), next_steps, provider_details, regions without
+# zones and the plan-time availability and quota checks. Azure mocked; no cloud calls.
+
+mock_provider "azurerm" {
+  override_during = plan
+}
+mock_provider "azapi" {
+  override_during = plan
+}
+mock_provider "http" {}
+
+override_data {
+  target = module.config.data.http.aif_release_manifest
+  values = {
+    status_code   = 200
+    response_body = file("../elemental-config/tests/fixtures/release_manifest.yaml")
+  }
+}
+
+# VM sizes the subscription sees in the region: size, family, zones, restrictions, capabilities.
+override_data {
+  target          = data.azapi_resource_list.skus
+  override_during = plan
+  values = {
+    output = {
+      sizes = [
+        {
+          name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+        {
+          name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+        {
+          name         = "Standard_D8ds_v6", family = "standardDDSv6Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI, NVMe" }]
+        },
+        {
+          name         = "Standard_NC24ads_A100_v4", family = "standardNCADSA100v4Family", zones = ["1", "2"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "24" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_action.compute_usages
+  override_during = plan
+  values = {
+    output = {
+      usages = [
+        { name = "cores", current = 10, limit = 200 },
+        { name = "standardDSv5Family", current = 0, limit = 100 },
+        { name = "standardDDSv6Family", current = 0, limit = 100 },
+        { name = "standardNCADSA100v4Family", current = 0, limit = 100 },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_action.network_usages
+  override_during = plan
+  values = {
+    output = {
+      usages = [
+        { name = "StandardSkuPublicIPAddresses", current = 0, limit = 100 },
+        { name = "StandardSkuLoadBalancers", current = 0, limit = 100 },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_vms
+  override_during = plan
+  values          = { output = { vms = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_public_ips
+  override_during = plan
+  values          = { output = { ips = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_lbs
+  override_during = plan
+  values          = { output = { lbs = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_action.locations
+  override_during = plan
+  values          = { output = { zones = ["1", "2", "3"] } }
+}
+
+override_data {
+  target          = data.azurerm_storage_account_blob_container_sas.write[0]
+  override_during = plan
+  values          = { sas = "?sv=2022-11-02&sig=WRITESIG" }
+}
+
+override_data {
+  target          = data.azurerm_storage_account_blob_container_sas.operator[0]
+  override_during = plan
+  values          = { sas = "?sv=2022-11-02&sig=OPERATORSIG" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.lb
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/lb", ip_address = "203.0.113.10" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.nat[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/nat", ip_address = "203.0.113.20" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.jumphost[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/jumphost", ip_address = "203.0.113.11" }
+}
+
+override_resource {
+  target          = azurerm_network_interface.jumphost[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkInterfaces/jumphost", private_ip_address = "10.20.0.5" }
+}
+
+override_resource {
+  target          = azurerm_network_interface.node
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkInterfaces/node", private_ip_address = "10.20.8.10" }
+}
+
+override_resource {
+  target          = azurerm_shared_image_version.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/dummy_gallery/images/dummy-elemental/versions/1.0.1" }
+}
+
+override_resource {
+  target          = random_password.token
+  override_during = plan
+  values          = { result = "dummytokendummytokendummytoken1234" }
+}
+
+override_resource {
+  target          = azurerm_application_security_group.this["control_plane"]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/applicationSecurityGroups/control-plane" }
+}
+
+override_resource {
+  target          = azurerm_application_security_group.this["agent"]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/applicationSecurityGroups/agent" }
+}
+
+override_resource {
+  target          = azurerm_resource_group.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy" }
+}
+
+override_resource {
+  target          = azurerm_virtual_network.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy" }
+}
+
+override_resource {
+  target          = azurerm_subnet.public[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy/subnets/public" }
+}
+
+override_resource {
+  target          = azurerm_subnet.private[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy/subnets/private" }
+}
+
+override_resource {
+  target          = azurerm_nat_gateway.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/natGateways/dummy" }
+}
+
+override_resource {
+  target          = azurerm_network_security_group.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkSecurityGroups/dummy" }
+}
+
+override_resource {
+  target          = azurerm_lb.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy" }
+}
+
+override_resource {
+  target          = azurerm_lb_backend_address_pool.control_plane
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy/backendAddressPools/control-plane" }
+}
+
+override_resource {
+  target          = azurerm_lb_probe.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy/probes/dummy" }
+}
+
+override_resource {
+  target          = azurerm_storage_account.build[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Storage/storageAccounts/dummy" }
+}
+
+override_resource {
+  target          = time_static.created
+  override_during = plan
+  values          = { rfc3339 = "2026-11-13T12:34:56Z" }
+}
+
+variables {
+  azure_subscription_id      = "00000000-1111-2222-3333-444444444444"
+  region                     = "westeurope"
+  admin_cidrs                = ["198.51.100.0/24"]
+  api_cidrs                  = ["198.51.100.0/24"]
+  root_password_hash         = "$6$DUMMYSALT$ROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASH0"
+  node_user_password_hash    = "$6$DUMMYSALT$NODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASH0"
+  ssh_authorized_keys        = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGUeJySRXuZUM/7X5U/XJA1igArCUc0Z8FrAZupL1y5O test"]
+  appco_username             = "DUMMY-APPCO-USER"
+  suse_registry_username     = "DUMMY-REGCODE"
+  suse_registry_password     = "DUMMY-REGISTRY-PASSWORD"
+  appco_password             = "DUMMY-APPCO-PASSWORD"
+  nvidia_api_key             = "DUMMY-NVIDIA-API-KEY"
+  rancher_bootstrap_password = "DUMMY-RANCHER-BOOTSTRAP"
+  cluster_name               = "out-az"
+  deploy_nodes               = false
+}
+
+run "output_set" {
+  command = plan
+
+  # A missing output name fails as an unknown reference.
+  assert {
+    condition = length([
+      output.provider, output.cluster_name, output.region, output.kubernetes_api_endpoint,
+      output.api_host, output.api_vip, output.rancher_url, output.rancher_hostname,
+      output.rancher_bootstrap_password, output.jumphost, output.nodes, output.image,
+      output.egress_ips, output.network, output.next_steps, output.provider_details,
+      output.ingress_endpoint, output.build_status, output.security, output.security_credentials,
+      output.observability, output.observability_credentials,
+    ]) == 22
+    error_message = "A required output is missing."
+  }
+
+  assert {
+    condition     = output.provider == "azure" && output.cluster_name == "out-az" && output.region == "westeurope"
+    error_message = "provider, cluster_name or region is wrong."
+  }
+
+  assert {
+    condition     = output.api_vip == "203.0.113.10" && output.api_host == "rke2-203.0.113.10.sslip.io" && output.kubernetes_api_endpoint == "https://rke2-203.0.113.10.sslip.io:6443"
+    error_message = "api_vip and api_host must come from the load balancer's static public IP."
+  }
+
+  assert {
+    condition     = output.ingress_endpoint == "https://203.0.113.10" && output.rancher_hostname == "rancher-203.0.113.10.sslip.io" && output.rancher_url == "https://rancher-203.0.113.10.sslip.io"
+    error_message = "ingress_endpoint and the Rancher URL must use the load balancer address."
+  }
+
+  assert {
+    condition     = output.jumphost.public_ip == "203.0.113.11" && output.jumphost.private_ip == "10.20.0.5" && output.jumphost.ssh_user == "suse" && length(output.nodes) == 0
+    error_message = "jumphost must carry its addresses and ssh_user, and nodes must be empty."
+  }
+
+  assert {
+    condition     = jsonencode(output.egress_ips) == jsonencode(["203.0.113.20"]) && jsonencode(output.network.subnet_cidrs) == jsonencode(["10.20.0.0/21", "10.20.8.0/21"])
+    error_message = "egress_ips must be the NAT address and the network two subnets."
+  }
+
+  assert {
+    condition = (
+      terraform_data.build_access[0].input.build_status.method == "page-blob" &&
+      startswith(terraform_data.build_access[0].input.build_status.url_or_key, "${azurerm_storage_account.build[0].name}/images/out-az-") &&
+      jsonencode(terraform_data.build_access[0].input.build_status.hosts) == jsonencode(["10.20.0.5"])
+    )
+    error_message = "the build access record (read by ssh.sh and build-logs.sh during the apply) must name the VHD and the build host."
+  }
+
+  assert {
+    condition = (
+      jsonencode(output.image.ids) == jsonencode({ westeurope = azurerm_shared_image_version.this[0].id }) &&
+      output.image.build_id == substr(module.config.build_hash, 0, 12)
+    )
+    error_message = "image carries the build ID and the gallery image version per region."
+  }
+}
+
+run "provider_details" {
+  command = plan
+
+  assert {
+    condition = (
+      output.provider_details.subscription_id == "00000000-1111-2222-3333-444444444444" &&
+      output.provider_details.resource_group == "out-az" &&
+      jsonencode(sort(keys(output.provider_details.network_security_group_ids))) == jsonencode(["agent", "control_plane", "jumphost"]) &&
+      output.provider_details.storage_account == azurerm_storage_account.build[0].name &&
+      output.provider_details.gallery == "out_az_gallery" &&
+      jsonencode(output.provider_details.zones) == jsonencode(["1", "2", "3"])
+    )
+    error_message = "provider_details must report the subscription, group, NSGs, build storage account, gallery and zones."
+  }
+}
+
+run "next_steps_image_only" {
+  command = plan
+
+  assert {
+    condition     = strcontains(output.next_steps, "deploy_nodes = false") && strcontains(output.next_steps, "build-logs.sh") && strcontains(output.next_steps, "Image ")
+    error_message = "next_steps must say that no nodes are deployed and point at the build logs."
+  }
+}
+
+run "next_steps_with_nodes" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+    image_id     = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/g/images/i/versions/1.0.1"
+  }
+
+  assert {
+    condition     = strcontains(output.next_steps, "kubeconfig.sh") && strcontains(output.next_steps, "ssh.sh")
+    error_message = "next_steps must hint at the kubeconfig and ssh helpers once nodes exist."
+  }
+}
+
+run "next_steps_without_nodes" {
+  command = plan
+
+  variables {
+    image_id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/g/images/i/versions/1.0.1"
+  }
+
+  assert {
+    condition     = strcontains(output.next_steps, "deploy_nodes = false") && output.build_status == null
+    error_message = "next_steps must say that no nodes are deployed."
+  }
+}
+
+run "no_nodes_no_bastion_with_image_id" {
+  command = plan
+
+  variables {
+    image_id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/g/images/i/versions/1.0.1"
+  }
+
+  assert {
+    condition = alltrue([
+      length(azurerm_linux_virtual_machine.jumphost) == 0,
+      length(azurerm_linux_virtual_machine.node) == 0,
+      length(azurerm_network_interface.jumphost) == 0,
+      length(azurerm_public_ip.jumphost) == 0,
+    ]) && output.jumphost.public_ip == null && output.jumphost.private_ip == null && output.provider_details.jumphost_id == null
+    error_message = "Without nodes and with image_id nothing runs but the network and the load balancer."
+  }
+}
+
+run "ingress_controller_none" {
+  command = plan
+
+  variables {
+    ingress_controller = "none"
+  }
+
+  assert {
+    condition     = output.ingress_endpoint == null
+    error_message = "ingress_endpoint is null when ingress_controller is none."
+  }
+}
+
+run "rancher_disabled" {
+  command = plan
+
+  variables {
+    components = ["gpu-operator"]
+  }
+
+  assert {
+    condition     = output.rancher_url == null && output.rancher_hostname == null && output.rancher_bootstrap_password == null
+    error_message = "The Rancher outputs are null without the rancher component."
+  }
+}
+
+run "rancher_hostname_from_ingress_domain" {
+  command = plan
+
+  variables {
+    rancher_hostname = null
+    ingress_domain   = "example.test"
+  }
+
+  assert {
+    condition     = output.rancher_hostname == "rancher.example.test"
+    error_message = "ingress_domain gives the Rancher hostname."
+  }
+}
+
+run "region_display_name_is_normalised" {
+  command = plan
+
+  variables {
+    region = "West Europe"
+  }
+
+  assert {
+    condition     = output.region == "westeurope"
+    error_message = "A display name is accepted and normalised to the location name."
+  }
+}
+
+run "no_zone_region" {
+  command = plan
+
+  override_data {
+    target          = data.azapi_resource_list.skus
+    override_during = plan
+    values = {
+      output = {
+        sizes = [
+          {
+            name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = null, restrictions = []
+            capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+          {
+            name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = null, restrictions = []
+            capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+        ]
+      }
+    }
+  }
+
+  override_data {
+    target          = data.azapi_resource_action.locations
+    override_during = plan
+    values          = { output = { zones = [] } }
+  }
+
+  variables {
+    deploy_nodes = true
+  }
+
+  assert {
+    condition = (
+      length(output.provider_details.zones) == 0 &&
+      alltrue([for h, n in output.nodes : n.zone == null]) &&
+      alltrue([for h, v in azurerm_linux_virtual_machine.node : v.zone == null]) &&
+      azurerm_public_ip.lb.zones == null
+    )
+    error_message = "A region without zones pins no node and gives the load balancer address no zones."
+  }
+}
+
+# --- Availability: every case fails the plan, none only warns -----------------
+
+run "size_not_offered" {
+  command = plan
+
+  variables {
+    deploy_nodes                = true
+    control_plane_instance_type = "Standard_D16s_v5"
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "jumphost_size_not_offered" {
+  command = plan
+
+  variables {
+    jumphost_instance_type = "Standard_D2s_v5"
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "size_name_malformed" {
+  command = plan
+
+  variables {
+    control_plane_instance_type = "D8s v5"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "size_restricted_for_subscription" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+  }
+
+  override_data {
+    target          = data.azapi_resource_list.skus
+    override_during = plan
+    values = {
+      output = {
+        sizes = [
+          {
+            name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"]
+            restrictions = [{ type = "Location", reasonCode = "NotAvailableForSubscription", restrictionInfo = { locations = ["westeurope"], zones = [] } }]
+            capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+          {
+            name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+            capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "size_restricted_in_zone" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+    zones        = ["1", "2", "3"]
+  }
+
+  override_data {
+    target          = data.azapi_resource_list.skus
+    override_during = plan
+    values = {
+      output = {
+        sizes = [
+          {
+            name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"]
+            restrictions = [{ type = "Zone", reasonCode = "NotAvailableForSubscription", restrictionInfo = { locations = ["westeurope"], zones = ["3"] } }]
+            capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+          {
+            name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+            capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "zone_restriction_fails_default_zones" {
+  command = plan
+
+  override_data {
+    target          = data.azapi_resource_list.skus
+    override_during = plan
+    values = {
+      output = {
+        sizes = [
+          {
+            name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"]
+            restrictions = [{ type = "Zone", reasonCode = "NotAvailableForSubscription", restrictionInfo = { locations = ["westeurope"], zones = ["3"] } }]
+            capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+          {
+            name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+            capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+        ]
+      }
+    }
+  }
+
+  variables {
+    deploy_nodes = true
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "size_without_generation_2" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+  }
+
+  override_data {
+    target          = data.azapi_resource_list.skus
+    override_during = plan
+    values = {
+      output = {
+        sizes = [
+          {
+            name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+            capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V1" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+          {
+            name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+            capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+          },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "family_vcpu_quota_short" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+  }
+
+  override_data {
+    target          = data.azapi_resource_action.compute_usages
+    override_during = plan
+    values = {
+      output = {
+        usages = [
+          { name = "cores", current = 10, limit = 200 },
+          { name = "standardDSv5Family", current = 0, limit = 24 },
+        ]
+      }
+    }
+  }
+
+  # 3 control planes of 8 vCPUs and a 4 vCPU jumphost need 28.
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "family_vcpu_quota_enough" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+  }
+
+  override_data {
+    target          = data.azapi_resource_action.compute_usages
+    override_during = plan
+    values = {
+      output = {
+        usages = [
+          { name = "cores", current = 10, limit = 200 },
+          { name = "standardDSv5Family", current = 0, limit = 28 },
+        ]
+      }
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_linux_virtual_machine.node) == 3
+    error_message = "A family quota that exactly covers the cluster passes."
+  }
+}
+
+run "existing_vms_count_against_need" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+  }
+
+  override_data {
+    target          = data.azapi_resource_action.compute_usages
+    override_during = plan
+    values = {
+      output = {
+        usages = [
+          { name = "cores", current = 10, limit = 200 },
+          { name = "standardDSv5Family", current = 28, limit = 28 },
+        ]
+      }
+    }
+  }
+
+  override_data {
+    target          = data.azapi_resource_list.existing_vms
+    override_during = plan
+    values = {
+      output = {
+        vms = [
+          { size = "Standard_D8s_v5" }, { size = "Standard_D8s_v5" }, { size = "Standard_D8s_v5" }, { size = "Standard_D4s_v5" },
+        ]
+      }
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_linux_virtual_machine.node) == 3
+    error_message = "VMs the cluster already runs must not be counted twice against the quota."
+  }
+}
+
+run "regional_vcpu_quota_short" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+  }
+
+  override_data {
+    target          = data.azapi_resource_action.compute_usages
+    override_during = plan
+    values = {
+      output = {
+        usages = [
+          { name = "cores", current = 190, limit = 200 },
+          { name = "standardDSv5Family", current = 0, limit = 100 },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "gpu_family_quota_zero" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+    gpu_pools    = { gpu = { instance_type = "Standard_NC24ads_A100_v4", count = 1 } }
+  }
+
+  override_data {
+    target          = data.azapi_resource_action.compute_usages
+    override_during = plan
+    values = {
+      output = {
+        usages = [
+          { name = "cores", current = 10, limit = 200 },
+          { name = "standardDSv5Family", current = 0, limit = 100 },
+          { name = "standardNCADSA100v4Family", current = 0, limit = 0 },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "public_ip_quota_short" {
+  command = plan
+
+  override_data {
+    target          = data.azapi_resource_action.network_usages
+    override_during = plan
+    values = {
+      output = {
+        usages = [
+          { name = "StandardSkuPublicIPAddresses", current = 99, limit = 100 },
+          { name = "StandardSkuLoadBalancers", current = 0, limit = 100 },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.limits_check]
+}
+
+run "own_public_ips_count_against_need" {
+  command = plan
+
+  override_data {
+    target          = data.azapi_resource_action.network_usages
+    override_during = plan
+    values = {
+      output = {
+        usages = [
+          { name = "StandardSkuPublicIPAddresses", current = 3, limit = 3 },
+          { name = "StandardSkuLoadBalancers", current = 1, limit = 1 },
+        ]
+      }
+    }
+  }
+
+  override_data {
+    target          = data.azapi_resource_list.existing_public_ips
+    override_during = plan
+    values          = { output = { ips = [{ name = "a" }, { name = "b" }, { name = "c" }] } }
+  }
+
+  override_data {
+    target          = data.azapi_resource_list.existing_lbs
+    override_during = plan
+    values          = { output = { lbs = [{ name = "a" }] } }
+  }
+
+  assert {
+    condition     = azurerm_lb.this.sku == "Standard"
+    error_message = "The cluster's own public IPs and load balancer must not be counted twice against the network quota."
+  }
+}

@@ -1,0 +1,582 @@
+# Asserts the image chain: naming, build_hash driving the gallery version, SAS window, the units baked into
+# the image (report ready, load balancer hairpin) and the image_id shortcut. Azure mocked; no cloud calls.
+
+mock_provider "azurerm" {
+  override_during = plan
+}
+mock_provider "azapi" {
+  override_during = plan
+}
+mock_provider "http" {}
+
+override_data {
+  target = module.config.data.http.aif_release_manifest
+  values = {
+    status_code   = 200
+    response_body = file("../elemental-config/tests/fixtures/release_manifest.yaml")
+  }
+}
+
+# VM sizes the subscription sees in the region: size, family, zones, restrictions, capabilities.
+override_data {
+  target          = data.azapi_resource_list.skus
+  override_during = plan
+  values = {
+    output = {
+      sizes = [
+        {
+          name         = "Standard_D8s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+        {
+          name         = "Standard_D4s_v5", family = "standardDSv5Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "4" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+        {
+          name         = "Standard_D8ds_v6", family = "standardDDSv6Family", zones = ["1", "2", "3"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "8" }, { name = "HyperVGenerations", value = "V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI, NVMe" }]
+        },
+        {
+          name         = "Standard_NC24ads_A100_v4", family = "standardNCADSA100v4Family", zones = ["1", "2"], restrictions = []
+          capabilities = [{ name = "vCPUs", value = "24" }, { name = "HyperVGenerations", value = "V1,V2" }, { name = "PremiumIO", value = "True" }, { name = "AcceleratedNetworkingEnabled", value = "True" }, { name = "DiskControllerTypes", value = "SCSI" }]
+        },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_action.compute_usages
+  override_during = plan
+  values = {
+    output = {
+      usages = [
+        { name = "cores", current = 10, limit = 200 },
+        { name = "standardDSv5Family", current = 0, limit = 100 },
+        { name = "standardDDSv6Family", current = 0, limit = 100 },
+        { name = "standardNCADSA100v4Family", current = 0, limit = 100 },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_action.network_usages
+  override_during = plan
+  values = {
+    output = {
+      usages = [
+        { name = "StandardSkuPublicIPAddresses", current = 0, limit = 100 },
+        { name = "StandardSkuLoadBalancers", current = 0, limit = 100 },
+      ]
+    }
+  }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_vms
+  override_during = plan
+  values          = { output = { vms = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_public_ips
+  override_during = plan
+  values          = { output = { ips = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_list.existing_lbs
+  override_during = plan
+  values          = { output = { lbs = [] } }
+}
+
+override_data {
+  target          = data.azapi_resource_action.locations
+  override_during = plan
+  values          = { output = { zones = ["1", "2", "3"] } }
+}
+
+override_data {
+  target          = data.azurerm_storage_account_blob_container_sas.write[0]
+  override_during = plan
+  values          = { sas = "?sv=2022-11-02&sig=WRITESIG" }
+}
+
+override_data {
+  target          = data.azurerm_storage_account_blob_container_sas.operator[0]
+  override_during = plan
+  values          = { sas = "?sv=2022-11-02&sig=OPERATORSIG" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.lb
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/lb", ip_address = "203.0.113.10" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.nat[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/nat", ip_address = "203.0.113.20" }
+}
+
+override_resource {
+  target          = azurerm_public_ip.jumphost[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/jumphost", ip_address = "203.0.113.11" }
+}
+
+override_resource {
+  target          = azurerm_network_interface.jumphost[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkInterfaces/jumphost", private_ip_address = "10.20.0.5" }
+}
+
+override_resource {
+  target          = azurerm_network_interface.node
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkInterfaces/node", private_ip_address = "10.20.8.10" }
+}
+
+override_resource {
+  target          = azurerm_shared_image_version.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/dummy_gallery/images/dummy-elemental/versions/1.0.1" }
+}
+
+override_resource {
+  target          = random_password.token
+  override_during = plan
+  values          = { result = "dummytokendummytokendummytoken1234" }
+}
+
+override_resource {
+  target          = azurerm_application_security_group.this["control_plane"]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/applicationSecurityGroups/control-plane" }
+}
+
+override_resource {
+  target          = azurerm_application_security_group.this["agent"]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/applicationSecurityGroups/agent" }
+}
+
+override_resource {
+  target          = azurerm_resource_group.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy" }
+}
+
+override_resource {
+  target          = azurerm_virtual_network.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy" }
+}
+
+override_resource {
+  target          = azurerm_subnet.public[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy/subnets/public" }
+}
+
+override_resource {
+  target          = azurerm_subnet.private[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/virtualNetworks/dummy/subnets/private" }
+}
+
+override_resource {
+  target          = azurerm_nat_gateway.this[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/natGateways/dummy" }
+}
+
+override_resource {
+  target          = azurerm_network_security_group.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/networkSecurityGroups/dummy" }
+}
+
+override_resource {
+  target          = azurerm_lb.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy" }
+}
+
+override_resource {
+  target          = azurerm_lb_backend_address_pool.control_plane
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy/backendAddressPools/control-plane" }
+}
+
+override_resource {
+  target          = azurerm_lb_probe.this
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/loadBalancers/dummy/probes/dummy" }
+}
+
+override_resource {
+  target          = azurerm_storage_account.build[0]
+  override_during = plan
+  values          = { id = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Storage/storageAccounts/dummy" }
+}
+
+override_resource {
+  target          = time_static.created
+  override_during = plan
+  values          = { rfc3339 = "2026-11-13T12:34:56Z" }
+}
+
+variables {
+  azure_subscription_id      = "00000000-1111-2222-3333-444444444444"
+  region                     = "westeurope"
+  admin_cidrs                = ["198.51.100.0/24"]
+  api_cidrs                  = ["198.51.100.0/24"]
+  root_password_hash         = "$6$DUMMYSALT$ROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASHROOTDUMMYHASH0"
+  node_user_password_hash    = "$6$DUMMYSALT$NODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASHNODEDUMMYHASH0"
+  ssh_authorized_keys        = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGUeJySRXuZUM/7X5U/XJA1igArCUc0Z8FrAZupL1y5O test"]
+  appco_username             = "DUMMY-APPCO-USER"
+  suse_registry_username     = "DUMMY-REGCODE"
+  suse_registry_password     = "DUMMY-REGISTRY-PASSWORD"
+  appco_password             = "DUMMY-APPCO-PASSWORD"
+  nvidia_api_key             = "DUMMY-NVIDIA-API-KEY"
+  rancher_bootstrap_password = "DUMMY-RANCHER-BOOTSTRAP"
+  cluster_name               = "img-az"
+  deploy_nodes               = false
+}
+
+run "base" {
+  command = plan
+
+  assert {
+    condition     = azurerm_shared_image_version.this[0].name == "1.0.${parseint(substr(output.image.build_id, 0, 7), 16)}"
+    error_message = "The gallery image version is 1.0.<first 28 bits of build_hash as an integer>."
+  }
+}
+
+run "build_hash_drives_version" {
+  command = plan
+
+  variables {
+    image_rebuild = 1
+  }
+
+  assert {
+    condition     = output.image.build_id != run.base.image.build_id
+    error_message = "image_rebuild must change build_hash."
+  }
+
+  assert {
+    condition     = azurerm_shared_image_version.this[0].name == "1.0.${parseint(substr(output.image.build_id, 0, 7), 16)}" && azurerm_shared_image_version.this[0].name != "1.0.${parseint(substr(run.base.image.build_id, 0, 7), 16)}"
+    error_message = "A new build_hash must give a new gallery image version name."
+  }
+
+  assert {
+    condition     = azurerm_shared_image_version.this[0].tags["elemental-build"] == output.image.build_id && output.image.rebuild == 1
+    error_message = "The version carries the build ID."
+  }
+}
+
+run "same_inputs_same_version" {
+  command = plan
+
+  assert {
+    condition     = output.image.build_id == run.base.image.build_id
+    error_message = "The same inputs must give the same build_hash (no drift between plans)."
+  }
+}
+
+run "names" {
+  command = plan
+
+  assert {
+    condition = (
+      can(regex("^aif[0-9a-f]{12}$", azurerm_storage_account.build[0].name)) &&
+      length(azurerm_storage_account.build[0].name) <= 24 &&
+      azurerm_storage_account.build[0].name == "aif${substr(sha1("00000000-1111-2222-3333-444444444444/img-az"), 0, 12)}" &&
+      azurerm_storage_container.images[0].name == "images" &&
+      azurerm_storage_container.images[0].container_access_type == "private" &&
+      azurerm_storage_account.build[0].min_tls_version == "TLS1_2" && !azurerm_storage_account.build[0].allow_nested_items_to_be_public
+    )
+    error_message = "The storage account is aif plus 12 hex digits of sha1(subscription/cluster), with a private container."
+  }
+
+  assert {
+    condition = (
+      azurerm_shared_image_gallery.this[0].name == "img_az_gallery" &&
+      can(regex("^[A-Za-z0-9_.]+$", azurerm_shared_image_gallery.this[0].name)) &&
+      azurerm_shared_image.this[0].name == "img-az-elemental" &&
+      azurerm_shared_image.this[0].os_type == "Linux" && azurerm_shared_image.this[0].hyper_v_generation == "V2" &&
+      !azurerm_shared_image.this[0].specialized && azurerm_shared_image.this[0].disk_controller_type_nvme_enabled
+    )
+    error_message = "The gallery name has underscores only, the image is a generalized Linux generation 2 image with NVMe support."
+  }
+
+  assert {
+    condition = (
+      startswith(azurerm_shared_image_version.this[0].blob_uri, "https://${azurerm_storage_account.build[0].name}.blob.core.windows.net/images/img-az-") &&
+      endswith(azurerm_shared_image_version.this[0].blob_uri, ".vhd") &&
+      azurerm_shared_image_version.this[0].target_region[0].name == "westeurope"
+    )
+    error_message = "The image version is created from the uploaded VHD and replicated to the region."
+  }
+
+  assert {
+    condition = (
+      azurerm_linux_virtual_machine.jumphost[0].name == "img-az-jumphost" &&
+      azurerm_public_ip.jumphost[0].name == "img-az-jumphost" &&
+      azurerm_lb.this.name == "img-az-lb" && azurerm_public_ip.lb.name == "img-az-lb" &&
+      azurerm_public_ip.nat[0].name == "img-az-nat" && azurerm_nat_gateway.this[0].name == "img-az-nat"
+    )
+    error_message = "Resources are named <cluster>-<role>."
+  }
+}
+
+run "sas_tokens" {
+  command = plan
+
+  assert {
+    condition = (
+      data.azurerm_storage_account_blob_container_sas.write[0].permissions[0].create &&
+      data.azurerm_storage_account_blob_container_sas.write[0].permissions[0].write &&
+      !data.azurerm_storage_account_blob_container_sas.write[0].permissions[0].read &&
+      !data.azurerm_storage_account_blob_container_sas.write[0].permissions[0].list &&
+      !data.azurerm_storage_account_blob_container_sas.write[0].permissions[0].delete &&
+      data.azurerm_storage_account_blob_container_sas.write[0].https_only
+    )
+    error_message = "The jumphost's SAS can create and write blobs and nothing else."
+  }
+
+  assert {
+    condition = (
+      data.azurerm_storage_account_blob_container_sas.operator[0].permissions[0].read &&
+      data.azurerm_storage_account_blob_container_sas.operator[0].permissions[0].delete &&
+      !data.azurerm_storage_account_blob_container_sas.operator[0].permissions[0].write &&
+      !data.azurerm_storage_account_blob_container_sas.operator[0].permissions[0].create
+    )
+    error_message = "The operator's SAS reads (to poll the marker) and deletes (the VHD) only."
+  }
+
+  # The window is anchored to the build, not to the plan time: a timestamp() in
+  # the expiry would replace the jumphost on every plan.
+  assert {
+    condition = (
+      time_offset.sas_expiry[0].triggers["build"] == module.config.build_hash &&
+      time_offset.sas_start[0].triggers["build"] == module.config.build_hash &&
+      time_offset.sas_expiry[0].offset_hours == 6 && time_offset.sas_start[0].offset_minutes == -15
+    )
+    error_message = "The SAS window must come from time_offset keyed on build_hash, so it does not change between plans."
+  }
+}
+
+run "no_nodes_builds_image" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      length(azurerm_linux_virtual_machine.node) == 0,
+      length(azurerm_network_interface_backend_address_pool_association.control_plane) == 0,
+      length(azurerm_linux_virtual_machine.jumphost) == 1,
+      length(terraform_data.image_ready) == 1,
+      length(terraform_data.vhd_cleanup) == 1,
+    ])
+    error_message = "deploy_nodes = false builds the image through the jumphost and creates no nodes."
+  }
+}
+
+run "keep_build_artifacts" {
+  command = plan
+
+  variables {
+    keep_build_artifacts = true
+  }
+
+  assert {
+    condition     = length(terraform_data.vhd_cleanup) == 0
+    error_message = "keep_build_artifacts keeps the uploaded VHD."
+  }
+}
+
+run "node_units" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+  }
+
+  assert {
+    condition = (
+      strcontains(module.config.elemental_files["butane.yaml"], "azure-report-ready.service") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "/var/lib/elemental/azure-report-ready.sh") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "azure-lb-hairpin.service") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "azure-lb-hairpin.timer") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "/var/lib/elemental/azure-lb-hairpin.sh")
+    )
+    error_message = "The image must carry the report-ready and hairpin units and their scripts."
+  }
+
+  assert {
+    condition = (
+      strcontains(module.config.elemental_files["butane.yaml"], "168.63.129.16") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "WireServer") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "seq 1 60") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "sleep 15") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "TimeoutStartSec=16min")
+    )
+    error_message = "The report-ready script talks to the WireServer and retries for about 15 minutes, inside the unit timeout."
+  }
+
+  assert {
+    condition     = strcontains(module.config.elemental_files["butane.yaml"], "nft list table ip \"$TABLE\"")
+    error_message = "The hairpin script checks that its nft table exists before it trusts the state file."
+  }
+
+  assert {
+    condition = (
+      strcontains(module.config.elemental_files["butane.yaml"], "VIP=203.0.113.10") &&
+      strcontains(module.config.elemental_files["butane.yaml"], "API_PORTS=\"6443 9345\"") &&
+      !strcontains(module.config.elemental_files["butane.yaml"], "INGRESS_PORTS") &&
+      !strcontains(module.config.elemental_files["butane.yaml"], "listening 443")
+    )
+    error_message = "The hairpin script carries the load balancer frontend address and redirects the API ports only, not 80 or 443."
+  }
+
+  assert {
+    condition     = strcontains(module.config.elemental_files["butane.yaml"], "[ \"$${NODETYPE:-}\" = server ] || exit 0") && strcontains(module.config.elemental_files["butane.yaml"], "/var/lib/elemental/runtime.env") && strcontains(module.config.elemental_files["butane.yaml"], "dnat to $ip")
+    error_message = "The hairpin script only acts on control planes (NODETYPE=server) and DNATs the frontend address to the node's own IP."
+  }
+
+  assert {
+    condition     = strcontains(module.config.elemental_files["butane.yaml"], "ignition.platform.id=azure") || strcontains(module.config.elemental_files["install.yaml"], "ignition.platform.id=azure")
+    error_message = "The kernel command line selects the azure Ignition platform."
+  }
+}
+
+run "node_units_without_ingress" {
+  command = plan
+
+  variables {
+    ingress_controller = "none"
+  }
+
+  assert {
+    condition     = !strcontains(module.config.elemental_files["butane.yaml"], "INGRESS_PORTS") && strcontains(module.config.elemental_files["butane.yaml"], "API_PORTS=\"6443 9345\"")
+    error_message = "Without an ingress controller the hairpin script still redirects only the API ports."
+  }
+}
+
+run "vip_changes_build_hash" {
+  command = plan
+
+  override_resource {
+    target          = azurerm_public_ip.lb
+    override_during = plan
+    values = {
+      id         = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Network/publicIPAddresses/lb"
+      ip_address = "203.0.113.99"
+    }
+  }
+
+  assert {
+    condition     = output.image.build_id != run.base.image.build_id
+    error_message = "The frontend address is baked into the image, so it must feed build_hash."
+  }
+}
+
+run "api_cidrs_do_not_change_build_hash" {
+  command = plan
+
+  variables {
+    api_cidrs = ["192.0.2.0/24"]
+  }
+
+  assert {
+    condition     = output.image.build_id == run.base.image.build_id
+    error_message = "Firewall inputs are not image inputs."
+  }
+}
+
+run "image_id_skips_build_chain" {
+  command = plan
+
+  variables {
+    deploy_nodes = true
+    image_id     = "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/dummy/providers/Microsoft.Compute/galleries/g/images/i/versions/1.0.1"
+  }
+
+  assert {
+    condition = alltrue([
+      length(azurerm_shared_image_gallery.this) == 0,
+      length(azurerm_shared_image.this) == 0,
+      length(azurerm_shared_image_version.this) == 0,
+      length(azurerm_storage_account.build) == 0,
+      length(azurerm_storage_container.images) == 0,
+      length(time_offset.sas_expiry) == 0,
+      length(terraform_data.image_ready) == 0,
+      length(terraform_data.vhd_cleanup) == 0,
+      length(terraform_data.build_access) == 0,
+    ])
+    error_message = "With image_id nothing of the build chain exists."
+  }
+
+  assert {
+    condition     = output.provider_details.storage_account == null && output.provider_details.gallery == null && output.build_status == null
+    error_message = "provider_details and build_status must report no build."
+  }
+}
+
+run "image_id_malformed" {
+  command = plan
+
+  variables {
+    image_id = "not-an-id"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "jumphost_image_malformed" {
+  command = plan
+
+  variables {
+    jumphost_image = "SUSE:sles-16-0-x86-64"
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "jumphost_image_urn" {
+  command = plan
+
+  variables {
+    jumphost_image = "SUSE:sles-16-0-x86-64:gen2:1.2.3"
+  }
+
+  assert {
+    condition = (
+      azurerm_linux_virtual_machine.jumphost[0].source_image_reference[0].publisher == "SUSE" &&
+      azurerm_linux_virtual_machine.jumphost[0].source_image_reference[0].offer == "sles-16-0-x86-64" &&
+      azurerm_linux_virtual_machine.jumphost[0].source_image_reference[0].sku == "gen2" &&
+      azurerm_linux_virtual_machine.jumphost[0].source_image_reference[0].version == "1.2.3" &&
+      azurerm_linux_virtual_machine.jumphost[0].admin_username == "suse" &&
+      azurerm_linux_virtual_machine.jumphost[0].size == "Standard_D4s_v5" &&
+      azurerm_linux_virtual_machine.jumphost[0].os_disk[0].disk_size_gb == 100
+    )
+    error_message = "jumphost_image is a publisher:offer:sku:version URN; the jumphost defaults are the documented ones."
+  }
+}
+
+run "jumphost_username_default" {
+  command = plan
+
+  variables {
+    jumphost_username = ""
+  }
+
+  assert {
+    condition     = azurerm_linux_virtual_machine.jumphost[0].admin_username == "azureuser" && output.jumphost.ssh_user == "azureuser"
+    error_message = "An empty jumphost_username falls back to azureuser."
+  }
+}

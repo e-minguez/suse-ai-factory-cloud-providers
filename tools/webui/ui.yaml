@@ -152,6 +152,31 @@ oci:
       - public_subnet_id
       - private_subnet_id
 
+azure:
+  examples:
+    worker_pools: |
+      {"wrk": {"instance_type": "Standard_D8s_v5", "count": 2}}
+  basic:
+    - name: region
+      label: Azure location
+      widget: text
+      options: [westeurope, northeurope, swedencentral, germanywestcentral, francecentral, uksouth, eastus, eastus2, westus2, southcentralus]
+  groups:
+    Provider:
+      - resource_group_name
+      - jumphost_image
+      - jumphost_username
+      - keep_build_artifacts
+      - vpc_id
+      - public_subnet_id
+      - private_subnet_id
+      - image_id
+  managed:
+    - azure_subscription_id
+    - azure_tenant_id
+    - azure_client_id
+    - azure_client_secret
+
 vultr:
   examples:
     worker_pools: |

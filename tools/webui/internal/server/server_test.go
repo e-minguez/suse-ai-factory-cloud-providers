@@ -235,7 +235,7 @@ func TestStatusLabel(t *testing.T) {
 }
 
 func TestProviderName(t *testing.T) {
-	for in, want := range map[string]string{"aws": "AWS", "evroc": "evroc", "exoscale": "Exoscale", "vultr": "Vultr", "other": "other"} {
+	for in, want := range map[string]string{"aws": "AWS", "azure": "Azure", "evroc": "evroc", "exoscale": "Exoscale", "vultr": "Vultr", "other": "other"} {
 		if got := providerName(in); got != want {
 			t.Errorf("providerName(%q) = %q, want %q", in, got, want)
 		}

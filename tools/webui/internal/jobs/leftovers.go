@@ -12,6 +12,7 @@ import (
 var leftoverTools = map[string][]string{
 	"aws":      {"aws"},
 	"evroc":    {"evroc", "jq"},
+	"azure":    {"az", "jq"},
 	"exoscale": {"curl", "jq", "openssl"},
 	"vultr":    {"curl", "jq"},
 }
@@ -55,6 +56,7 @@ type Leftovers struct {
 //
 //	aws       <cluster_name> --region <region>   (region: tfvars, else AWS_REGION; AWS_* creds via creds.Env)
 //	evroc     <cluster_name> [--region R] [--project P]
+//	azure     <cluster_name> [--project SUBSCRIPTION_ID]
 //	exoscale  <cluster_name> [--region R]        + EXOSCALE_API_KEY/SECRET from exoscale_api_key/secret
 //	vultr     <cluster_name>                     + VULTR_API_KEY from vultr_api_key
 //
@@ -94,6 +96,10 @@ func LeftoverSpec(repo, clustersDir, provider, cluster string) Leftovers {
 		region()
 		if vars["project"] != "" {
 			l.Args = append(l.Args, "--project", vars["project"])
+		}
+	case "azure":
+		if vars["azure_subscription_id"] != "" {
+			l.Args = append(l.Args, "--project", vars["azure_subscription_id"])
 		}
 	case "exoscale":
 		region()

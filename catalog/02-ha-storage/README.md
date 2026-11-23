@@ -90,4 +90,5 @@ Do not add `local-path-provisioner`: both components set the default StorageClas
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
 - [OCI](oci/README.md)
+- [Azure](azure/README.md)
 - [AWS](aws/README.md)

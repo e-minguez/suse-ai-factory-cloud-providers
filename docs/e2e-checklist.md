@@ -1,6 +1,6 @@
 # End-to-end checks not yet run
 
-Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16).
+Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16). azure has not run at all.
 Run these from the cluster directory (`examples/<provider>` or
 `clusters/<name>`); `make ci` must pass first.
 
@@ -51,6 +51,42 @@ joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only, nodes boot.
 - [ ] As a multicluster downstream: `cluster.sh register` with the NAT address in the management `ingress_cidrs`.
 - [ ] Expired PARs after 24 hours: `oci os preauth-request list --bucket-name <cluster>-build`.
+
+## azure
+
+Nothing has run against a real subscription. Start with the Step 0 checks in
+[docs/plans/azure.md](plans/azure.md#step-0-blockers-manual-once-the-account-is-ready)
+(runbook: [examples/azure/README.md](../examples/azure/README.md)), then:
+
+- [ ] Image: fixed VHD uploaded as a page blob through the write-only SAS, the
+      done marker appears, the Generation 2 gallery image version is created,
+      the VHD is deleted.
+- [ ] A VM from the image boots, Ignition reads `user_data` (IMDS), and the VM
+      reaches `Succeeded` (the `azure-report-ready` unit works).
+- [ ] One then three control planes join through the load balancer address
+      (6443, 9345); health probes pass; Rancher answers on 443.
+- [ ] Load balancer hairpin: from a control plane the frontend answers on
+      6443 and 9345 (first with `azure-lb-hairpin.timer` disabled: the NAT
+      gateway may carry the flow); `nft list table ip azure-lb-hairpin` shows
+      the DNAT (6443 and 9345 only) while the local 6443 answers. Open: 443 from
+      a pod on a control plane.
+- [ ] Zone spread of the control planes (`zones` default and explicit).
+- [ ] A GPU pool (`Standard_NC4as_T4_v3`): `nvidia-smi` in a pod; and an
+      NVMe-only `_v6` size boots with the NVMe controller.
+- [ ] `user_data` size limit: before or after base64 (about 60 KiB and 47 KiB raw).
+- [ ] A worker pool (`worker_pools`), Rancher local-path volume and
+      aif-operator.
+- [ ] `deploy.sh --rebuild` replaces every node; a plan after it shows no
+      changes.
+- [ ] `image_id` set to an existing gallery image version: the jumphost is a
+      bastion only, nodes boot. `deploy_nodes` false then true.
+- [ ] Existing network (`vpc_id`): plan checks against a live virtual network
+      with a NAT gateway, one control plane in the existing private subnet,
+      `egress_ips` equal to the NAT address, destroy leaving the network.
+- [ ] Destroy and `tools/leftovers/azure.sh`; the SAS no longer works after 24
+      hours.
+- [ ] As a multicluster downstream: `cluster.sh register` with the NAT address
+      in the management `ingress_cidrs`.
 
 ## Multicluster
 

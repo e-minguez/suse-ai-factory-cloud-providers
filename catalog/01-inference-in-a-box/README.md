@@ -75,4 +75,5 @@ flowchart LR
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
 - [OCI](oci/README.md)
+- [Azure](azure/README.md)
 - [AWS](aws/README.md)

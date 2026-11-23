@@ -67,6 +67,7 @@ flowchart TD
         evroc["evroc: dd to evroc_disk (image target) →<br/>detach → evroc_snapshot per zone"]
         exoscale["exoscale: qemu-img convert to qcow2 (≥ 10 GiB),<br/>HTTP on jumphost :80 → exoscale_template"]
         oci["oci: qemu-img convert to qcow2, curl -T to write-only PARs →<br/>oci_core_image + UEFI capability schema"]
+        azure["azure: qemu-img convert to fixed VHD, curl Put Page to a page blob (write-only SAS) →<br/>azurerm_shared_image_version (Generation 2)"]
     end
 
     deliver --> nodes["Nodes: boot from the image,<br/>Ignition sets role, hostname, node-ip"]
@@ -77,7 +78,8 @@ flowchart TD
 Terraform waits for the build from the workstation: aws polls S3
 (`wait-for-raw.sh`), vultr and exoscale poll the served URL
 (`wait-for-image.sh`), oci polls a read-only pre-authenticated request for the
-`done` marker (`wait-for-image.sh`), evroc polls the build-status relay on the
+`done` marker (`wait-for-image.sh`), azure polls a read-only SAS for the `done` marker
+(`wait-for-image.sh`), evroc polls the build-status relay on the
 jumphost (`wait-for-image.sh`).
 `scripts/build-logs.sh` follows the build log on the build host over SSH.
 
@@ -238,6 +240,26 @@ flowchart TD
     end
 ```
 
+### azure: one pass
+
+The load balancer and its static public IP exist before the image, and backend
+pool membership is a separate resource per NIC added after the VMs, so
+everything fits in one apply ([ADR 015](decisions/015-azure-module.md)).
+
+```mermaid
+flowchart TD
+    subgraph p1 ["Pass 1: Deploy"]
+        net["network: azurerm_resource_group, azurerm_virtual_network,<br/>public + private azurerm_subnet, azurerm_nat_gateway,<br/>NSG + application security group per role"]
+        lb["lb: azurerm_public_ip (static), azurerm_lb,<br/>probe + rule per port, backend pool"]
+        jh["jumphost: azurerm_linux_virtual_machine (builds the image, then the SSH bastion)"]
+        img["image: azurerm_storage_account + SAS, azurerm_shared_image_gallery,<br/>azurerm_shared_image (V2), azurerm_shared_image_version"]
+        nodes["nodes: azurerm_linux_virtual_machine per node (zones)"]
+        pool["azurerm_network_interface_backend_address_pool_association (control planes)"]
+        net --> lb --> img --> nodes --> pool
+        net --> jh --> img
+    end
+```
+
 ## Network
 
 Main traffic paths. SSH always goes through the jumphost (`ProxyJump`,
@@ -392,6 +414,37 @@ flowchart LR
     ag -- "6443, 9345 via public address" --> nat
     nat --> inet
     inet -- "to the reserved IP" --> nlb
+```
+
+### azure
+
+```mermaid
+flowchart LR
+    admin(["Admin"])
+    users(["Users / kubectl"])
+    inet(["Internet"])
+
+    subgraph vnet ["azurerm_virtual_network"]
+        subgraph pub ["public subnet"]
+            jh["jumphost<br/>azurerm_linux_virtual_machine (public IP)"]
+        end
+        subgraph priv ["private subnet (NSGs on the NICs)"]
+            cp["control_plane<br/>azurerm_linux_virtual_machine<br/>nft DNAT: frontend → own IP"]
+            ag["worker, gpu<br/>azurerm_linux_virtual_machine"]
+        end
+    end
+    lb["azurerm_lb Standard (static public IP)<br/>6443, 9345, 80/443"]
+    nat["azurerm_nat_gateway"]
+
+    admin -- "SSH (admin_cidrs)" --> jh
+    jh -- "SSH" --> cp
+    jh -- "SSH" --> ag
+    users -- "80/443 (ingress_cidrs)<br/>6443 (api_cidrs), source kept, filtered by NSG" --> lb --> cp
+    cp -- "6443, 9345 via frontend (answered locally)" --> cp
+    ag -- "6443, 9345 via frontend" --> nat
+    nat --> inet
+    inet -- "to the static IP" --> lb
+    cp -- "egress" --> nat
 ```
 
 ### SUSE Security and SUSE Observability

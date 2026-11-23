@@ -98,6 +98,7 @@ func TestTfvarsProviders(t *testing.T) {
 	for p, vals := range map[string]map[string]string{
 		"vultr":    {"vultr_api_key": "VK"},
 		"exoscale": {"exoscale_api_key": "EK", "exoscale_api_secret": "ES"},
+		"azure":    {"azure_subscription_id": "SUB", "azure_tenant_id": "TEN", "azure_client_id": "CID", "azure_client_secret": "CSECRET"},
 	} {
 		if st, _ := Status(d, p); anySet(st) {
 			t.Fatalf("%s set before save", p)
@@ -169,6 +170,10 @@ func TestSecretValues(t *testing.T) {
 	_ = Save(d, "exoscale", map[string]string{"exoscale_api_key": "EXOKEY", "exoscale_api_secret": "EXOSECRET"})
 	if v, _ := SecretValues(d, "exoscale"); len(v) != 2 {
 		t.Fatalf("exoscale %v", v)
+	}
+	_ = Save(d, "azure", map[string]string{"azure_subscription_id": "SUBID", "azure_client_secret": "AZSECRET"})
+	if v, _ := SecretValues(d, "azure"); len(v) != 1 || v[0] != "AZSECRET" {
+		t.Fatalf("azure %v", v)
 	}
 	if v, err := SecretValues(t.TempDir(), "vultr"); err != nil || len(v) != 0 {
 		t.Fatalf("vultr %v %v", v, err)
