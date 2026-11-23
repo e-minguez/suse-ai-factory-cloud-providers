@@ -1,0 +1,9 @@
+# Shape 03, GPU downstream cluster. Shared values go in clusters/common-*.tfvars.
+
+cluster_name        = "aif-gpu"
+control_plane_count = 3
+components          = ["cert-manager", "gpu-operator", "local-path-provisioner"]
+
+gpu_pools = {
+  gpu = { instance_type = "g2-standard-8", count = 1 }
+}

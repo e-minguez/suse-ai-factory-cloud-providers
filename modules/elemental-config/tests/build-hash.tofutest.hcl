@@ -222,3 +222,29 @@ run "rebuild_counter_values_differ" {
     error_message = "Each image_rebuild value must give its own build_hash."
   }
 }
+
+run "local_route_addresses_change_hash" {
+  command = plan
+
+  variables {
+    local_route_addresses = ["10.20.0.100"]
+  }
+
+  assert {
+    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    error_message = "local_route_addresses must change build_hash."
+  }
+}
+
+run "local_route_addresses_after_server_change_hash" {
+  command = plan
+
+  variables {
+    local_route_addresses_after_server = ["10.20.0.100"]
+  }
+
+  assert {
+    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369" && output.build_hash != "d5e10eff61b4a8105ca66751c88670d7aec48d04318e02ca1712ed9cebdf4159"
+    error_message = "local_route_addresses_after_server must change build_hash, differently from local_route_addresses."
+  }
+}

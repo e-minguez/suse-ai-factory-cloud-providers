@@ -1,0 +1,53 @@
+# Prints the attached target disk (device_name ${device_name}). Return 1 when it
+# is not there yet. udev names it google-<device_name>; the SCSI name is the fallback.
+resolve_target_disk() {
+  local c
+  for c in /dev/disk/by-id/google-${device_name} /dev/disk/by-id/scsi-0Google_PersistentDisk_${device_name} /dev/disk/by-id/nvme-Google_PersistentDisk_${device_name}; do
+    if [ -e "$c" ]; then
+      readlink -f "$c"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# The attachment is part of instance creation; wait up to 20 x 15 s for udev.
+TARGET=""
+for attempt in $(seq 1 20); do
+  TARGET=$(resolve_target_disk) && break
+  TARGET=""
+  log "target disk not found yet (attempt $attempt/20), waiting 15s"
+  sleep 15
+done
+if [ -z "$TARGET" ]; then
+  log "ERROR: target disk ${device_name} never appeared"
+  exit 1
+fi
+log "target disk: $TARGET"
+
+RAW_BYTES=$(stat -c %s "$1")
+DISK_BYTES=$(blockdev --getsize64 "$TARGET")
+if [ "$RAW_BYTES" -gt "$DISK_BYTES" ]; then
+  log "ERROR: raw image ($RAW_BYTES bytes) is larger than $TARGET ($DISK_BYTES bytes)"
+  exit 1
+fi
+
+# The disk is blank and new for this build: no zero regions need writing.
+dd if="$1" of="$TARGET" bs=4M conv=fsync,sparse status=none
+sync
+blockdev --flushbufs "$TARGET"
+
+SIG=$(dd if="$TARGET" bs=1 skip=512 count=8 status=none)
+if [ "$SIG" != "EFI PART" ]; then
+  log "ERROR: no GPT signature at offset 512 on $TARGET, got: $SIG"
+  exit 1
+fi
+log "GPT signature confirmed"
+
+# Published here, not from on_step finished: a failed publish must fail the
+# build, and on_step failures only warn.
+echo "$BUILD_ID" > "$DONE_FILE"
+if ! publish "done" "image written to $TARGET"; then
+  log "ERROR: image is on $TARGET but done could not be published"
+  exit 1
+fi

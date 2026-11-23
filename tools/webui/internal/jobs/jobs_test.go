@@ -286,10 +286,11 @@ func TestLeftoverSpec(t *testing.T) {
 	must(t, os.MkdirAll(filepath.Join(dir, "c1"), 0o700))
 	must(t, os.WriteFile(filepath.Join(dir, "common-all.tfvars"), []byte("region = \"eu\"\n"), 0o600))
 	must(t, os.WriteFile(filepath.Join(dir, "common-vultr.tfvars"), []byte("vultr_api_key = \"k\"\n"), 0o600))
-	must(t, os.WriteFile(filepath.Join(dir, "c1/terraform.tfvars"), []byte("cluster_name = \"foo\"\nproject = \"p\"\noci_compartment_ocid = \"ocid1.compartment.oc1..c\"\n"), 0o600))
+	must(t, os.WriteFile(filepath.Join(dir, "c1/terraform.tfvars"), []byte("cluster_name = \"foo\"\nproject = \"p\"\ngcp_project = \"gp\"\noci_compartment_ocid = \"ocid1.compartment.oc1..c\"\n"), 0o600))
 	cases := map[string]string{
 		"aws": "foo --region eu", "evroc": "foo --region eu --project p",
-		"exoscale": "foo --region eu", "vultr": "foo", "oci": "foo --region eu --compartment ocid1.compartment.oc1..c",
+		"exoscale": "foo --region eu", "vultr": "foo", "gcp": "foo --project gp",
+		"oci": "foo --region eu --compartment ocid1.compartment.oc1..c",
 	}
 	for p, want := range cases {
 		if got := strings.Join(LeftoverSpec(repo, dir, p, "c1").Args, " "); got != want {

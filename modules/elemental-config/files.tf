@@ -31,20 +31,23 @@ locals {
       })
 
       "butane.yaml" = templatefile("${path.module}/templates/elemental/butane.yaml.tftpl", {
-        root_password_hash      = var.root_password_hash
-        ssh_authorized_keys     = var.ssh_authorized_keys
-        node_username           = var.node_username
-        node_user_password_hash = var.node_user_password_hash
-        permit_root_ssh         = var.permit_root_ssh
-        enable_write_node_ip    = var.enable_write_node_ip
-        pin_single_nic_node_ip  = var.pin_single_nic_node_ip
-        write_node_ip_script    = local.write_node_ip_script
-        enable_iscsi_prep       = local.enabled_iscsi_prep
-        iscsi_prep_script       = file("${path.module}/templates/elemental/storage/iscsi-prep.sh")
-        enable_local_path_prep  = local.enabled_local_path_prep
-        enable_debugfs          = contains(local.enabled_components, "observability-agent")
-        extra_units_yaml        = local.extra_units_yaml
-        extra_files             = var.extra_butane_files
+        root_password_hash                 = var.root_password_hash
+        ssh_authorized_keys                = var.ssh_authorized_keys
+        node_username                      = var.node_username
+        node_user_password_hash            = var.node_user_password_hash
+        permit_root_ssh                    = var.permit_root_ssh
+        enable_write_node_ip               = var.enable_write_node_ip
+        pin_single_nic_node_ip             = var.pin_single_nic_node_ip
+        write_node_ip_script               = local.write_node_ip_script
+        local_route_addresses              = var.local_route_addresses
+        local_route_addresses_after_server = var.local_route_addresses_after_server
+        local_routes_script                = file("${path.module}/templates/elemental/network/local-routes.sh")
+        enable_iscsi_prep                  = local.enabled_iscsi_prep
+        iscsi_prep_script                  = file("${path.module}/templates/elemental/storage/iscsi-prep.sh")
+        enable_local_path_prep             = local.enabled_local_path_prep
+        enable_debugfs                     = contains(local.enabled_components, "observability-agent")
+        extra_units_yaml                   = local.extra_units_yaml
+        extra_files                        = var.extra_butane_files
       })
 
       "kubernetes/cluster.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/cluster.yaml.tftpl", {

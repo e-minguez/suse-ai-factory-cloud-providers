@@ -227,6 +227,28 @@ variable "pin_single_nic_node_ip" {
   description = "Make write-node-ip.sh pin single-NIC nodes too, waiting up to 10 minutes for an address inside vpc_cidr; RKE2 does not start if none appears. For platforms whose DHCP can hand out an address outside the VPC range."
 }
 
+variable "local_route_addresses" {
+  type        = list(string)
+  default     = []
+  description = "IPv4 addresses (for example passthrough load balancer addresses) that control planes route locally through the interface holding the default route, from boot after network-online."
+
+  validation {
+    condition     = alltrue([for a in var.local_route_addresses : can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}$", a)) && can(cidrhost("${a}/32", 0))])
+    error_message = "local_route_addresses must contain IPv4 addresses without a prefix length."
+  }
+}
+
+variable "local_route_addresses_after_server" {
+  type        = list(string)
+  default     = []
+  description = "Like local_route_addresses, but the routes are added only once rke2-server is active, so a joining control plane reaches an existing server through the load balancer instead of itself."
+
+  validation {
+    condition     = alltrue([for a in var.local_route_addresses_after_server : can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}$", a)) && can(cidrhost("${a}/32", 0))])
+    error_message = "local_route_addresses_after_server must contain IPv4 addresses without a prefix length."
+  }
+}
+
 variable "extra_build_inputs" {
   type        = map(string)
   default     = {}

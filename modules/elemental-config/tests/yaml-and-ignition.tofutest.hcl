@@ -163,6 +163,69 @@ run "write_node_ip_is_off_by_default" {
   }
 }
 
+run "local_routes_are_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = !strcontains(output.elemental_files["butane.yaml"], "local-routes")
+    error_message = "butane.yaml must not mention local-routes unless a local_route_addresses list is set."
+  }
+}
+
+run "local_routes_render_units_and_script" {
+  command = plan
+
+  variables {
+    local_route_addresses              = ["10.20.0.100"]
+    local_route_addresses_after_server = ["10.20.0.101", "10.20.0.102"]
+  }
+
+  assert {
+    condition     = strcontains(output.elemental_files["butane.yaml"], "local-routes.sh 10.20.0.100\n")
+    error_message = "local-routes.service must pass local_route_addresses to the script."
+  }
+
+  assert {
+    condition     = strcontains(output.elemental_files["butane.yaml"], "local-routes.sh --after-server 10.20.0.101 10.20.0.102")
+    error_message = "local-routes-after-server.service must pass local_route_addresses_after_server to the script."
+  }
+
+  assert {
+    condition     = strcontains(output.elemental_files["butane.yaml"], "After=network-online.target rke2-server.service")
+    error_message = "The after-server unit must be ordered after rke2-server.service."
+  }
+
+  assert {
+    condition     = strcontains(output.elemental_files["butane.yaml"], "ip route replace to local")
+    error_message = "butane.yaml must carry the local-routes script."
+  }
+
+  assert {
+    condition     = can(yamldecode(output.elemental_files["butane.yaml"]))
+    error_message = "butane.yaml must stay valid YAML with local routes."
+  }
+}
+
+run "local_routes_reject_non_ipv4" {
+  command = plan
+
+  variables {
+    local_route_addresses = ["10.20.0.0/24"]
+  }
+
+  expect_failures = [var.local_route_addresses]
+}
+
+run "local_routes_after_server_reject_bad_address" {
+  command = plan
+
+  variables {
+    local_route_addresses_after_server = ["300.1.1.1"]
+  }
+
+  expect_failures = [var.local_route_addresses_after_server]
+}
+
 run "node_ignition_roles_and_canal" {
   command = plan
 

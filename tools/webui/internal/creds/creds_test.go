@@ -237,3 +237,37 @@ func TestEvrocConfigChecks(t *testing.T) {
 		}
 	}
 }
+
+func TestGCP(t *testing.T) {
+	d := t.TempDir()
+	if Env(d, "gcp") != nil {
+		t.Fatal("env before save")
+	}
+	for _, bad := range []string{"{{{", `{"type": "other"}`, `{}`} {
+		if err := Save(d, "gcp", map[string]string{"adc": bad}); err == nil {
+			t.Fatalf("accepted %q", bad)
+		}
+	}
+	key := `{"type": "service_account", "project_id": "p", "private_key": "-----BEGIN PRIVATE KEY-----abcdef"}`
+	if err := Save(d, "gcp", map[string]string{"adc": key}); err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(d, ".home", ".config", "gcloud", "application_default_credentials.json")
+	if mode(t, p) != 0o600 {
+		t.Fatal("mode")
+	}
+	env := strings.Join(Env(d, "gcp"), "\n")
+	if !strings.Contains(env, "GOOGLE_APPLICATION_CREDENTIALS="+p) || !strings.Contains(env, "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="+p) {
+		t.Fatal(env)
+	}
+	if st, _ := Status(d, "gcp"); !st["adc"] {
+		t.Fatal("status")
+	}
+	v, err := SecretValues(d, "gcp")
+	if err != nil || len(v) != 1 || !strings.HasPrefix(v[0], "-----BEGIN") {
+		t.Fatalf("secrets %v %v", v, err)
+	}
+	if err := Save(d, "gcp", map[string]string{"adc": ""}); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -1,0 +1,868 @@
+{
+  "skus": [
+    {
+      "name": "services/6F81-5844-456A/skus/A001",
+      "skuId": "A001",
+      "description": "N2 Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 36000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A002",
+      "skuId": "A002",
+      "description": "N2 Instance Ram running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "RAM",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 5000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A003",
+      "skuId": "A003",
+      "description": "E2 Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 25000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A004",
+      "skuId": "A004",
+      "description": "E2 Instance Ram running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "RAM",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 3000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A005",
+      "skuId": "A005",
+      "description": "G2 Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 30000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A006",
+      "skuId": "A006",
+      "description": "G2 Instance Ram running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "RAM",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 4000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A007",
+      "skuId": "A007",
+      "description": "Nvidia L4 GPU running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "GPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 800000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A008",
+      "skuId": "A008",
+      "description": "C3 Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 40000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A009",
+      "skuId": "A009",
+      "description": "C3 Instance Ram running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "RAM",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 5500000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A010",
+      "skuId": "A010",
+      "description": "G4 Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 45000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A011",
+      "skuId": "A011",
+      "description": "G4 Instance Ram running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "RAM",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 6000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/A012",
+      "skuId": "A012",
+      "description": "Nvidia RTX PRO 6000 GPU running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "GPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "3",
+                  "nanos": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/B001",
+      "skuId": "B001",
+      "description": "Balanced PD Capacity in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Storage",
+        "resourceGroup": "SSD",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.mo",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 120000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/B002",
+      "skuId": "B002",
+      "description": "Hyperdisk Balanced Capacity in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Storage",
+        "resourceGroup": "SSD",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.mo",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 140000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/B003",
+      "skuId": "B003",
+      "description": "Storage PD Snapshot in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Storage",
+        "resourceGroup": "PDSnapshot",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.mo",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 26000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/B004",
+      "skuId": "B004",
+      "description": "Storage Image in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Storage",
+        "resourceGroup": "Image",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.mo",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 50000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/C001",
+      "skuId": "C001",
+      "description": "External IP Charge on a Standard VM",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Network",
+        "resourceGroup": "IpAddress",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "global"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 5000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/C002",
+      "skuId": "C002",
+      "description": "Cloud NAT Gateway Uptime in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Network",
+        "resourceGroup": "NAT",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 1400000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/C003",
+      "skuId": "C003",
+      "description": "Network Load Balancing: Forwarding Rule Minimum Service Charge in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Network",
+        "resourceGroup": "LB",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 25000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/C004",
+      "skuId": "C004",
+      "description": "Network Load Balancing: Forwarding Rule Additional Service Charge in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Network",
+        "resourceGroup": "LB",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 10000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/D001",
+      "skuId": "D001",
+      "description": "N2 Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "Commit1Yr"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 1000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/D002",
+      "skuId": "D002",
+      "description": "Spot Preemptible N2 Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 1000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/D003",
+      "skuId": "D003",
+      "description": "N2 Custom Instance Core running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 1000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/D004",
+      "skuId": "D004",
+      "description": "N2 Instance Core running in Frankfurt",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "CPU",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west3"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "h",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 900000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/D005",
+      "skuId": "D005",
+      "description": "Regional Balanced PD Capacity in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Storage",
+        "resourceGroup": "SSD",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.mo",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 1000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/D006",
+      "skuId": "D006",
+      "description": "Balanced PD Capacity in Frankfurt",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Storage",
+        "resourceGroup": "SSD",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west3"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.mo",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 999000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "services/6F81-5844-456A/skus/D007",
+      "skuId": "D007",
+      "description": "E2 Instance Ram running in Netherlands",
+      "category": {
+        "serviceDisplayName": "Compute Engine",
+        "resourceFamily": "Compute",
+        "resourceGroup": "RAM",
+        "usageType": "OnDemand"
+      },
+      "serviceRegions": [
+        "europe-west4"
+      ],
+      "pricingInfo": [
+        {
+          "effectiveTime": "2026-11-20T00:00:00Z",
+          "pricingExpression": {
+            "usageUnit": "GiBy.mo",
+            "tieredRates": [
+              {
+                "startUsageAmount": 0,
+                "unitPrice": {
+                  "currencyCode": "USD",
+                  "units": "0",
+                  "nanos": 777000000
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

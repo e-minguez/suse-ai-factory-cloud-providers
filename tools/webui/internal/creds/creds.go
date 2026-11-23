@@ -5,6 +5,7 @@ package creds
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -25,6 +26,11 @@ var ErrUnknown = errors.New("unknown provider")
 // file lives under <clusters>/.home/.evroc (HOME of children, see HomeDir).
 const evrocRel = ".home/.evroc/config.yaml"
 
+// gcp: Application Default Credentials are read from
+// $HOME/.config/gcloud/application_default_credentials.json, so the file
+// lives under <clusters>/.home (HOME of children, see HomeDir).
+const gcpRel = ".home/.config/gcloud/application_default_credentials.json"
+
 func field(name, label, help string, sensitive bool) schema.Field {
 	return schema.Field{
 		Name: name, Type: "string", Description: help, Sensitive: sensitive,
@@ -43,6 +49,10 @@ func Fields(p string) []schema.Field {
 		}
 	case "evroc":
 		f := field("config", "evroc config file", "Content of ~/.evroc/config.yaml written by `evroc login`.", true)
+		f.Widget = "text"
+		return []schema.Field{f}
+	case "gcp":
+		f := field("adc", "Application Default Credentials", "Content of the JSON credentials file: a service account key, or application_default_credentials.json written by `gcloud auth application-default login`.", true)
 		f.Widget = "text"
 		return []schema.Field{f}
 	case "vultr":
@@ -86,6 +96,12 @@ func Status(clustersDir, p string) (map[string]bool, error) {
 		if err := ociStatus(clustersDir, out); err != nil {
 			return nil, err
 		}
+	case "gcp":
+		b, err := os.ReadFile(filepath.Join(clustersDir, gcpRel))
+		if err != nil && !os.IsNotExist(err) {
+			return nil, err
+		}
+		out["adc"] = len(strings.TrimSpace(string(b))) > 0
 	case "vultr", "exoscale":
 		vals, err := tfvars.Read(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider))
 		if err != nil {
@@ -117,6 +133,15 @@ func Save(clustersDir, p string, values map[string]string) error {
 		return writeFile(filepath.Join(clustersDir, evrocRel), []byte(cfg+"\n"))
 	case "oci":
 		return ociSave(clustersDir, values)
+	case "gcp":
+		cfg := strings.TrimSpace(values["adc"])
+		if cfg == "" {
+			return nil
+		}
+		if err := checkGCPCredentials(cfg); err != nil {
+			return err
+		}
+		return writeFile(filepath.Join(clustersDir, gcpRel), []byte(cfg+"\n"))
 	case "vultr", "exoscale":
 		set := map[string]any{}
 		for _, f := range Fields(p) {
@@ -162,6 +187,13 @@ func Env(clustersDir, p string) []string {
 			env = append(env, "AWS_CONFIG_FILE="+cfg)
 		}
 		return env
+	case "gcp":
+		// The Terraform provider finds the file under HOME on its own; gcloud (leftovers
+		// check) and an explicit path need the variables.
+		if f := filepath.Join(clustersDir, gcpRel); exists(f) {
+			return []string{"GOOGLE_APPLICATION_CREDENTIALS=" + f, "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=" + f}
+		}
+		return nil
 	case "evroc":
 		// Nothing: the provider and the CLI read $HOME/.evroc/config.yaml (CLI
 		// format); EVROC_CONFIG_FILE would make the provider expect the SDK format.
@@ -205,6 +237,19 @@ func SecretValues(clustersDir, p string) ([]string, error) {
 		collectSecrets(v, false, &out)
 	case "oci":
 		return ociSecretValues(clustersDir)
+	case "gcp":
+		b, err := os.ReadFile(filepath.Join(clustersDir, gcpRel))
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		var v any
+		if err := yaml.Unmarshal(b, &v); err != nil {
+			return nil, nil
+		}
+		collectSecrets(v, false, &out)
 	case "vultr", "exoscale":
 		vals, err := tfvars.Read(tfvars.Path(clustersDir, p, "", tfvars.LayerCommonProvider))
 		if err != nil {
@@ -325,6 +370,23 @@ func writeFile(path string, data []byte) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
+}
+
+// checkGCPCredentials accepts a credentials JSON of a type Application Default
+// Credentials load: service_account, authorized_user, external_account or
+// impersonated_service_account.
+func checkGCPCredentials(cfg string) error {
+	var c struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal([]byte(cfg), &c); err != nil {
+		return errors.New("Application Default Credentials are not valid JSON")
+	}
+	switch c.Type {
+	case "service_account", "authorized_user", "external_account", "impersonated_service_account":
+		return nil
+	}
+	return fmt.Errorf("credentials JSON has type %q; expected service_account, authorized_user, external_account or impersonated_service_account", c.Type)
 }
 
 // checkEvrocConfig accepts an `evroc login` config: currentProfile must name a

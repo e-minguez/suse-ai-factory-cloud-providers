@@ -1,6 +1,6 @@
 # End-to-end checks not yet run
 
-Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16).
+Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16). gcp has not run at all.
 Run these from the cluster directory (`examples/<provider>` or
 `clusters/<name>`); `make ci` must pass first.
 
@@ -51,6 +51,41 @@ joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only, nodes boot.
 - [ ] As a multicluster downstream: `cluster.sh register` with the NAT address in the management `ingress_cidrs`.
 - [ ] Expired PARs after 24 hours: `oci os preauth-request list --bucket-name <cluster>-build`.
+
+## gcp
+
+[ADR 014](decisions/014-gcp-module.md), [platform notes](providers/gcp.md). The
+module has only run against mocked providers: every item is open. Runbook:
+[examples/gcp/README.md](../examples/gcp/README.md). Do them in this order
+(staged, as on oci):
+
+- [ ] Quotas and org policies of the project (`gpus_all_regions`, the L4 or RTX
+      PRO 6000 quota, `vmExternalIpAccess`, `trustedImageProjects`,
+      `resourceLocations`); plan with `deploy_nodes = false` passes the checks.
+- [ ] Image build: guest attributes report `building` then `done`, the snapshot
+      and the global image exist, a failed build stops the wait at once, a
+      second build after `--rebuild` is not rate limited.
+- [ ] The Elemental image boots UEFI with `nvme` and `gve` on `n2-standard-4`
+      and on `g2-standard-4`; Ignition reads `user-data`; MTU and hostname from
+      DHCP.
+- [ ] One control plane, then three: local routes (the late internal route lets
+      the second and third join), health checks from all four ranges, Rancher
+      answers on the sslip.io name.
+- [ ] A worker pool and a GPU pool (L4, then RTX PRO 6000): GPU operator ready,
+      node advertises `nvidia.com/gpu`, `nvidia-smi` in a pod, precompiled
+      driver loads.
+- [ ] Rancher local-path volume and aif-operator.
+- [ ] `deploy.sh --rebuild` replaces every node; a plan afterwards shows no
+      changes.
+- [ ] `image_id` set to an existing image: the jumphost is a bastion only.
+- [ ] `deploy_nodes = false` builds the image only; a later run with `true`.
+- [ ] Pod MTU 1410 with the default `vpc_mtu`; a larger `vpc_mtu`.
+- [ ] Quota names in the plan messages match the metrics the API returns
+      (L4, G4, machine families); a quota that is too low fails the plan.
+- [ ] Destroy, then `tools/leftovers/gcp.sh <cluster>`; the target disk and the
+      snapshot are gone.
+- [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
+      address in the management `ingress_cidrs`.
 
 ## Multicluster
 

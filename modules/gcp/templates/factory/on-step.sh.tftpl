@@ -1,0 +1,28 @@
+# Publishes the build state as guest attributes of this instance, which
+# Terraform reads through the Compute API: no inbound port is needed.
+# Keys: build_id, state (building|done|failed), message.
+GA_URL="http://169.254.169.254/computeMetadata/v1/instance/guest-attributes/${namespace}"
+
+ga_put() {
+  curl -fsS -m 10 -X PUT -H 'Metadata-Flavor: Google' --data-binary "$2" "$GA_URL/$1" >/dev/null
+}
+
+# Only building tolerates misses; done and failed retry for about 5 minutes.
+publish() {
+  local i tries=3
+  [ "$1" = building ] || tries=20
+  for ((i = 1; i <= tries; i++)); do
+    if ga_put build_id "$BUILD_ID" && ga_put message "$${2:0:200}" && ga_put state "$1"; then
+      return 0
+    fi
+    sleep 5
+  done
+  log "WARNING: could not publish $1 after $tries attempt(s)"
+  return 1
+}
+
+case "$1" in
+  finished) ;;
+  failed) publish failed "$2" || true ;;
+  *) publish building "$1: $2" || true ;;
+esac

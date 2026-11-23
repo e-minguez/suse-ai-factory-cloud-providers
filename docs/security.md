@@ -106,6 +106,11 @@ meant to be tracked. `.deploy/` logs can contain sensitive values.
   only filter: worker and GPU nodes have no inbound rules, control planes admit
   only the load balancer ports, no node admits SSH from outside, and private
   network traffic is not filtered.
+- gcp: nodes have no public address by default and no service account. The
+  external load balancer admits `api_cidrs` and `ingress_cidrs` (plus the Cloud
+  NAT address for nodes); the supervisor (9345) is served only by the internal
+  load balancer, from the control plane and agent network tags
+  ([notes](providers/gcp.md#network)).
 - Kubernetes API (6443): the public listener admits `api_cidrs`, default
   `0.0.0.0/0`, so by default the API is protected by its certificates and
   tokens alone. Narrow it to keep the API off the internet.
