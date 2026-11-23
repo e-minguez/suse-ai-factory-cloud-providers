@@ -153,7 +153,8 @@ RUN set -eu; \
 # oci CLI for the oci leftovers check: wheels for the image's python313 and the
 # target arch, every one pinned by sha256 (tools/webui/oci-cli/lock.sh). pip only
 # unpacks them, so the stage runs on the build platform. No bytecode: the image
-# sets PYTHONPYCACHEPREFIX to the /tmp tmpfs instead.
+# sets PYTHONPYCACHEPREFIX to the /tmp tmpfs instead. oci_cli finds its services
+# directory only when its path contains site-packages.
 FROM --platform=$BUILDPLATFORM registry.suse.com/bci/bci-base:16.0 AS ocicli
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG TARGETARCH
@@ -166,8 +167,8 @@ RUN set -eu; \
       --abi cp313 --abi abi3 --abi none \
       --platform "manylinux_2_34_${a}" --platform "manylinux_2_28_${a}" \
       --platform "manylinux_2_17_${a}" --platform "manylinux2014_${a}" \
-      --target /out/oci-cli -r /tmp/requirements.txt; \
-    head -n 1 /out/oci-cli/bin/oci | grep -qx '#!/usr/bin/python3.13'
+      --target /out/oci-cli/site-packages -r /tmp/requirements.txt; \
+    head -n 1 /out/oci-cli/site-packages/bin/oci | grep -qx '#!/usr/bin/python3.13'
 
 # --------------------------------------------------------------- rootfs
 FROM registry.suse.com/bci/bci-micro:16.0 AS micro
