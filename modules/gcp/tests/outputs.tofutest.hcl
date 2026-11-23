@@ -258,21 +258,26 @@ run "instance_settings" {
 
   assert {
     condition = (
-      google_compute_instance.node["gcp-test-cp-01"].machine_type == "n2-standard-4" &&
-      google_compute_instance.node["gcp-test-cp-01"].boot_disk[0].initialize_params[0].size == 100 &&
-      google_compute_instance.node["gcp-test-wrk-01"].boot_disk[0].initialize_params[0].size == 300 &&
-      google_compute_instance.node["gcp-test-gpu-01"].boot_disk[0].initialize_params[0].size == 200
+      google_compute_instance.control_plane["gcp-test-cp-01"].machine_type == "n2-standard-4" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].boot_disk[0].initialize_params[0].size == 100 &&
+      google_compute_instance.agent["gcp-test-wrk-01"].boot_disk[0].initialize_params[0].size == 300 &&
+      google_compute_instance.agent["gcp-test-gpu-01"].boot_disk[0].initialize_params[0].size == 200
     )
     error_message = "Disk sizes follow the defaults and the pool overrides."
   }
 
   assert {
     condition = alltrue([
-      for h, i in google_compute_instance.node :
+      for h, i in merge(google_compute_instance.control_plane, google_compute_instance.agent) :
       length(i.service_account) == 0 && i.network_interface[0].nic_type == "GVNIC" && length(i.network_interface[0].access_config) == 0 &&
       join(",", keys(i.metadata)) == "user-data" && i.boot_disk[0].initialize_params[0].type == "pd-balanced"
     ])
     error_message = "Nodes have no service account and no public address, use gVNIC, take only user-data metadata and boot from pd-balanced."
+  }
+
+  assert {
+    condition     = length(google_compute_firewall.node_clients) == 0
+    error_message = "Without public node addresses there is no node-clients rule."
   }
 
   assert {
@@ -282,18 +287,18 @@ run "instance_settings" {
 
   assert {
     condition = (
-      google_compute_instance.node["gcp-test-cp-01"].tags == toset(["gcp-test-control-plane"]) &&
-      google_compute_instance.node["gcp-test-gpu-01"].tags == toset(["gcp-test-agent"])
+      google_compute_instance.control_plane["gcp-test-cp-01"].tags == toset(["gcp-test-control-plane"]) &&
+      google_compute_instance.agent["gcp-test-gpu-01"].tags == toset(["gcp-test-agent"])
     )
     error_message = "Network tags select the firewall rules."
   }
 
   assert {
     condition = (
-      google_compute_instance.node["gcp-test-gpu-01"].scheduling[0].on_host_maintenance == "TERMINATE" &&
-      google_compute_instance.node["gcp-test-cp-01"].scheduling[0].on_host_maintenance == "MIGRATE" &&
-      google_compute_instance.node["gcp-test-gpu-01"].boot_disk[0].interface == "NVME" &&
-      google_compute_instance.node["gcp-test-cp-01"].boot_disk[0].interface == null
+      google_compute_instance.agent["gcp-test-gpu-01"].scheduling[0].on_host_maintenance == "TERMINATE" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].scheduling[0].on_host_maintenance == "MIGRATE" &&
+      google_compute_instance.agent["gcp-test-gpu-01"].boot_disk[0].interface == "NVME" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].boot_disk[0].interface == null
     )
     error_message = "G2 needs NVMe and TERMINATE; N2 keeps SCSI and migrates."
   }
@@ -310,10 +315,10 @@ run "disk_type_by_family" {
 
   assert {
     condition = (
-      google_compute_instance.node["gcp-test-cp-01"].boot_disk[0].initialize_params[0].type == "hyperdisk-balanced" &&
-      google_compute_instance.node["gcp-test-cp-01"].boot_disk[0].interface == "NVME" &&
-      google_compute_instance.node["gcp-test-gpu-01"].boot_disk[0].initialize_params[0].type == "hyperdisk-balanced" &&
-      google_compute_instance.node["gcp-test-gpu-01"].scheduling[0].on_host_maintenance == "TERMINATE"
+      google_compute_instance.control_plane["gcp-test-cp-01"].boot_disk[0].initialize_params[0].type == "hyperdisk-balanced" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].boot_disk[0].interface == "NVME" &&
+      google_compute_instance.agent["gcp-test-gpu-01"].boot_disk[0].initialize_params[0].type == "hyperdisk-balanced" &&
+      google_compute_instance.agent["gcp-test-gpu-01"].scheduling[0].on_host_maintenance == "TERMINATE"
     )
     error_message = "C3 and G4 boot from Hyperdisk Balanced over NVMe; G4 terminates on host maintenance."
   }
@@ -329,11 +334,20 @@ run "public_ip_on_demand" {
 
   assert {
     condition = (
-      length(google_compute_instance.node["gcp-test-cp-01"].network_interface[0].access_config) == 1 &&
-      length(google_compute_instance.node["gcp-test-wrk-01"].network_interface[0].access_config) == 1 &&
-      length(google_compute_instance.node["gcp-test-gpu-01"].network_interface[0].access_config) == 0
+      length(google_compute_instance.control_plane["gcp-test-cp-01"].network_interface[0].access_config) == 1 &&
+      length(google_compute_instance.agent["gcp-test-wrk-01"].network_interface[0].access_config) == 1 &&
+      length(google_compute_instance.agent["gcp-test-gpu-01"].network_interface[0].access_config) == 0
     )
     error_message = "control_plane_public_ip and a pool public_ip add an ephemeral address."
+  }
+
+  assert {
+    condition = (
+      length(google_compute_firewall.node_clients) == 1 &&
+      toset(flatten([for a in google_compute_firewall.node_clients[0].allow : a.ports])) == toset(["6443", "80", "443"]) &&
+      google_compute_firewall.node_clients[0].target_tags == toset(["gcp-test-control-plane"])
+    )
+    error_message = "Nodes with a public address reach the external load balancer through the node-clients rule."
   }
 }
 
@@ -346,29 +360,29 @@ run "labels" {
 
   assert {
     condition = (
-      google_compute_instance.node["gcp-test-cp-01"].labels["elemental-cluster"] == "gcp-test" &&
-      google_compute_instance.node["gcp-test-cp-01"].labels["elemental-managed-by"] == "terraform" &&
-      google_compute_instance.node["gcp-test-cp-01"].labels["elemental-module"] == "ai-factory" &&
-      google_compute_instance.node["gcp-test-cp-01"].labels["elemental-created"] == "20261113-123456" &&
-      google_compute_instance.node["gcp-test-cp-01"].labels["elemental-role"] == "control_plane" &&
-      google_compute_instance.node["gcp-test-cp-01"].labels["elemental-pool"] == "cp" &&
-      google_compute_instance.node["gcp-test-gpu-02"].labels["elemental-role"] == "gpu" &&
-      google_compute_instance.node["gcp-test-gpu-02"].labels["elemental-pool"] == "gpu" &&
-      google_compute_instance.node["gcp-test-cp-01"].labels["team"] == "ai"
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["elemental-cluster"] == "gcp-test" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["elemental-managed-by"] == "terraform" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["elemental-module"] == "ai-factory" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["elemental-created"] == "20261113-123456" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["elemental-role"] == "control_plane" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["elemental-pool"] == "cp" &&
+      google_compute_instance.agent["gcp-test-gpu-02"].labels["elemental-role"] == "gpu" &&
+      google_compute_instance.agent["gcp-test-gpu-02"].labels["elemental-pool"] == "gpu" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["team"] == "ai"
     )
     error_message = "Instances carry the managed labels, role, pool and var.tags."
   }
 
   assert {
     condition = (
-      google_compute_instance.node["gcp-test-cp-01"].boot_disk[0].initialize_params[0].labels["elemental-pool"] == "cp" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].boot_disk[0].initialize_params[0].labels["elemental-pool"] == "cp" &&
       google_compute_instance.jumphost[0].labels["elemental-role"] == "jumphost" &&
       !contains(keys(google_compute_instance.jumphost[0].labels), "elemental-build") &&
       google_compute_disk.image_target[0].labels["elemental-role"] == "image" &&
       contains(keys(google_compute_snapshot.ai_factory[0].labels), "elemental-build") &&
       contains(keys(google_compute_image.ai_factory[0].labels), "elemental-build") &&
       contains(keys(google_compute_disk.image_target[0].labels), "elemental-build") &&
-      contains(keys(google_compute_instance.node["gcp-test-cp-01"].labels), "elemental-build") &&
+      contains(keys(google_compute_instance.control_plane["gcp-test-cp-01"].labels), "elemental-build") &&
       google_compute_image.ai_factory[0].labels["team"] == "ai"
     )
     error_message = "Disks, jumphost (no build label), snapshot and image are labelled."
@@ -482,7 +496,7 @@ run "image_id_nodes_use_it" {
 
   assert {
     condition = (
-      google_compute_instance.node["gcp-test-cp-01"].boot_disk[0].initialize_params[0].image == "projects/dummy-project/global/images/pinned" &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].boot_disk[0].initialize_params[0].image == "projects/dummy-project/global/images/pinned" &&
       length(google_compute_instance.jumphost) == 1 && !contains(keys(google_compute_instance.jumphost[0].labels), "elemental-build") &&
       !strcontains(google_compute_instance.jumphost[0].metadata["startup-script"], "image-factory")
     )
@@ -498,7 +512,7 @@ run "deploy_nodes_false_builds_image_only" {
   }
 
   assert {
-    condition     = length(output.nodes) == 0 && length(google_compute_image.ai_factory) == 1 && length(google_compute_instance.node) == 0
+    condition     = length(output.nodes) == 0 && length(google_compute_image.ai_factory) == 1 && length(google_compute_instance.control_plane) + length(google_compute_instance.agent) == 0
     error_message = "deploy_nodes = false builds the image and creates no nodes."
   }
 }
@@ -531,7 +545,7 @@ run "build_id_everywhere" {
       google_compute_image.ai_factory[0].labels["elemental-build"] == module.config.build_id &&
       google_compute_snapshot.ai_factory[0].labels["elemental-build"] == module.config.build_id &&
       google_compute_disk.image_target[0].labels["elemental-build"] == module.config.build_id &&
-      google_compute_instance.node["gcp-test-cp-01"].labels["elemental-build"] == module.config.build_id &&
+      google_compute_instance.control_plane["gcp-test-cp-01"].labels["elemental-build"] == module.config.build_id &&
       google_compute_image.ai_factory[0].name == "gcp-test-${module.config.build_id}"
     )
     error_message = "The build id labels the image chain and the nodes, and names the image."

@@ -466,7 +466,7 @@ run "existing_instances_are_not_counted_twice" {
   }
 
   assert {
-    condition     = length(google_compute_instance.node) == 6
+    condition     = length(google_compute_instance.control_plane) + length(google_compute_instance.agent) == 6
     error_message = "A plan on top of the cluster's own instances and addresses must pass with no quota left."
   }
 }
@@ -535,7 +535,7 @@ run "custom_machine_type_is_not_listed" {
   }
 
   assert {
-    condition     = google_compute_instance.node["gcp-test-cp-01"].machine_type == "n2-custom-4-16384"
+    condition     = google_compute_instance.control_plane["gcp-test-cp-01"].machine_type == "n2-custom-4-16384"
     error_message = "Custom machine types pass through."
   }
 }

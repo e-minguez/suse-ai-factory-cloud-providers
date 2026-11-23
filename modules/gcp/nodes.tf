@@ -22,10 +22,21 @@ locals {
       "elemental-build" = module.config.build_id
     })
   }
+
+  # GPU families cannot live-migrate: the host maintenance event stops the VM.
+  node_maintenance = {
+    for n in local.ignition_nodes : n.hostname =>
+    n.role == "gpu" || contains(local.gpu_families, local.machine_family[n.instance_type]) ? "TERMINATE" : "MIGRATE"
+  }
+
+  oversized_user_data_message = "Node metadata is over the budget of ${local.node_metadata_budget} characters for ${join(", ", local.oversized_user_data)} (a metadata value holds 262144 bytes). Look for unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
 }
 
-resource "google_compute_instance" "node" {
-  for_each = local.nodes
+# Control planes and agents are separate resources: Terraform orders by
+# resource, so a failed agent (GPU stockout) must not block the control plane
+# instance groups and load balancers.
+resource "google_compute_instance" "control_plane" {
+  for_each = { for h, n in local.nodes : h => n if n.role == "control_plane" }
 
   # Quota and machine type checks gate the launch.
   depends_on = [terraform_data.limits_check]
@@ -33,7 +44,7 @@ resource "google_compute_instance" "node" {
   name         = each.key
   zone         = each.value.zone
   machine_type = each.value.instance_type
-  tags         = [local.tags[each.value.role == "control_plane" ? "control_plane" : "agent"]]
+  tags         = [local.tags["control_plane"]]
   labels       = local.node_labels[each.key]
 
   boot_disk {
@@ -63,9 +74,8 @@ resource "google_compute_instance" "node" {
     user-data = local.node_user_data[each.key]
   }
 
-  # GPU families cannot live-migrate: the host maintenance event stops the VM.
   scheduling {
-    on_host_maintenance = each.value.role == "gpu" || contains(local.gpu_families, local.machine_family[each.value.instance_type]) ? "TERMINATE" : "MIGRATE"
+    on_host_maintenance = local.node_maintenance[each.key]
     automatic_restart   = true
   }
 
@@ -81,9 +91,70 @@ resource "google_compute_instance" "node" {
 
     precondition {
       condition     = length(local.oversized_user_data) == 0
-      error_message = "Node metadata is over the budget of ${local.node_metadata_budget} characters for ${join(", ", local.oversized_user_data)} (a metadata value holds 262144 bytes). Look for unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
+      error_message = local.oversized_user_data_message
     }
   }
+}
+
+resource "google_compute_instance" "agent" {
+  for_each = { for h, n in local.nodes : h => n if n.role != "control_plane" }
+
+  depends_on = [terraform_data.limits_check]
+
+  name         = each.key
+  zone         = each.value.zone
+  machine_type = each.value.instance_type
+  tags         = [local.tags["agent"]]
+  labels       = local.node_labels[each.key]
+
+  boot_disk {
+    interface = local.boot_disk_interface[each.value.instance_type]
+
+    initialize_params {
+      image  = local.effective_image_id
+      size   = each.value.disk_size_gb
+      type   = local.node_boot_disk_type[each.value.instance_type]
+      labels = local.node_labels[each.key]
+    }
+  }
+
+  network_interface {
+    subnetwork = local.subnetwork_id
+    nic_type   = "GVNIC"
+
+    dynamic "access_config" {
+      for_each = each.value.public_ip ? [1] : []
+
+      content {}
+    }
+  }
+
+  metadata = {
+    user-data = local.node_user_data[each.key]
+  }
+
+  scheduling {
+    on_host_maintenance = local.node_maintenance[each.key]
+    automatic_restart   = true
+  }
+
+  shielded_instance_config {
+    enable_secure_boot = false
+  }
+
+  lifecycle {
+    ignore_changes       = [metadata]
+    replace_triggered_by = [terraform_data.build_trigger, terraform_data.node_image]
+
+    precondition {
+      condition     = length(local.oversized_user_data) == 0
+      error_message = local.oversized_user_data_message
+    }
+  }
+}
+
+locals {
+  node_instances = merge(google_compute_instance.control_plane, google_compute_instance.agent)
 }
 
 # With build_trigger, replaces every node when the image changes (built or image_id).

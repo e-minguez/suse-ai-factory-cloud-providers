@@ -82,7 +82,7 @@ resource "terraform_data" "build_trigger" {
 resource "google_compute_instance" "jumphost" {
   count = local.jumphost_enabled ? 1 : 0
 
-  depends_on = [terraform_data.limits_check]
+  depends_on = [terraform_data.limits_check, google_compute_firewall.this]
 
   name         = local.jumphost_name
   zone         = local.zones[0]

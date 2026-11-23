@@ -30,11 +30,10 @@ locals {
   ))
 
   # Nodes dial the external address through Cloud NAT, so its address is a client
-  # too (an existing network lists it in nat_ips); nodes with a public address bypass NAT and arrive from that address.
-  node_client_cidrs = concat([for ip in local.egress_ips : "${ip}/32"], [
-    for h, i in google_compute_instance.node : "${i.network_interface[0].access_config[0].nat_ip}/32"
-    if length(i.network_interface[0].access_config) > 0
-  ])
+  # too (an existing network lists it in nat_ips). firewall_rules must not read
+  # the nodes: the jumphost depends on it; public node addresses get node-clients.
+  nat_client_cidrs = [for ip in local.egress_ips : "${ip}/32"]
+  public_ip_nodes  = [for h, n in local.nodes : h if n.public_ip]
 
   # Ports between cluster members: kubelet, VXLAN, node ports (control plane and agents alike).
   node_ports = module.rke2_ports.worker
@@ -81,8 +80,8 @@ locals {
         }]
       }
       lb-api = {
-        description = "Kubernetes API through the external load balancer from api_cidrs and the nodes (NAT or public address)"
-        sources     = { ranges = concat(var.api_cidrs, local.node_client_cidrs), tags = [] }
+        description = "Kubernetes API through the external load balancer from api_cidrs and the nodes through Cloud NAT"
+        sources     = { ranges = concat(var.api_cidrs, local.nat_client_cidrs), tags = [] }
         targets     = [local.tags["control_plane"]]
         allow       = [{ protocol = "tcp", ports = ["6443"] }]
       }
@@ -95,8 +94,8 @@ locals {
     },
     length(local.ingress_ports) == 0 ? {} : {
       lb-ingress = {
-        description = "Ingress through the external load balancer from ingress_cidrs and the nodes (NAT or public address)"
-        sources     = { ranges = concat(var.ingress_cidrs, local.node_client_cidrs), tags = [] }
+        description = "Ingress through the external load balancer from ingress_cidrs and the nodes through Cloud NAT"
+        sources     = { ranges = concat(var.ingress_cidrs, local.nat_client_cidrs), tags = [] }
         targets     = [local.tags["control_plane"]]
         allow       = [{ protocol = "tcp", ports = local.ingress_ports }]
       }
@@ -123,5 +122,26 @@ resource "google_compute_firewall" "this" {
       protocol = allow.value.protocol
       ports    = length(allow.value.ports) == 0 ? null : allow.value.ports
     }
+  }
+}
+
+# Nodes with a public address reach the external load balancer from that
+# address, not through Cloud NAT. Reads the nodes, so it waits for them.
+resource "google_compute_firewall" "node_clients" {
+  count = length(local.public_ip_nodes) > 0 ? 1 : 0
+
+  name        = "${var.cluster_name}-node-clients"
+  description = "Kubernetes API and ingress through the external load balancer from nodes with a public address"
+  network     = local.network_id
+  direction   = "INGRESS"
+  priority    = 1000
+  source_ranges = [
+    for h in local.public_ip_nodes : "${local.node_instances[h].network_interface[0].access_config[0].nat_ip}/32"
+  ]
+  target_tags = [local.tags["control_plane"]]
+
+  allow {
+    protocol = "tcp"
+    ports    = concat(["6443"], local.ingress_ports)
   }
 }

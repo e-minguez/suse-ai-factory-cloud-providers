@@ -65,10 +65,10 @@ output "nodes" {
       pool          = n.pool
       init          = n.init
       zone          = n.zone
-      private_ip    = google_compute_instance.node[h].network_interface[0].network_ip
-      public_ip     = try(google_compute_instance.node[h].network_interface[0].access_config[0].nat_ip, null)
+      private_ip    = local.node_instances[h].network_interface[0].network_ip
+      public_ip     = try(local.node_instances[h].network_interface[0].access_config[0].nat_ip, null)
       instance_type = n.instance_type
-      id            = google_compute_instance.node[h].id
+      id            = local.node_instances[h].id
       ssh_user      = var.node_username
     }
   }

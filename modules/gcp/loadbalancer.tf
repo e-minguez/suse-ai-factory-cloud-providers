@@ -93,7 +93,7 @@ resource "google_compute_instance_group" "control_plane" {
   description = "Control planes of ${var.cluster_name} in ${each.key}"
   zone        = each.key
   network     = local.network_id
-  instances   = [for n in local.control_plane_nodes : google_compute_instance.node[n.hostname].self_link if n.zone == each.key]
+  instances   = [for n in local.control_plane_nodes : google_compute_instance.control_plane[n.hostname].self_link if n.zone == each.key]
 }
 
 resource "google_compute_region_backend_service" "this" {
