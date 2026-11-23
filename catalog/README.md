@@ -115,6 +115,17 @@ These apply to every shape and are not implemented today:
 
 ## Provider notes
 
+### Exoscale: not in the catalog yet
+
+The shapes have no exoscale guides. The exoscale network layer moves from
+classic private networks to VPC first
+([#99](https://github.com/e-minguez/suse-ai-factory-cloud-providers/issues/99)),
+which changes node addressing and the network variables. The guides follow
+that change
+([#79](https://github.com/e-minguez/suse-ai-factory-cloud-providers/issues/79)).
+Until then, adapt a shape by hand on `examples/exoscale`, within the limits in
+[docs/providers/exoscale.md](../docs/providers/exoscale.md#limitations).
+
 ### Vultr: one VPC range for all clusters
 
 `examples/vultr` does not expose `vpc_cidr`, so every cluster in a shape with

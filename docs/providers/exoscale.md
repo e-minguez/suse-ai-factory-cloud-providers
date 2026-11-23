@@ -224,6 +224,15 @@ usage is back down and plan again.
 - Clients admitted by `api_cidrs` or `ingress_cidrs` can also reach a control
   plane directly on the same ports, because the NLB delivers to the public
   interface with the client address.
+- Image import: while `image_import_port_open` is true, the jumphost serves the
+  qcow2 over plain HTTP on port 80 to `0.0.0.0/0` so the template registration can
+  fetch it. The image holds the RKE2 join token, the password hashes and the rest
+  of the Ignition configuration. The URL path has 128 random bits and the
+  directory listing is hidden, so the image is not reachable without the URL, but
+  the URL and the image cross the network unencrypted, and the URL is in the state
+  and the build log. The image is deleted from the jumphost after 3600 s and
+  pass 2 removes the rule
+  ([#75](https://github.com/e-minguez/suse-ai-factory-cloud-providers/issues/75)).
 - No egress rules: Exoscale allows all egress until the first egress rule.
 - The API key and secret are inputs of the external data sources and end up
   in state, as other credentials do ([ADR 005](../decisions/005-state-secrets.md)).
