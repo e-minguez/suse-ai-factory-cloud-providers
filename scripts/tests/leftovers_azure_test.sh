@@ -131,8 +131,16 @@ run c1
 
 # --- missing CLI is inconclusive, no usage line
 reset
+# /usr/bin and /bin without az: CI runners ship the real az in /usr/bin.
+mkdir -p "$W/nocli"
+for d in /usr/bin /bin; do
+  for f in "$d"/*; do
+    n=${f##*/}
+    [ "$n" = az ] || [ -e "$W/nocli/$n" ] || ln -s "$f" "$W/nocli/$n"
+  done
+done
 RC=0
-OUT=$(PATH="/usr/bin:/bin" "$BASH" "$TOOL" c1 2>&1) || RC=$?
+OUT=$(PATH="$W/nocli" "$BASH" "$TOOL" c1 2>&1) || RC=$?
 [ "$RC" -eq 3 ] || fail "no CLI rc=$RC"
 has "$OUT" "az not installed"
 hasnt "$OUT" "usage:"
