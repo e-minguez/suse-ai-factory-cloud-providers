@@ -161,10 +161,11 @@ RUN zypper --non-interactive install --no-recommends python313 python313-pip && 
 COPY tools/webui/oci-cli/requirements.txt /tmp/requirements.txt
 RUN set -eu; \
     case "${TARGETARCH}" in amd64) a=x86_64 ;; arm64) a=aarch64 ;; *) exit 1 ;; esac; \
-    plats=(); for t in manylinux_2_34 manylinux_2_28 manylinux_2_17 manylinux2014; do plats+=(--platform "${t}_${a}"); done; \
     python3.13 -m pip install --no-cache-dir --no-compile --disable-pip-version-check \
       --require-hashes --only-binary=:all: --implementation cp --python-version 3.13 \
-      --abi cp313 --abi abi3 --abi none "${plats[@]}" \
+      --abi cp313 --abi abi3 --abi none \
+      --platform "manylinux_2_34_${a}" --platform "manylinux_2_28_${a}" \
+      --platform "manylinux_2_17_${a}" --platform "manylinux2014_${a}" \
       --target /out/oci-cli -r /tmp/requirements.txt; \
     head -n 1 /out/oci-cli/bin/oci | grep -qx '#!/usr/bin/python3.13'
 
