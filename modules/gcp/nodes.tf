@@ -48,7 +48,7 @@ resource "google_compute_instance" "node" {
   }
 
   network_interface {
-    subnetwork = google_compute_subnetwork.this.id
+    subnetwork = local.subnetwork_id
     nic_type   = "GVNIC"
 
     dynamic "access_config" {

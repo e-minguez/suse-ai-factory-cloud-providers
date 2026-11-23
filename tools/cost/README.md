@@ -174,7 +174,8 @@ image, the last two at the disk size (an upper bound: both store compressed
 data). Every external IPv4 in use (jumphost, public nodes, load balancer, NAT)
 costs the in-use rate. The three to five forwarding rules cost one minimum
 charge (first five rules) and the internal ones are priced like the external
-ones. Cloud NAT is priced per VM without a public address, up to 32.
+ones. Cloud NAT is priced per VM without a public address, up to 32; with `vpc_id` the
+module creates no NAT or NAT address, so both rows are dropped.
 
 Not included: outbound traffic, load balancer and NAT data processing, and
 hyperdisk provisioned performance.

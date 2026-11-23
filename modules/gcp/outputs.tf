@@ -84,8 +84,8 @@ output "image" {
 }
 
 output "egress_ips" {
-  description = "Public source IPs of cluster egress: the reserved Cloud NAT address."
-  value       = [google_compute_address.nat.address]
+  description = "Public source IPs of cluster egress: the reserved Cloud NAT address, or nat_ips with an existing network (empty when unset)."
+  value       = local.egress_ips
 }
 
 output "network" {
@@ -148,8 +148,8 @@ output "provider_details" {
   description = "GCP-specific values: project, network, subnet, load balancer addresses and forwarding rules, NAT address, image, jumphost and instance group names."
   value = {
     project    = var.gcp_project
-    network    = google_compute_network.this.self_link
-    subnetwork = google_compute_subnetwork.this.self_link
+    network    = local.network_self_link
+    subnetwork = local.subnetwork_self_link
     load_balancers = {
       external_address = local.external_address
       internal_address = local.api_vip
@@ -157,8 +157,8 @@ output "provider_details" {
       backend_services = { for k, b in google_compute_region_backend_service.this : k => b.id }
     }
     instance_groups = { for z, g in google_compute_instance_group.control_plane : z => g.self_link }
-    nat_address     = google_compute_address.nat.address
-    router          = google_compute_router.this.self_link
+    nat_address     = try(local.egress_ips[0], null)
+    router          = one(google_compute_router.this[*].self_link)
     image           = local.effective_image_id
     jumphost        = one(google_compute_instance.jumphost[*].self_link)
     zones           = local.zones

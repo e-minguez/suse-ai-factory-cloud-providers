@@ -118,7 +118,7 @@ locals {
     )
   }
 
-  new_static_addresses = length([for a in ["${var.cluster_name}-nat", "${var.cluster_name}-lb-external"] : a if !contains(local.existing_addresses, a)])
+  new_static_addresses = length([for a in concat(local.create_network ? ["${var.cluster_name}-nat"] : [], ["${var.cluster_name}-lb-external"]) : a if !contains(local.existing_addresses, a)])
 
   region_entries = concat(
     flatten([for p in local.new_placements : concat(

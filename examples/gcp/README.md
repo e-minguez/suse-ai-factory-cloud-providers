@@ -43,6 +43,9 @@ overrides the per-family boot disk type of the nodes.
 `keep_build_artifacts` has no effect on gcp: the build disk and the snapshot
 stay until the next build or `./deploy.sh --destroy`.
 
+Existing VPC: set `vpc_id` and `subnet_id` (and `nat_ips`; requirements in
+[docs/providers/gcp.md](../../docs/providers/gcp.md#existing-network)).
+
 ## End-to-end runbook
 
 Tfvars layering, later wins: `../common-all.tfvars` (admin_cidrs, password

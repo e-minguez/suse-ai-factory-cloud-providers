@@ -86,6 +86,11 @@ module has only run against mocked providers: every item is open. Runbook:
       snapshot are gone.
 - [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
       address in the management `ingress_cidrs`.
+- [ ] Existing network (`vpc_id`, `subnet_id`, `nat_ips`): the plan checks read
+      a live VPC and subnet and reject a subnet of another VPC or region; one
+      control plane boots in the subnet behind its Cloud NAT; `egress_ips`
+      equals `nat_ips`; Rancher answers; destroy leaves the VPC, subnet, router
+      and NAT; `tools/leftovers/gcp.sh <cluster>` does not list them.
 
 ## Multicluster
 

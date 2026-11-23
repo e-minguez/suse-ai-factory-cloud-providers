@@ -78,3 +78,14 @@ gpu_pools = {
 # tags replaces (not merges with) any tags map in common-*.tfvars. Lowercase only.
 # tags                        = { env = "test" }
 # image_id                    = "my-image"  # boot an existing image instead of building
+
+# Deploy into an existing VPC instead of creating one: a regional subnet in
+# `region` of that VPC, in this project, with Cloud NAT egress (nodes are
+# private). Both or neither. Set vpc_mtu to the VPC MTU when it is not 1460.
+# nat_ips lists the Cloud NAT addresses (not readable); without it egress_ips is
+# empty and the NAT client firewall entries are skipped. Destroy leaves the
+# network alone. See docs/providers/gcp.md#existing-network.
+# vpc_id    = "my-vpc"
+# subnet_id = "my-subnet"
+# nat_ips   = ["203.0.113.50"]
+# vpc_mtu   = 1460

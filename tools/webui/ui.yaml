@@ -148,6 +148,9 @@ gcp:
     Provider:
       - gcp_impersonate_service_account
       - {name: boot_disk_type, widget: text, options: [pd-balanced, pd-ssd, pd-standard, hyperdisk-balanced]}  # empty = per family; a select would always send a value
+      - vpc_id
+      - subnet_id
+      - nat_ips
 
 oci:
   examples:

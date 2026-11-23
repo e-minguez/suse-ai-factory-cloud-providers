@@ -28,7 +28,7 @@ resource "google_compute_address" "internal_lb" {
   region       = local.region
   address_type = "INTERNAL"
   purpose      = "SHARED_LOADBALANCER_VIP"
-  subnetwork   = google_compute_subnetwork.this.id
+  subnetwork   = local.subnetwork_id
   labels       = merge(local.labels, { "elemental-role" = "lb" })
 }
 
@@ -92,7 +92,7 @@ resource "google_compute_instance_group" "control_plane" {
   name        = "${var.cluster_name}-cp-${each.key}"
   description = "Control planes of ${var.cluster_name} in ${each.key}"
   zone        = each.key
-  network     = google_compute_network.this.id
+  network     = local.network_id
   instances   = [for n in local.control_plane_nodes : google_compute_instance.node[n.hostname].self_link if n.zone == each.key]
 }
 
@@ -104,7 +104,7 @@ resource "google_compute_region_backend_service" "this" {
   region                = local.region
   load_balancing_scheme = each.value.scheme
   protocol              = "TCP"
-  network               = each.value.scheme == "INTERNAL" ? google_compute_network.this.id : null
+  network               = each.value.scheme == "INTERNAL" ? local.network_id : null
   health_checks         = [google_compute_region_health_check.this[each.key].id]
 
   dynamic "backend" {
@@ -128,7 +128,7 @@ resource "google_compute_forwarding_rule" "this" {
   ports                 = [tostring(each.value.port)]
   ip_address            = each.value.scheme == "INTERNAL" ? google_compute_address.internal_lb.address : google_compute_address.external_lb.address
   backend_service       = google_compute_region_backend_service.this[each.key].id
-  network               = each.value.scheme == "INTERNAL" ? google_compute_network.this.id : null
-  subnetwork            = each.value.scheme == "INTERNAL" ? google_compute_subnetwork.this.id : null
+  network               = each.value.scheme == "INTERNAL" ? local.network_id : null
+  subnetwork            = each.value.scheme == "INTERNAL" ? local.subnetwork_id : null
   labels                = merge(local.labels, { "elemental-role" = "lb", "elemental-listener" = each.value.listener })
 }

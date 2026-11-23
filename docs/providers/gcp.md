@@ -19,7 +19,8 @@ below is open, and the list at the end is the first-deploy checklist.
 - `kind = "bare_metal"` and `placement` fail the plan.
 - `cluster_name` is at most 30 characters.
 - One region per cluster. Zones are full names (`europe-west4-a`).
-- No existing network (`vpc_id`) yet: the module always creates its VPC.
+- An existing network is read-only and must be in `gcp_project` (no Shared VPC
+  host project); see [Existing network](#existing-network).
 - The image does not use Secure Boot (`enable_secure_boot = false`).
 - `keep_build_artifacts` has no effect yet: the target disk and the snapshot
   stay until the next build or `terraform destroy`.
@@ -171,6 +172,54 @@ verified. It matters only for quick `--rebuild` loops.
 - The jumphost has an ephemeral public address and is the only SSH entry
   (`ProxyJump`, `scripts/ssh.sh`). Nodes have no public address unless
   `control_plane_public_ip` or a pool `public_ip` is true.
+
+## Existing network
+
+`vpc_id` (VPC network, name or self link) and `subnet_id` (regional subnet of
+that VPC in `region`, name or self link), both or neither, deploy into an
+existing VPC instead of creating one. Untested against a live project. Set them
+before the first apply: setting or clearing them later replaces the network
+objects, firewall rules, load balancers and nodes.
+
+- The module creates no VPC, subnet, Cloud Router, Cloud NAT or NAT address, and
+  reads the network and subnet with data sources. It still creates its own
+  firewall rules (target tags), addresses, load balancers and instances in it.
+- Both must be in `gcp_project`. A Shared VPC network of a host project is
+  rejected: the firewall rules would have to live in the host project.
+- Plan checks: the subnet is in `region`, belongs to `vpc_id`, `vpc_cidr` is
+  null or equal to its primary range, the range is a /16 to /28, holds the
+  nodes, the jumphost and the internal load balancer address, and does not
+  overlap `10.42.0.0/16` or `10.43.0.0/16`. Traefik trusts proxy protocol from
+  that range.
+- `vpc_cidr` and the node-ip pinning use the subnet primary range. Secondary
+  ranges are not used.
+- Nodes are private: the subnet needs Cloud NAT egress (or another route to the
+  internet) before the first boot. The module does not check it.
+- The VPC MTU cannot be read. `vpc_mtu` (default 1460) sets the pod MTU
+  (`vpc_mtu - 50`): set it to the MTU of the VPC when that is not 1460.
+- Cloud NAT addresses cannot be read either. `nat_ips` lists them: they become
+  the `egress_ips` output and the NAT client entries of the `lb-api` and
+  `lb-ingress` firewall rules (nodes dial the external address through NAT; the
+  load balancers keep the client address). Without `nat_ips`, `egress_ips` is
+  empty and nodes behind the NAT cannot reach the external load balancer
+  addresses (api_host, Rancher) until the NAT addresses are in `api_cidrs` and
+  `ingress_cidrs`. Automatic NAT address allocation changes the address:
+  reserve static ones for the NAT.
+- `provider_details.router` is null and `nat_address` is the first of
+  `nat_ips`.
+- Destroy leaves the network in place. `tools/leftovers/gcp.sh` matches by
+  name, so it suggests a VPC, subnet or router only when it is named like the
+  cluster (`<cluster>` or `<cluster>-*`): do not name the existing network that
+  way.
+
+Find the values:
+
+```bash
+gcloud compute networks list --project <project>
+gcloud compute networks subnets list --project <project> --network <vpc> --regions <region>
+gcloud compute routers nats list --router <router> --region <region> --project <project>
+gcloud compute routers get-nat-ip-info <router> --nat-name <nat> --region <region> --project <project>
+```
 
 ## Nodes
 

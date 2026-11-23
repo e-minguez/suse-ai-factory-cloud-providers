@@ -30,9 +30,8 @@ locals {
   ))
 
   # Nodes dial the external address through Cloud NAT, so its address is a client
-  # too; nodes with a public address bypass NAT and arrive from that address.
-  nat_cidr = "${google_compute_address.nat.address}/32"
-  node_client_cidrs = concat([local.nat_cidr], [
+  # too (an existing network lists it in nat_ips); nodes with a public address bypass NAT and arrive from that address.
+  node_client_cidrs = concat([for ip in local.egress_ips : "${ip}/32"], [
     for h, i in google_compute_instance.node : "${i.network_interface[0].access_config[0].nat_ip}/32"
     if length(i.network_interface[0].access_config) > 0
   ])
@@ -110,7 +109,7 @@ resource "google_compute_firewall" "this" {
 
   name          = "${var.cluster_name}-${each.key}"
   description   = each.value.description
-  network       = google_compute_network.this.id
+  network       = local.network_id
   direction     = "INGRESS"
   priority      = 1000
   source_ranges = length(each.value.sources.ranges) == 0 ? null : each.value.sources.ranges

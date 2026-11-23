@@ -112,7 +112,7 @@ resource "google_compute_instance" "jumphost" {
   }
 
   network_interface {
-    subnetwork = google_compute_subnetwork.this.id
+    subnetwork = local.subnetwork_id
     # gVNIC only where the family requires it: the public Leap image may not declare it.
     nic_type = contains(local.nvme_families, local.machine_family[local.jumphost_type]) ? "GVNIC" : null
 

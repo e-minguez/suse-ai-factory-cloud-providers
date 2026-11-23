@@ -96,12 +96,17 @@ func (gcp) Expand(cfg provider.Config) ([]pricing.Resource, []pricing.Excluded) 
 	)
 
 	// network.tf: Cloud NAT is charged per VM that uses it up to a cap, plus
-	// the in-use external address of the gateway.
-	res = append(res,
-		pricing.Resource{Kind: pricing.KindFixed, Label: "cloud nat gateway (per VM, max 32)", Role: "network", RateID: rateNATVM, Qty: min(natVMs, natVMCap)},
-		pricing.Resource{Kind: pricing.KindFixed, Label: "external IPv4 (cloud nat)", Role: "network", RateID: rateIP, Qty: 1},
-		pricing.Resource{Kind: pricing.KindFree, Label: "vpc, subnet, firewall rules, router, health checks, internal address", Role: "network", Qty: 1},
-	)
+	// the in-use external address of the gateway. With vpc_id the module
+	// creates neither: the existing NAT is not its cost.
+	if d.existingNet {
+		res = append(res, pricing.Resource{Kind: pricing.KindFree, Label: "firewall rules, health checks, internal address", Role: "network", Qty: 1})
+	} else {
+		res = append(res,
+			pricing.Resource{Kind: pricing.KindFixed, Label: "cloud nat gateway (per VM, max 32)", Role: "network", RateID: rateNATVM, Qty: min(natVMs, natVMCap)},
+			pricing.Resource{Kind: pricing.KindFixed, Label: "external IPv4 (cloud nat)", Role: "network", RateID: rateIP, Qty: 1},
+			pricing.Resource{Kind: pricing.KindFree, Label: "vpc, subnet, firewall rules, router, health checks, internal address", Role: "network", Qty: 1},
+		)
+	}
 
 	return res, []pricing.Excluded{
 		{Label: "outbound traffic", Reason: "traffic-dependent; internet egress is billed per GiB"},

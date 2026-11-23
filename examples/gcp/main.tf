@@ -31,6 +31,9 @@ module "ai_factory" {
   worker_pools                = var.worker_pools
   image_id                    = var.image_id
   vpc_cidr                    = var.vpc_cidr
+  vpc_id                      = var.vpc_id
+  subnet_id                   = var.subnet_id
+  nat_ips                     = var.nat_ips
   image_rebuild               = var.image_rebuild
   aif_release                 = var.aif_release
   components                  = var.components

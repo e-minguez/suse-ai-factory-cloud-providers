@@ -115,6 +115,7 @@ C4, N4, G4, A3 and later). Existing networks (`vpc_id`) are not supported yet.
 | jumphost\_instance\_type | Machine type, flavor or plan of the jumphost that builds the image and serves as SSH bastion. Null uses the provider default. | `string` | `null` | no |
 | jumphost\_username | Login user of the jumphost. Empty makes the jumphost root-only. | `string` | `"suse"` | no |
 | keep\_build\_artifacts | Keep the intermediate build artifacts (raw image, build disks) after the image is registered. No effect on vultr, which builds on the jumphost, nor on gcp, which keeps the build disk and snapshot until the next build or destroy. | `bool` | `false` | no |
+| nat\_ips | Public addresses of the Cloud NAT serving subnet\_id, for the egress\_ips output and the firewall rules that admit nodes to the external load balancer. Cloud NAT cannot be read back, so list them; empty skips both. Only with vpc\_id. | `list(string)` | `[]` | no |
 | node\_user\_password\_hash | Crypt hash for node\_username. | `string` | n/a | yes |
 | node\_username | Unprivileged login account created on every node. | `string` | `"suse"` | no |
 | nvidia\_api\_key | NVIDIA NGC API key. Optional, recommended with aif-operator; unset omits the nvidia credentials block. | `string` | `null` | no |
@@ -140,12 +141,14 @@ C4, N4, G4, A3 and later). Existing networks (`vpc_id`) are not supported yet.
 | security\_primary\_endpoint | Federation endpoint of the primary NeuVector cluster as host or host:port (port defaults to 443). Required with security-downstream. | `string` | `null` | no |
 | security\_rancher\_url | Rancher URL (https://...) used for NeuVector Rancher SSO. Null uses the local Rancher when rancher is enabled, otherwise SSO is off. | `string` | `null` | no |
 | ssh\_authorized\_keys | SSH public keys for node\_username, and for root when permit\_root\_ssh is set. | `list(string)` | n/a | yes |
+| subnet\_id | Existing regional subnet of vpc\_id in region (name or self link) for every node and the jumphost. It needs Cloud NAT egress, because nodes are private. Required with vpc\_id. | `string` | `null` | no |
 | suse\_registry\_password | SUSE registry password, paired with suse\_registry\_username. | `string` | `null` | no |
 | suse\_registry\_username | SUSE registry username. Optional, set together with suse\_registry\_password; recommended with aif-operator. | `string` | `null` | no |
 | suse\_storage\_nodes | Where the suse-storage (Longhorn) disks live: roles (control\_plane, worker for all worker\_pools, gpu for all gpu\_pools) and/or pool names, e.g. ["control\_plane", "storage"]. At least three such nodes are required. | `list(string)` | <pre>[<br/>  "control_plane"<br/>]</pre> | no |
 | sysext\_image\_overrides | Beta workaround: per-extension OCI image overrides written into the release manifest, keyed by extension name. See docs/workarounds.md. | `map(string)` | <pre>{<br/>  "suse-storage": "registry.suse.com/beta/uc/longhorn:5.279-4.13"<br/>}</pre> | no |
 | tags | Extra tags or labels on every resource that supports them. Keys must not use the elemental- prefix, which the module manages. | `map(string)` | `{}` | no |
 | vpc\_cidr | IPv4 CIDR of the cluster network, from which subnets are derived; null uses the provider default. Must not overlap the RKE2 cluster (10.42.0.0/16) or service (10.43.0.0/16) CIDRs. | `string` | `null` | no |
+| vpc\_id | Existing VPC network (name or self link) in gcp\_project to deploy into instead of creating one. Requires subnet\_id; the module then creates no VPC, subnet, Cloud Router or Cloud NAT. | `string` | `null` | no |
 | vpc\_mtu | MTU of the cluster network interfaces; the pod MTU is derived from it. Null uses the provider default. | `number` | `null` | no |
 | worker\_pools | Worker pools without GPUs keyed by pool name, with the same fields as gpu\_pools. Hostnames are <cluster\_name>-<pool>-NN, so keys must not collide with gpu\_pools keys. | <pre>map(object({<br/>    instance_type = string<br/>    count         = optional(number, 1)<br/>    disk_size_gb  = optional(number)<br/>    zone          = optional(string)<br/>    public_ip     = optional(bool, false)<br/>    kind          = optional(string, "vm")<br/>    placement     = optional(string)<br/>  }))</pre> | `{}` | no |
 | zones | Zones the cluster spans, suffixes or full names as the provider expects (for example ["a", "b"] or ["europe-west4-a"]); control planes are spread round-robin. Empty uses the provider default; providers without zones accept at most one entry. | `list(string)` | `[]` | no |
@@ -158,7 +161,7 @@ C4, N4, G4, A3 and later). Existing networks (`vpc_id`) are not supported yet.
 | api\_vip | Reserved internal IPv4 of the internal passthrough load balancer: the address nodes join through. |
 | build\_status | Guest attributes of the build host (project, zone, instance) and the build host reachable via the jumphost while no image exists yet; null once it does. |
 | cluster\_name | Cluster name. |
-| egress\_ips | Public source IPs of cluster egress: the reserved Cloud NAT address. |
+| egress\_ips | Public source IPs of cluster egress: the reserved Cloud NAT address, or nat\_ips with an existing network (empty when unset). |
 | image | Image build ID and the image self link per region (images are global); none while the image does not exist. |
 | ingress\_endpoint | URL of the ingress listeners on the external load balancer. null when ingress\_controller is none. |
 | jumphost | Jumphost addresses and login user (root when jumphost\_username is empty). The addresses are null when image\_id is set and deploy\_nodes is false: no jumphost exists then. |

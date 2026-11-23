@@ -26,8 +26,10 @@ locals {
   # A Google Cloud region; europe-west4 offers L4 and RTX PRO 6000 GPUs in zones a, b and c.
   region = coalesce(var.region, "europe-west4")
 
-  vpc_cidr = coalesce(var.vpc_cidr, "10.20.0.0/20")
-  # A custom-mode VPC defaults to 1460; the platform accepts 1300-8896.
+  # An existing subnet (subnet_id) supplies its own primary range.
+  vpc_cidr = local.create_network ? coalesce(var.vpc_cidr, "10.20.0.0/20") : try(data.google_compute_subnetwork.existing[0].ip_cidr_range, coalesce(var.vpc_cidr, "10.20.0.0/20"))
+  # A custom-mode VPC defaults to 1460; the platform accepts 1300-8896. The MTU of
+  # an existing network cannot be read: set vpc_mtu to it when it is not 1460.
   vpc_mtu      = coalesce(var.vpc_mtu, 1460)
   pod_veth_mtu = local.vpc_mtu - 50
   vpc_prefix   = tonumber(split("/", local.vpc_cidr)[1])

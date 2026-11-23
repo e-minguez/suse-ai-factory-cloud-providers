@@ -24,6 +24,7 @@ func (gcp) Name() string { return "gcp" }
 // details is Config.Details for gcp.
 type details struct {
 	bootDiskType string // boot_disk_type; "" = the family default
+	existingNet  bool   // vpc_id set: the NAT and its address belong to the user
 }
 
 // Mirrors machine_type_format and fractional_g4 in modules/gcp/locals.tf.
@@ -54,6 +55,7 @@ func (gcp) Resolve(c tfconfig.Common, v *tfconfig.Vars) (provider.Config, []tfco
 	d := details{}
 	if v != nil {
 		d.bootDiskType = v.String("boot_disk_type")
+		d.existingNet = v.String("vpc_id") != ""
 	}
 
 	var diags []tfconfig.Diagnostic

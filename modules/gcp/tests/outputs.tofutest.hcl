@@ -196,7 +196,7 @@ run "output_set" {
 
   assert {
     condition = (
-      output.egress_ips == ["203.0.113.20"] &&
+      join(",", output.egress_ips) == "203.0.113.20" &&
       output.network.vpc_cidr == "10.20.0.0/20" && output.network.subnet_cidrs == ["10.20.0.0/20"]
     )
     error_message = "egress_ips is the reserved NAT address; network has one subnet."
@@ -377,7 +377,7 @@ run "labels" {
   assert {
     condition = (
       google_compute_address.external_lb.labels["elemental-role"] == "lb" &&
-      google_compute_address.nat.labels["elemental-role"] == "network" &&
+      google_compute_address.nat[0].labels["elemental-role"] == "network" &&
       google_compute_forwarding_rule.this["ext-https"].labels["elemental-listener"] == "https" &&
       google_compute_forwarding_rule.this["int-supervisor"].labels["elemental-listener"] == "supervisor"
     )

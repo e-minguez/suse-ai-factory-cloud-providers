@@ -159,6 +159,20 @@ func TestBootDiskTypeOverride(t *testing.T) {
 	}
 }
 
+func TestExistingNetworkDropsNAT(t *testing.T) {
+	cfg, _ := gcp{}.Resolve(baseCommon(), nil)
+	cfg.Details = details{existingNet: true}
+	m := byLabel(first(gcp{}.Expand(cfg)))
+	for k := range m {
+		if strings.Contains(k, "cloud nat") {
+			t.Errorf("existing network: %q priced", k)
+		}
+	}
+	if m["external IPv4 (load balancer)|"].Qty != 1 {
+		t.Errorf("the load balancer address is still ours: %+v", m)
+	}
+}
+
 func first(r []pricing.Resource, _ []pricing.Excluded) []pricing.Resource { return r }
 
 func TestResolveTypeErrors(t *testing.T) {

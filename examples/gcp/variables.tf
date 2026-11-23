@@ -352,7 +352,25 @@ variable "image_rebuild" {
 variable "vpc_cidr" {
   type        = string
   default     = null
-  description = "IPv4 CIDR of the subnet. Null uses 10.20.0.0/20."
+  description = "IPv4 CIDR of the subnet. Null uses 10.20.0.0/20, or with vpc_id the primary range of the existing subnet."
+}
+
+variable "vpc_id" {
+  type        = string
+  default     = null
+  description = "Existing VPC network (name or self link) to deploy into. Requires subnet_id; null creates the VPC, subnet, Cloud Router and Cloud NAT."
+}
+
+variable "subnet_id" {
+  type        = string
+  default     = null
+  description = "Existing regional subnet of vpc_id in region (name or self link). It needs Cloud NAT egress. Required with vpc_id."
+}
+
+variable "nat_ips" {
+  type        = list(string)
+  default     = []
+  description = "Public addresses of the Cloud NAT serving subnet_id (egress_ips output, NAT client firewall entries). Only with vpc_id; empty skips them."
 }
 
 variable "control_plane_disk_size_gb" {

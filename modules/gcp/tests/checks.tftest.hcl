@@ -180,10 +180,10 @@ run "network" {
 
   assert {
     condition = (
-      google_compute_network.this.mtu == 1460 && !google_compute_network.this.auto_create_subnetworks &&
-      google_compute_subnetwork.this.ip_cidr_range == "10.20.0.0/20" &&
-      google_compute_router_nat.this.nat_ip_allocate_option == "MANUAL_ONLY" &&
-      google_compute_router_nat.this.source_subnetwork_ip_ranges_to_nat == "ALL_SUBNETWORKS_ALL_IP_RANGES"
+      google_compute_network.this[0].mtu == 1460 && !google_compute_network.this[0].auto_create_subnetworks &&
+      google_compute_subnetwork.this[0].ip_cidr_range == "10.20.0.0/20" &&
+      google_compute_router_nat.this[0].nat_ip_allocate_option == "MANUAL_ONLY" &&
+      google_compute_router_nat.this[0].source_subnetwork_ip_ranges_to_nat == "ALL_SUBNETWORKS_ALL_IP_RANGES"
     )
     error_message = "Custom-mode VPC with MTU 1460, one subnet and a Cloud NAT on the reserved address."
   }
@@ -198,7 +198,7 @@ run "custom_mtu_and_cidr" {
   }
 
   assert {
-    condition     = google_compute_network.this.mtu == 8896 && google_compute_subnetwork.this.ip_cidr_range == "10.30.0.0/16"
+    condition     = google_compute_network.this[0].mtu == 8896 && google_compute_subnetwork.this[0].ip_cidr_range == "10.30.0.0/16"
     error_message = "vpc_mtu and vpc_cidr must reach the network and the subnet."
   }
 }
@@ -599,4 +599,303 @@ run "gcp_project_must_be_an_id" {
   }
 
   expect_failures = [var.gcp_project]
+}
+
+# Existing network (vpc_id, subnet_id): read-only; no network object is created.
+run "existing_network" {
+  command = plan
+
+  variables {
+    vpc_id    = "corp-vpc"
+    subnet_id = "projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes"
+    nat_ips   = ["198.51.100.77"]
+    vpc_mtu   = 1500
+  }
+
+  override_data {
+    target          = data.google_compute_network.existing
+    override_during = plan
+    values = {
+      id        = "projects/dummy-project/global/networks/corp-vpc"
+      self_link = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+    }
+  }
+
+  override_data {
+    target          = data.google_compute_subnetwork.existing
+    override_during = plan
+    values = {
+      id            = "projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes"
+      self_link     = "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes"
+      network       = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+      ip_cidr_range = "172.20.8.0/22"
+    }
+  }
+
+  assert {
+    condition = alltrue([
+      length(google_compute_network.this) == 0,
+      length(google_compute_subnetwork.this) == 0,
+      length(google_compute_address.nat) == 0,
+      length(google_compute_router.this) == 0,
+      length(google_compute_router_nat.this) == 0,
+    ])
+    error_message = "With vpc_id the module must not create a VPC, subnet, address, router or NAT."
+  }
+
+  assert {
+    condition = alltrue([
+      google_compute_firewall.this["lb-api"].network == "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc",
+      google_compute_address.internal_lb.subnetwork == "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes",
+      contains(google_compute_firewall.this["lb-api"].source_ranges, "198.51.100.77/32"),
+      contains(google_compute_firewall.this["lb-ingress"].source_ranges, "198.51.100.77/32"),
+      !contains(google_compute_firewall.this["lb-api"].source_ranges, "203.0.113.20/32"),
+    ])
+    error_message = "Firewall rules and the internal address must use the existing network and subnet; nat_ips are the clients."
+  }
+
+  assert {
+    condition = alltrue([
+      join(",", output.egress_ips) == "198.51.100.77",
+      output.network.vpc_cidr == "172.20.8.0/22",
+      join(",", output.network.subnet_cidrs) == "172.20.8.0/22",
+      output.provider_details.network == "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc",
+      output.provider_details.subnetwork == "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes",
+      output.provider_details.router == null,
+    ])
+    error_message = "Outputs must report the existing network, its subnet range and nat_ips."
+  }
+
+  # The subnet range, not the 10.20.0.0/20 default, reaches the image config.
+  assert {
+    condition = alltrue([
+      anytrue([for k, v in nonsensitive(module.config.elemental_files) : strcontains(v, "172.20.8.0/22")]),
+      !anytrue([for k, v in nonsensitive(module.config.elemental_files) : strcontains(v, "10.20.0.0/20")]),
+      strcontains(nonsensitive(module.config.write_node_ip_script), "VPC_CIDR=\"172.20.8.0/22\""),
+    ])
+    error_message = "vpc_cidr must derive from the existing subnet."
+  }
+}
+
+run "existing_network_without_nat_ips" {
+  command = plan
+
+  variables {
+    vpc_id    = "corp-vpc"
+    subnet_id = "corp-nodes"
+  }
+
+  override_data {
+    target          = data.google_compute_network.existing
+    override_during = plan
+    values = {
+      id        = "n"
+      self_link = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+    }
+  }
+
+  override_data {
+    target          = data.google_compute_subnetwork.existing
+    override_during = plan
+    values = {
+      id            = "s"
+      self_link     = "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes"
+      network       = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+      ip_cidr_range = "172.20.8.0/22"
+    }
+  }
+
+  assert {
+    condition     = length(output.egress_ips) == 0 && output.provider_details.nat_address == null && !contains(google_compute_firewall.this["lb-api"].source_ranges, "0.0.0.0/32")
+    error_message = "Without nat_ips the egress output is empty and no NAT client rule is added."
+  }
+}
+
+run "existing_network_partial" {
+  command = plan
+
+  variables {
+    vpc_id = "corp-vpc"
+  }
+
+  expect_failures = [var.subnet_id]
+}
+
+run "nat_ips_need_vpc_id" {
+  command = plan
+
+  variables {
+    nat_ips = ["198.51.100.77"]
+  }
+
+  expect_failures = [var.nat_ips]
+}
+
+run "existing_network_vpc_cidr_mismatch" {
+  command = plan
+
+  variables {
+    vpc_id    = "corp-vpc"
+    subnet_id = "corp-nodes"
+    vpc_cidr  = "10.40.0.0/16"
+  }
+
+  override_data {
+    target          = data.google_compute_network.existing
+    override_during = plan
+    values = {
+      id        = "n"
+      self_link = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+    }
+  }
+
+  override_data {
+    target          = data.google_compute_subnetwork.existing
+    override_during = plan
+    values = {
+      id            = "s"
+      self_link     = "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes"
+      network       = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+      ip_cidr_range = "172.20.8.0/22"
+    }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "existing_subnet_other_network" {
+  command = plan
+
+  variables {
+    vpc_id    = "corp-vpc"
+    subnet_id = "corp-nodes"
+  }
+
+  override_data {
+    target          = data.google_compute_network.existing
+    override_during = plan
+    values = {
+      id        = "n"
+      self_link = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+    }
+  }
+
+  override_data {
+    target          = data.google_compute_subnetwork.existing
+    override_during = plan
+    values = {
+      id            = "s"
+      self_link     = "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes"
+      network       = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/other"
+      ip_cidr_range = "172.20.8.0/22"
+    }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "existing_subnet_other_region" {
+  command = plan
+
+  variables {
+    vpc_id    = "corp-vpc"
+    subnet_id = "projects/dummy-project/regions/europe-west1/subnetworks/corp-nodes"
+  }
+
+  override_data {
+    target          = data.google_compute_network.existing
+    override_during = plan
+    values = {
+      id        = "n"
+      self_link = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+    }
+  }
+
+  override_data {
+    target          = data.google_compute_subnetwork.existing
+    override_during = plan
+    values = {
+      id            = "s"
+      self_link     = "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west1/subnetworks/corp-nodes"
+      network       = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+      ip_cidr_range = "172.20.8.0/22"
+    }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "existing_subnet_too_small" {
+  command = plan
+
+  variables {
+    vpc_id    = "corp-vpc"
+    subnet_id = "corp-nodes"
+
+    worker_pools = { wrk = { instance_type = "n2-standard-8", count = 10 } }
+  }
+
+  override_data {
+    target          = data.google_compute_network.existing
+    override_during = plan
+    values = {
+      id        = "n"
+      self_link = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+    }
+  }
+
+  override_data {
+    target          = data.google_compute_subnetwork.existing
+    override_during = plan
+    values = {
+      id            = "s"
+      self_link     = "https://www.googleapis.com/compute/v1/projects/dummy-project/regions/europe-west4/subnetworks/corp-nodes"
+      network       = "https://www.googleapis.com/compute/v1/projects/dummy-project/global/networks/corp-vpc"
+      ip_cidr_range = "172.20.8.0/28"
+    }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "existing_network_other_project" {
+  command = plan
+
+  variables {
+    vpc_id    = "projects/host-project/global/networks/corp-vpc"
+    subnet_id = "projects/host-project/regions/europe-west4/subnetworks/corp-nodes"
+  }
+
+  override_data {
+    target          = data.google_compute_network.existing
+    override_during = plan
+    values = {
+      id        = "n"
+      self_link = "https://www.googleapis.com/compute/v1/projects/host-project/global/networks/corp-vpc"
+    }
+  }
+
+  override_data {
+    target          = data.google_compute_subnetwork.existing
+    override_during = plan
+    values = {
+      id            = "s"
+      self_link     = "https://www.googleapis.com/compute/v1/projects/host-project/regions/europe-west4/subnetworks/corp-nodes"
+      network       = "https://www.googleapis.com/compute/v1/projects/host-project/global/networks/corp-vpc"
+      ip_cidr_range = "172.20.8.0/22"
+    }
+  }
+
+  expect_failures = [terraform_data.input_checks]
+}
+
+run "existing_network_malformed_id" {
+  command = plan
+
+  variables {
+    vpc_id    = "Corp VPC"
+    subnet_id = "corp-nodes"
+  }
+
+  expect_failures = [var.vpc_id]
 }
