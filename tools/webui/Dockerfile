@@ -149,6 +149,27 @@ RUN set -eu; \
     echo "$(cut -d' ' -f1 evroc.sha256)  evroc" | sha256sum -c -; \
     install -m 0755 evroc /out/bin/evroc
 
+# --------------------------------------------------------------- ocicli
+# oci CLI for the oci leftovers check: wheels for the image's python313 and the
+# target arch, every one pinned by sha256 (tools/webui/oci-cli/lock.sh). pip only
+# unpacks them, so the stage runs on the build platform. No bytecode: the image
+# sets PYTHONPYCACHEPREFIX to the /tmp tmpfs instead. oci_cli finds its services
+# directory only when its path contains site-packages.
+FROM --platform=$BUILDPLATFORM registry.suse.com/bci/bci-base:16.0 AS ocicli
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG TARGETARCH
+RUN zypper --non-interactive install --no-recommends python313 python313-pip && zypper clean --all
+COPY tools/webui/oci-cli/requirements.txt /tmp/requirements.txt
+RUN set -eu; \
+    case "${TARGETARCH}" in amd64) a=x86_64 ;; arm64) a=aarch64 ;; *) exit 1 ;; esac; \
+    python3.13 -m pip install --no-cache-dir --no-compile --disable-pip-version-check \
+      --require-hashes --only-binary=:all: --implementation cp --python-version 3.13 \
+      --abi cp313 --abi abi3 --abi none \
+      --platform "manylinux_2_34_${a}" --platform "manylinux_2_28_${a}" \
+      --platform "manylinux_2_17_${a}" --platform "manylinux2014_${a}" \
+      --target /out/oci-cli/site-packages -r /tmp/requirements.txt; \
+    head -n 1 /out/oci-cli/site-packages/bin/oci | grep -qx '#!/usr/bin/python3.13'
+
 # --------------------------------------------------------------- rootfs
 FROM registry.suse.com/bci/bci-micro:16.0 AS micro
 
@@ -156,10 +177,12 @@ FROM registry.suse.com/bci/bci-base:16.0 AS rootfs
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY --from=micro / /rootfs
 # micro already has bash and coreutils-single (GNU coreutils, conflicts with coreutils).
+# libgcc_s1 and libstdc++6: the cryptography and frozenlist wheels of the oci CLI link them.
 # --gpg-auto-import-keys: the copied micro rpm database has no repository key yet
 # (pattern from https://opensource.suse.com/bci-docs/guides/deploy-using-zypper/).
 RUN zypper --installroot /rootfs --non-interactive --gpg-auto-import-keys install --no-recommends \
-      jq openssh-clients openssl curl ca-certificates sed grep gawk findutils gzip tar && \
+      jq openssh-clients openssl curl ca-certificates sed grep gawk findutils gzip tar python313 \
+      libgcc_s1 libstdc++6 && \
     zypper --non-interactive --installroot /rootfs clean --all && \
     rm -rf /rootfs/var/cache/zypp /rootfs/var/log/* /rootfs/usr/share/doc /rootfs/usr/share/man && \
     echo 'aif:x:1000:1000:aif:/opt/aif/clusters/.home:/bin/bash' >> /rootfs/etc/passwd && \
@@ -202,6 +225,8 @@ COPY tools/webui/terraformrc /etc/terraformrc
 COPY --from=build /out/webui /out/cost /usr/local/bin/
 COPY --from=clis /out/aws-cli /usr/local/aws-cli
 COPY --from=clis /out/bin/ /usr/local/bin/
+COPY --from=ocicli /out/oci-cli /usr/local/oci-cli
+COPY tools/webui/oci-cli/oci /usr/local/bin/oci
 COPY --from=repo /opt/aif /opt/aif
 # -upgrade: the mirror has one version per provider; older lock files move to it.
 ENV HOME=/opt/aif/clusters/.home \
@@ -209,6 +234,7 @@ ENV HOME=/opt/aif/clusters/.home \
     TF_CLI_CONFIG_FILE=/etc/terraformrc \
     TF_CLI_ARGS_init=-upgrade \
     TF_IN_AUTOMATION=1 \
+    PYTHONPYCACHEPREFIX=/tmp/pycache \
     WEBUI_ADDR=0.0.0.0:8080 \
     WEBUI_REPO=/opt/aif \
     WEBUI_COST_BIN=/usr/local/bin/cost

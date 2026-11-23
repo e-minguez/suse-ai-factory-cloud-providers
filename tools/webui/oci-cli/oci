@@ -1,0 +1,3 @@
+#!/bin/sh
+# oci CLI in the web UI image: its packages live outside the default sys.path.
+PYTHONPATH=/usr/local/oci-cli/site-packages exec /usr/local/oci-cli/site-packages/bin/oci "$@"

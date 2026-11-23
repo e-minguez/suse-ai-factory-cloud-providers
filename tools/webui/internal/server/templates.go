@@ -115,11 +115,11 @@ func statusLabel(s string) string {
 // providerNames is the brand spelling of each provider; templates keep the
 // lowercase key in URLs and form values.
 var providerNames = map[string]string{
-	"aws": "AWS", "evroc": "evroc", "exoscale": "Exoscale", "vultr": "Vultr",
+	"aws": "AWS", "evroc": "evroc", "exoscale": "Exoscale", "oci": "Oracle Cloud", "vultr": "Vultr",
 }
 
 // providerLogos lists the providers with a symbol in static/providers.svg.
-var providerLogos = map[string]bool{"aws": true, "evroc": true, "exoscale": true, "vultr": true}
+var providerLogos = map[string]bool{"aws": true, "evroc": true, "exoscale": true, "oci": true, "vultr": true}
 
 func providerName(p string) string {
 	if n, ok := providerNames[p]; ok {

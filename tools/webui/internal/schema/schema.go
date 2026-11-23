@@ -36,7 +36,10 @@ type Field struct {
 const FallbackGroup = "Advanced"
 
 // credentialVars are required variables the account profile page owns.
-var credentialVars = map[string]bool{"vultr_api_key": true, "exoscale_api_key": true, "exoscale_api_secret": true}
+var credentialVars = map[string]bool{
+	"vultr_api_key": true, "exoscale_api_key": true, "exoscale_api_secret": true,
+	"oci_tenancy_ocid": true, "oci_user_ocid": true, "oci_fingerprint": true, "oci_private_key_path": true,
+}
 
 // IsCredential reports whether name is a provider credential variable.
 func IsCredential(name string) bool { return credentialVars[name] }

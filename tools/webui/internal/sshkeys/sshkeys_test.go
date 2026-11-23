@@ -87,7 +87,7 @@ func TestFetchGitHub(t *testing.T) {
 }
 
 func TestLimits(t *testing.T) {
-	if UserDataLimit("aws") != 16384 || UserDataLimit("evroc") != 786432 {
+	if UserDataLimit("aws") != 16384 || UserDataLimit("evroc") != 786432 || UserDataLimit("oci") != 22000 {
 		t.Fatal("limits")
 	}
 }

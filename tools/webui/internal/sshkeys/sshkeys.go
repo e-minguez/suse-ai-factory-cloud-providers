@@ -183,6 +183,8 @@ func UserDataLimit(provider string) int {
 		return 16384
 	case "exoscale":
 		return 24576
+	case "oci":
+		return 22000 // user_data_max_bytes in modules/oci/image.tf
 	case "vultr":
 		return 32768
 	case "evroc":

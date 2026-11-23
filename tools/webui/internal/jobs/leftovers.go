@@ -13,6 +13,7 @@ var leftoverTools = map[string][]string{
 	"aws":      {"aws"},
 	"evroc":    {"evroc", "jq"},
 	"exoscale": {"curl", "jq", "openssl"},
+	"oci":      {"oci", "jq"},
 	"vultr":    {"curl", "jq"},
 }
 
@@ -56,6 +57,7 @@ type Leftovers struct {
 //	aws       <cluster_name> --region <region>   (region: tfvars, else AWS_REGION; AWS_* creds via creds.Env)
 //	evroc     <cluster_name> [--region R] [--project P]
 //	exoscale  <cluster_name> [--region R]        + EXOSCALE_API_KEY/SECRET from exoscale_api_key/secret
+//	oci       <cluster_name> [--region R] [--compartment C]   (C: oci_compartment_ocid; CLI creds from $HOME/.oci/config)
 //	vultr     <cluster_name>                     + VULTR_API_KEY from vultr_api_key
 //
 // The repo-root common-all.tfvars is the lowest layer, as in deploy.sh.
@@ -102,6 +104,11 @@ func LeftoverSpec(repo, clustersDir, provider, cluster string) Leftovers {
 		}
 		if vars["exoscale_api_secret"] != "" {
 			l.Env = append(l.Env, "EXOSCALE_API_SECRET="+vars["exoscale_api_secret"])
+		}
+	case "oci":
+		region()
+		if vars["oci_compartment_ocid"] != "" {
+			l.Args = append(l.Args, "--compartment", vars["oci_compartment_ocid"])
 		}
 	case "vultr":
 		if vars["vultr_api_key"] != "" {
