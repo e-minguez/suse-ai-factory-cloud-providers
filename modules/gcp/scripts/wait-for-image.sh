@@ -89,7 +89,7 @@ rc=0
 poll_until "$TIMEOUT_SECONDS" "$POLL_SECONDS" probe || rc=$?
 case "$rc" in
   0) err "build \"$BUILD_ID\" is on the target disk" ;;
-  2) err "the build failed or could not be read. Read the log with scripts/build-logs.sh." ;;
+  2) err "the build failed or could not be read. Read the log with scripts/build-logs.sh, fix the cause and run deploy.sh --rebuild: a plain rerun reads the same failed build." ;;
   *) err "TIMEOUT after ${TIMEOUT_SECONDS}s. Follow the build with scripts/build-logs.sh: a step that keeps failing shows there." ;;
 esac
 exit "$rc"

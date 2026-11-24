@@ -473,6 +473,8 @@ the command and never runs it.
 
 ## Operational limits
 
+- After a failed build, a plain rerun keeps the jumphost and its build ID and
+  reads the same `failed` state: fix the cause and run `deploy.sh --rebuild`.
 - A failed build leaves the target disk (and a snapshot, if it got that far) in
   the project: the next build uses new names. `terraform destroy` removes what
   Terraform manages; check with the leftover script.
