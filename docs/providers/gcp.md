@@ -514,6 +514,12 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
   node back with `nvidia.com/gpu: 1`; a plan afterwards shows no changes.
 - Destroy in under five minutes (membership removals without draining), then
   `tools/leftovers/gcp.sh` reports nothing left.
+- `image_id` on a running cluster, set to a copy of its own image (the image
+  holds the cluster's load balancer addresses, so it must come from the same
+  cluster): the plan destroys the build disk, snapshot and image, replaces the
+  nodes and the jumphost (bastion only, Leap boot disk), the nodes boot from the
+  pinned image and the next plan shows no changes. Terraform does not manage the
+  pinned image: delete it yourself after the destroy.
 - The test project's org policies allow external IPs, the custom image and both
   regions.
 
@@ -524,7 +530,6 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
 - NAT address as a client for the external address is enough for in-cluster
   access to Rancher; the Cloud NAT address as `egress_ips` for multicluster
   registration.
-- `image_id`.
 - The existing network path.
 
 ## Sources
