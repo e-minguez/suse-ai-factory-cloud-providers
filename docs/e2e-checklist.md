@@ -61,12 +61,12 @@ the image build, `deploy_nodes = false` then `true`, UEFI boot with `gve` and
 through the internal load balancer, one control plane with a worker and a GPU
 pool, Rancher and the API on sslip.io, MTU and NTP from DHCP, pod MTU 1410, the
 GPU operator with the precompiled driver on L4, `nvidia-smi` in a pod, a
-local-path volume, aif-operator, two `--rebuild` runs in a row and a destroy
-with a clean leftover check ([Verified](providers/gcp.md#verified)). Runbook:
+local-path volume, aif-operator, quota checks, a failed build stopping the wait
+at the next poll, two `--rebuild` runs in a row and a destroy with a clean
+leftover check ([Verified](providers/gcp.md#verified)). Runbook:
 [examples/gcp/README.md](../examples/gcp/README.md). Find a zone with GPU
 capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 
-- [ ] Image build: a failed build stops the wait at once.
 - [ ] A larger `vpc_mtu`.
 - [ ] An RTX PRO 6000 GPU pool (needs `GPUS_PER_GPU_FAMILY` quota and capacity).
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only.

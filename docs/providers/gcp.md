@@ -487,7 +487,9 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
 
 - Image build: guest attribute polling with the access token, an image from a
   snapshot of the attached disk without a force flag, the global image.
-  `build-logs.sh` reaches the jumphost during the build.
+  `build-logs.sh` reaches the jumphost during the build. A build killed during
+  `customize` reports `failed` in the guest attributes and the wait stops at the
+  next poll (30 s) with the step and exit status.
 - `deploy_nodes = false` builds the image only; a later run with `true` adds the
   nodes.
 - UEFI boot with the three guest OS features and `gve`/`nvme`; Ignition reads
