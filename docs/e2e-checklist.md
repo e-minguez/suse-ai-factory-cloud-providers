@@ -60,8 +60,8 @@ the image build, `deploy_nodes = false` then `true`, UEFI boot with `gve` and
 `nvme` on `n2-standard-4` and `g2-standard-4`, three control planes joining
 through the internal load balancer, Rancher and the API on sslip.io, pod MTU
 1410, the GPU operator with the precompiled driver on L4, `nvidia-smi` in a
-pod, a local-path volume, aif-operator and two `--rebuild` runs in a row
-([Verified](providers/gcp.md#verified)). Runbook:
+pod, a local-path volume, aif-operator, two `--rebuild` runs in a row and a
+destroy with a clean leftover check ([Verified](providers/gcp.md#verified)). Runbook:
 [examples/gcp/README.md](../examples/gcp/README.md). Find a zone with GPU
 capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 
@@ -69,13 +69,9 @@ capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 - [ ] MTU and NTP from DHCP on the node; a larger `vpc_mtu`.
 - [ ] One control plane (`control_plane_count = 1`).
 - [ ] A worker pool; an RTX PRO 6000 GPU pool.
-- [ ] `--rebuild` with `connection_draining_timeout_sec = 0`: the membership
-      removals take seconds, not about six minutes each.
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only.
 - [ ] Quota names in the plan messages match the metrics the API returns
       (L4, G4, machine families); a quota that is too low fails the plan.
-- [ ] Destroy, then `tools/leftovers/gcp.sh <cluster>`; the target disk and the
-      snapshot are gone.
 - [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
       address in the management `ingress_cidrs`.
 - [ ] Existing network (`vpc_id`, `subnet_id`, `nat_ips`): the plan checks read

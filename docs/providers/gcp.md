@@ -473,14 +473,17 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
 - sslip.io names serve Rancher (`/ping` 200) and the API (6443).
 - Pod MTU 1410 with the default `vpc_mtu`.
 - GPU operator with the precompiled driver on L4 (see [GPUs](#gpus)),
-  `nvidia-smi` in a workload pod, a local-path volume, aif-operator 2.4.0. The aif-operator chart install retries until Rancher has
-  installed the Fleet CRDs (about six minutes), then completes.
+  `nvidia-smi` in a workload pod, a local-path volume, aif-operator 2.4.0. The
+  aif-operator chart install retries until Rancher has installed the Fleet CRDs
+  (about six minutes), then completes.
 - A plan right after the deploy updates only `terraform_data.limits_check` (its
   stored quota demand drops to zero once the nodes exist); the next plan shows
   no changes.
 - `deploy.sh --rebuild` twice in a row: no image rate limit, every node and the
   jumphost replaced, the control planes back behind both load balancers, the GPU
   node back with `nvidia.com/gpu: 1`; a plan afterwards shows no changes.
+- Destroy in under five minutes (membership removals without draining), then
+  `tools/leftovers/gcp.sh` reports nothing left.
 - The test project's org policies allow external IPs, the custom image and both
   regions.
 
@@ -497,7 +500,7 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
   access to Rancher; the Cloud NAT address as `egress_ips` for multicluster
   registration.
 - `image_id`.
-- Destroy and `tools/leftovers/gcp.sh`; the existing network path.
+- The existing network path.
 
 ## Sources
 
