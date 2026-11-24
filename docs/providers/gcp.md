@@ -361,8 +361,12 @@ probe g2-standard-4 nvidia-l4
 gcloud compute networks delete gpu-probe-net --quiet
 ```
 
-`QUOTA_EXCEEDED` instead of `ZONE_RESOURCE_POOL_EXHAUSTED` means the regional
-GPU quota is missing, not capacity. A success says the zone had capacity at that
+A quota error (`QUOTA_EXCEEDED`, printed as `Quota '<METRIC>'`) instead of
+`ZONE_RESOURCE_POOL_EXHAUSTED` means the regional GPU quota is missing, not
+capacity. G4 boots from Hyperdisk only: add `--boot-disk-type hyperdisk-balanced`
+to probe `g4-standard-48` (`nvidia-rtx-pro-6000`). On 2026-11-24 the test project
+had `GPUS_PER_GPU_FAMILY` quota for RTX PRO 6000 in `us-central1`, `us-east4-b`
+and `us-west4-b` only, and all of them were exhausted. A success says the zone had capacity at that
 moment, not that it still has it at apply: deploy soon after. Smaller GPU sizes
 (`g2-standard-4` instead of `-8`) found capacity sooner.
 
@@ -380,6 +384,21 @@ gpu_pools = { gpu = { instance_type = "g2-standard-4", count = 1, zone = "asia-s
 If the GPU instance still fails at apply, the control planes and the load
 balancers come up anyway (they do not depend on the agents). Probe again, change
 the pool `zone` or `instance_type` and rerun `./deploy.sh`.
+
+Capacity can go between the probe and the launch: the first apply builds the
+image first, and on 2026-11-24 a zone that passed the probe was exhausted ten
+minutes later. Once the image and the other nodes exist, a rerun only creates
+the GPU instance, which takes seconds, so retrying is cheap (an instance that
+never starts is not billed):
+
+```bash
+until ./deploy.sh --yes; do sleep 300; done
+```
+
+A failed apply does not write the outputs that include the failed instance
+(`nodes`), so `kubeconfig.sh` and `ssh.sh` fail with "no init node" until an
+apply succeeds. To use the cluster before the GPU node exists, set
+`gpu_pools = {}`, apply, and add the pool back later.
 
 Not supported by the module, and options when no zone has capacity: Spot VMs,
 reservations (including calendar-mode future reservations), or asking Google
@@ -402,10 +421,12 @@ Plan-time hard fails (`terraform_data.limits_check`):
   permission to check.
 
 Not checked: metrics the region does not list, Hyperdisk quotas, quotas
-that only the Cloud Quotas API measures (the `gpus_per_gpu_family` rows are
-likely among them: not verified), and capacity
-(`ZONE_RESOURCE_POOL_EXHAUSTED`, which can still fail at launch; see
-[GPU capacity](#gpu-capacity)).
+that only the Cloud Quotas API measures, and capacity. `regions.get` lists
+`NVIDIA_L4_GPUS` but not `gpus_per_gpu_family` (checked in `us-central1` and
+`europe-west4`), so a G4 or A3 pool without that quota passes the plan and the
+instance creation fails with `Quota 'GPUS_PER_GPU_FAMILY'`. A capacity shortage
+(`ZONE_RESOURCE_POOL_EXHAUSTED`) also fails at launch; see
+[GPU capacity](#gpu-capacity).
 
 Input checks (`terraform_data.input_checks`): cluster name length, label rules,
 machine type syntax, fractional G4, zones inside the region and up, CIDR, MTU.
@@ -471,7 +492,9 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
   balancer (`api_vip`), and the external load balancer serves the API and
   Rancher, so health checks pass on both.
 - sslip.io names serve Rancher (`/ping` 200) and the API (6443).
-- Pod MTU 1410 with the default `vpc_mtu`.
+- Pod MTU 1410 with the default `vpc_mtu`; the NIC takes MTU 1460 and the NTP
+  server `169.254.169.254` from DHCP, and chrony syncs to it on every node.
+- One control plane with a worker pool and a GPU pool in one zone.
 - GPU operator with the precompiled driver on L4 (see [GPUs](#gpus)),
   `nvidia-smi` in a workload pod, a local-path volume, aif-operator 2.4.0. The
   aif-operator chart install retries until Rancher has installed the Fleet CRDs
@@ -489,13 +512,11 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
 
 ## Still open
 
-- `precondition` messages: quota names match the metrics the API returns for L4,
-  G4 and the machine families in use. Region data includes `gpus_per_gpu_family`
-  or not. A quota that is too low fails the plan.
+- `precondition` messages: quota names match the metrics the API returns for the
+  machine families in use (`NVIDIA_L4_GPUS` matches). A quota that is too low
+  fails the plan.
 - Precompiled GPU driver on RTX PRO 6000.
-- A worker pool.
-- One control plane (`control_plane_count = 1`).
-- NTP and MTU from DHCP on the node; a larger `vpc_mtu`.
+- A larger `vpc_mtu`.
 - NAT address as a client for the external address is enough for in-cluster
   access to Rancher; the Cloud NAT address as `egress_ips` for multicluster
   registration.

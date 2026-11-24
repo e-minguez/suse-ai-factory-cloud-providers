@@ -58,20 +58,21 @@ joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
 first deploys (2026-11-23 and 2026-11-24) passed the quotas and org policies,
 the image build, `deploy_nodes = false` then `true`, UEFI boot with `gve` and
 `nvme` on `n2-standard-4` and `g2-standard-4`, three control planes joining
-through the internal load balancer, Rancher and the API on sslip.io, pod MTU
-1410, the GPU operator with the precompiled driver on L4, `nvidia-smi` in a
-pod, a local-path volume, aif-operator, two `--rebuild` runs in a row and a
-destroy with a clean leftover check ([Verified](providers/gcp.md#verified)). Runbook:
+through the internal load balancer, one control plane with a worker and a GPU
+pool, Rancher and the API on sslip.io, MTU and NTP from DHCP, pod MTU 1410, the
+GPU operator with the precompiled driver on L4, `nvidia-smi` in a pod, a
+local-path volume, aif-operator, two `--rebuild` runs in a row and a destroy
+with a clean leftover check ([Verified](providers/gcp.md#verified)). Runbook:
 [examples/gcp/README.md](../examples/gcp/README.md). Find a zone with GPU
 capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 
 - [ ] Image build: a failed build stops the wait at once.
-- [ ] MTU and NTP from DHCP on the node; a larger `vpc_mtu`.
-- [ ] One control plane (`control_plane_count = 1`).
-- [ ] A worker pool; an RTX PRO 6000 GPU pool.
+- [ ] A larger `vpc_mtu`.
+- [ ] An RTX PRO 6000 GPU pool (needs `GPUS_PER_GPU_FAMILY` quota and capacity).
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only.
 - [ ] Quota names in the plan messages match the metrics the API returns
-      (L4, G4, machine families); a quota that is too low fails the plan.
+      (machine families; L4 matches, G4 is not listed by the region API); a
+      quota that is too low fails the plan.
 - [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
       address in the management `ingress_cidrs`.
 - [ ] Existing network (`vpc_id`, `subnet_id`, `nat_ips`): the plan checks read
