@@ -34,6 +34,7 @@ module "ai_factory" {
   vpc_id                      = var.vpc_id
   subnet_id                   = var.subnet_id
   nat_ips                     = var.nat_ips
+  vpc_mtu                     = var.vpc_mtu
   image_rebuild               = var.image_rebuild
   aif_release                 = var.aif_release
   components                  = var.components

@@ -373,6 +373,12 @@ variable "nat_ips" {
   description = "Public addresses of the Cloud NAT serving subnet_id (egress_ips output, NAT client firewall entries). Only with vpc_id; empty skips them."
 }
 
+variable "vpc_mtu" {
+  type        = number
+  default     = null
+  description = "MTU of the VPC (1300 to 8896); the pod MTU is 50 less. Null uses 1460. Set it to the MTU of an existing VPC (vpc_id) when that is not 1460."
+}
+
 variable "control_plane_disk_size_gb" {
   type        = number
   default     = null

@@ -151,6 +151,7 @@ gcp:
       - vpc_id
       - subnet_id
       - nat_ips
+      - vpc_mtu
 
 oci:
   examples:

@@ -188,7 +188,9 @@ objects, firewall rules, load balancers and nodes.
   firewall rules (target tags), addresses, load balancers and instances in it.
 - Both must be in `gcp_project`. A Shared VPC network of a host project is
   rejected: the firewall rules would have to live in the host project.
-- Plan checks: the subnet is in `region`, belongs to `vpc_id`, `vpc_cidr` is
+- Plan checks: the subnet is in `region` (a name is looked up in `region`, so a
+  subnet of another region fails as not found; a self link reaches the region
+  check), belongs to `vpc_id`, `vpc_cidr` is
   null or equal to its primary range, the range is a /16 to /28, holds the
   nodes, the jumphost and the internal load balancer address, and does not
   overlap `10.42.0.0/16` or `10.43.0.0/16`. Traefik trusts proxy protocol from
