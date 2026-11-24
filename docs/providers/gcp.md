@@ -525,10 +525,12 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
 - Existing network: a custom VPC with MTU 8896, a /24 subnet and a Cloud NAT on
   a static address, with `vpc_id`, `subnet_id`, `nat_ips` and `vpc_mtu = 8896`.
   The plan created no network, subnet, router or NAT; a subnet self link in
-  another region failed the input check. The node took its address in the
+  another region and a subnet of another VPC failed the input checks. The node took its address in the
   subnet and MTU 8896 from DHCP, the pod MTU was 8846, egress left through the
   NAT address, `egress_ips` equalled `nat_ips`, and the node reached Rancher and
-  the API on their external address through the NAT.
+  the API on their external address through the NAT. Destroy (2 minutes) left
+  the VPC, subnet, router and NAT, removed the cluster's firewall rules, and
+  `tools/leftovers/gcp.sh` reported nothing.
 - The test project's org policies allow external IPs, the custom image and both
   regions.
 

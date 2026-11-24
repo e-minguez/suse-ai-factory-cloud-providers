@@ -71,9 +71,6 @@ capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 - [ ] An RTX PRO 6000 GPU pool (needs `GPUS_PER_GPU_FAMILY` quota and capacity).
 - [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
       address in the management `ingress_cidrs`.
-- [ ] Existing network: a subnet of another VPC fails the plan; destroy leaves
-      the VPC, subnet, router and NAT; `tools/leftovers/gcp.sh <cluster>` does
-      not list them.
 
 ## Multicluster
 
