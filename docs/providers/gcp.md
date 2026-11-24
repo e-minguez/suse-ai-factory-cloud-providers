@@ -5,9 +5,10 @@ Platform behaviour that decides how the GCP module is built. Run it:
 [ADR 014](../decisions/014-gcp-module.md). Plan:
 [docs/plans/gcp.md](../plans/gcp.md).
 
-**Status: experimental, untested.** The module passes `terraform validate`
-and the mocked tests. It has not run against a real project. Every "verify"
-below is open, and the list at the end is the first-deploy checklist.
+**Status: experimental.** First real deploys on 2026-11-23 and 2026-11-24
+(`europe-west4`, `asia-southeast1`): image build, three control planes behind
+both load balancers, Rancher, aif-operator and an L4 GPU node work. What is
+still unverified is listed in [Still open](#still-open).
 
 ## Limitations
 
@@ -128,8 +129,9 @@ Images are global: one image serves every zone, stored in the region
 (`storage_locations`). Disk, snapshot and image names carry the build ID. The
 image is rebuilt only when `build_hash` changes. `image_id` skips the chain.
 
-The platform may limit how often images are created from one source disk. Not
-verified. It matters only for quick `--rebuild` loops.
+The platform may limit how often images are created from one source disk. Two
+`--rebuild` runs in a row (each with a new target disk and snapshot) were not
+limited.
 
 ## Ignition and metadata
 
@@ -256,7 +258,13 @@ false` there is none. Its image is `projects/opensuse-cloud/global/images/family
 
 Two regional passthrough network load balancers over the same control planes.
 Backends are one unmanaged instance group per zone, holding that zone's control
-planes.
+planes. Deleting an instance removes it from its group, and its replacement has
+the same self link, so an in-place update of the group's `instances` adds
+nothing back and leaves the load balancers without backends. Each control plane
+therefore has a `google_compute_instance_group_membership`, recreated with its
+instance (`replace_triggered_by`). Removals run one at a time and wait for
+connection draining, so the backend services set it to 0 (the 300 s default
+made each removal take about six minutes).
 
 | | Address | Ports | Used for |
 |---|---|---|---|
@@ -284,8 +292,8 @@ The options are `local_route_addresses` and
 them. Both addresses are in the image (`build_hash`).
 
 Hostnames: `rke2-<external address>.sslip.io` for the API and
-`rancher-<external address>.sslip.io` for Rancher by default (not verified on
-GCP). `api_host`, `rancher_hostname` and `ingress_domain` override them.
+`rancher-<external address>.sslip.io` for Rancher by default (both verified).
+`api_host`, `rancher_hostname` and `ingress_domain` override them.
 
 ## Labels
 
@@ -307,8 +315,75 @@ G2 (one or more L4, `g2-standard-4` and up) and G4 (RTX PRO 6000, full-GPU
 sizes `g4-standard-48` and up) are the targets; A2 and A3 1g types pass the
 checks but are untested. GPU nodes are agents and carry the pool's `gpu` role
 label. `europe-west4-a`, `-b` and `-c` offer both L4 and G4 (plan data, not
-verified). The precompiled SLES 16.1 driver is untested on GCP, as is the `gve`
-and `nvme` support of the Elemental initrd (first-deploy item).
+verified).
+
+Verified on `g2-standard-4` (one L4) on 2026-11-24: the Elemental initrd boots
+with `gve` and `nvme`, the precompiled SLES 16.1 driver loads, the operator's
+CUDA validator completes, the node advertises `nvidia.com/gpu: 1` and
+`nvidia-smi` lists the L4. G4 is untested.
+
+### GPU capacity
+
+Quota is not capacity. With enough GPU quota, instance creation can still fail
+with `ZONE_RESOURCE_POOL_EXHAUSTED` (or `ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS`)
+when the zone has no free GPU capacity for that machine type. No API reports
+capacity in advance, so the plan cannot check it: the error appears at apply,
+on the GPU instance. Capacity changes over time, and a zone that fails now can
+work an hour later.
+
+What happened on 2026-11-24 in a new project: `g2-standard-8` was exhausted in
+`europe-west4-a/b/c`, `europe-west1-b/c`, `us-central1-a/b`, `us-east4-a`,
+`us-west1-a` and `asia-east1-a`; `g2-standard-4` was exhausted in the first 13
+`asia-*` zones and then started in `asia-southeast1-c`, where the cluster was
+deployed.
+
+To find a zone, create and delete a throwaway instance in every zone that
+offers the GPU, and stop at the first success. The probe instances have no
+external address and are deleted immediately (billed per second). The snippet
+creates a temporary auto-mode VPC, because projects can have no `default`
+network:
+
+```bash
+gcloud compute networks create gpu-probe-net --subnet-mode auto --quiet
+
+probe() {  # $1 = machine type, $2 = accelerator type (nvidia-l4, nvidia-rtx-pro-6000)
+  for z in $(gcloud compute accelerator-types list --format='value(name,zone.basename())' \
+               | awk -v a="$2" '$1==a{print $2}' | sort); do
+    if out=$(gcloud compute instances create gpu-probe --zone "$z" --machine-type "$1" \
+         --image-family debian-12 --image-project debian-cloud --network gpu-probe-net \
+         --no-address --maintenance-policy TERMINATE --quiet 2>&1); then
+      echo "STOCK: $1 $z"; gcloud compute instances delete gpu-probe --zone "$z" --quiet; return
+    else echo "no:    $1 $z  $(tr '\n' ' ' <<<"$out" | grep -oE "[A-Z_]{8,}|Quota '[A-Z_0-9]+'" | head -1)"; fi
+  done
+}
+probe g2-standard-4 nvidia-l4
+
+gcloud compute networks delete gpu-probe-net --quiet
+```
+
+`QUOTA_EXCEEDED` instead of `ZONE_RESOURCE_POOL_EXHAUSTED` means the regional
+GPU quota is missing, not capacity. A success says the zone had capacity at that
+moment, not that it still has it at apply: deploy soon after. Smaller GPU sizes
+(`g2-standard-4` instead of `-8`) found capacity sooner.
+
+Then set `region` to the zone's region and pin the GPU pool to the zone. A pool
+`zone` must be one of `zones`, and control planes spread over `zones` by index,
+so list the zones once and change only the pool `zone` later: moving the pool
+replaces the GPU nodes and nothing else.
+
+```hcl
+region    = "asia-southeast1"
+zones     = ["asia-southeast1-a", "asia-southeast1-b", "asia-southeast1-c"]
+gpu_pools = { gpu = { instance_type = "g2-standard-4", count = 1, zone = "asia-southeast1-c" } }
+```
+
+If the GPU instance still fails at apply, the control planes and the load
+balancers come up anyway (they do not depend on the agents). Probe again, change
+the pool `zone` or `instance_type` and rerun `./deploy.sh`.
+
+Not supported by the module, and options when no zone has capacity: Spot VMs,
+reservations (including calendar-mode future reservations), or asking Google
+Cloud for capacity in a region.
 
 ## Quota and availability
 
@@ -329,7 +404,8 @@ Plan-time hard fails (`terraform_data.limits_check`):
 Not checked: metrics the region does not list, Hyperdisk quotas, quotas
 that only the Cloud Quotas API measures (the `gpus_per_gpu_family` rows are
 likely among them: not verified), and capacity
-(`ZONE_RESOURCE_POOL_EXHAUSTED`, which can still fail at launch).
+(`ZONE_RESOURCE_POOL_EXHAUSTED`, which can still fail at launch; see
+[GPU capacity](#gpu-capacity)).
 
 Input checks (`terraform_data.input_checks`): cluster name length, label rules,
 machine type syntax, fractional G4, zones inside the region and up, CIDR, MTU.
@@ -377,38 +453,51 @@ the command and never runs it.
   Terraform manages; check with the leftover script.
 - The access token lasts about one hour from the plan. The wait for a build that
   takes longer ends with a rerun message.
-- Nothing was run end to end: see below.
+- GPU capacity is not checked at plan: see [GPU capacity](#gpu-capacity).
+
+## Verified
+
+Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
+2026-11-24 (`asia-southeast1`, plus one `g2-standard-4`):
+
+- Image build: guest attribute polling with the access token, an image from a
+  snapshot of the attached disk without a force flag, the global image.
+  `build-logs.sh` reaches the jumphost during the build.
+- `deploy_nodes = false` builds the image only; a later run with `true` adds the
+  nodes.
+- UEFI boot with the three guest OS features and `gve`/`nvme`; Ignition reads
+  `user-data`; node hostnames are set.
+- Local routes: the three control planes join through the internal load
+  balancer (`api_vip`), and the external load balancer serves the API and
+  Rancher, so health checks pass on both.
+- sslip.io names serve Rancher (`/ping` 200) and the API (6443).
+- Pod MTU 1410 with the default `vpc_mtu`.
+- GPU operator with the precompiled driver on L4 (see [GPUs](#gpus)),
+  `nvidia-smi` in a workload pod, a local-path volume, aif-operator 2.4.0. The aif-operator chart install retries until Rancher has
+  installed the Fleet CRDs (about six minutes), then completes.
+- A plan right after the deploy updates only `terraform_data.limits_check` (its
+  stored quota demand drops to zero once the nodes exist); the next plan shows
+  no changes.
+- `deploy.sh --rebuild` twice in a row: no image rate limit, every node and the
+  jumphost replaced, the control planes back behind both load balancers, the GPU
+  node back with `nvidia.com/gpu: 1`; a plan afterwards shows no changes.
+- The test project's org policies allow external IPs, the custom image and both
+  regions.
 
 ## Still open
 
-First deploy checklist. Nothing here is verified:
-
-- The Elemental initrd contains `nvme` and `gve` (needed for G2, G4 and every
-  third-generation family). Boot on `n2-standard-4` and on `g2-standard-4`.
-- UEFI boot of the image with the three guest OS features; Ignition reads
-  `user-data`; hostname, NTP and MTU from DHCP.
-- An image from a snapshot of an attached disk needs no force flag (assumed from
-  the documentation).
-- Guest attribute polling works with the access token; 404 until the first
-  attribute is written.
-- Local routes: the backend drops the load balancer traffic without them and
-  answers with them. The late internal route lets a second control plane join:
-  this assumes the internal load balancer sends a backend without the route to
-  another healthy backend, not back to itself. If not, joins need the first
-  control plane private address instead of `api_vip`.
-- Health checks pass from all four ranges (external and internal).
-- sslip.io names resolve and serve Rancher and the API.
-- NAT address as a client for the external address is enough for in-cluster
-  access to Rancher.
 - `precondition` messages: quota names match the metrics the API returns for L4,
   G4 and the machine families in use. Region data includes `gpus_per_gpu_family`
-  or not.
-- Precompiled GPU driver on L4 and RTX PRO 6000; `nvidia-smi` in a pod.
-- Pod MTU 1410 with the default `vpc_mtu`; a larger MTU.
-- The Cloud NAT address as `egress_ips` for multicluster registration.
-- The rate limit of images per source disk (`--rebuild` twice in a row).
-- Org policy behaviour of the test project (external IPs, trusted image
-  projects, resource locations).
+  or not. A quota that is too low fails the plan.
+- Precompiled GPU driver on RTX PRO 6000.
+- A worker pool.
+- One control plane (`control_plane_count = 1`).
+- NTP and MTU from DHCP on the node; a larger `vpc_mtu`.
+- NAT address as a client for the external address is enough for in-cluster
+  access to Rancher; the Cloud NAT address as `egress_ips` for multicluster
+  registration.
+- `image_id`.
+- Destroy and `tools/leftovers/gcp.sh`; the existing network path.
 
 ## Sources
 

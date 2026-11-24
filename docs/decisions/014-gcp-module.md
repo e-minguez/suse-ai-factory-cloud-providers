@@ -1,8 +1,9 @@
 # 014 - gcp module design
 
 ## Status
-Accepted, implemented in `modules/gcp` with mocked tests only. No real deploy
-has run yet ([plan](../plans/gcp.md), [platform notes](../providers/gcp.md)).
+Accepted, implemented in `modules/gcp`. First real deploys passed on 2026-11-23
+and 2026-11-24 (three control planes, L4 GPU node); open items in the
+[platform notes](../providers/gcp.md#still-open) ([plan](../plans/gcp.md)).
 
 ## Context
 Platform behaviour that shapes the module (checked in the [plan](../plans/gcp.md)

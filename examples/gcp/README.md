@@ -6,7 +6,9 @@ network load balancer over the control planes, a jumphost that builds the
 Elemental image, and the global image created from a snapshot of the disk the
 build wrote. `deploy.sh` runs it in one pass.
 
-**Status:** implemented, mocked tests only; not run against a project yet.
+**Status:** experimental. Deployed with three control planes and an L4 GPU
+node; open items are in
+[docs/providers/gcp.md](../../docs/providers/gcp.md#still-open).
 `deploy_nodes = false` stops after the image.
 
 ## Prerequisites
@@ -14,7 +16,9 @@ build wrote. `deploy.sh` runs it in one pass.
 - Terraform 1.16.5 or later (or OpenTofu, experimental), `jq`, `curl`, `ssh`.
 - A project with the Compute Engine API enabled, and quota for the machine
   types (GPU quota in the region, `GPUS_ALL_REGIONS`). Set `gcp_project` (the
-  project ID) and `region` in `../common-gcp.tfvars`.
+  project ID) and `region` in `../common-gcp.tfvars`. Quota does not
+  guarantee GPU capacity: find a zone with a probe first, see
+  [GPU capacity](../../docs/providers/gcp.md#gpu-capacity).
 - Application Default Credentials, never tfvars: `gcloud auth
   application-default login`, or `GOOGLE_APPLICATION_CREDENTIALS` pointing at
   a key file. `gcp_impersonate_service_account` makes the provider impersonate

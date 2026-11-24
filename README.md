@@ -64,7 +64,7 @@ flowchart LR
 | **aws** | 1 | Raw image uploaded to S3, imported as an EBS snapshot and AMI | NLB DNS names | [aws.md](docs/providers/aws.md) |
 | **evroc** | 2 (+1 optional) | Raw image written to a disk, one snapshot per zone | sslip.io | [evroc.md](docs/providers/evroc.md) |
 | **exoscale** | 2 | Raw image converted to qcow2, served over HTTP, template per zone | sslip.io | [exoscale.md](docs/providers/exoscale.md); every node has a public IPv4, single zone ([limitations](docs/providers/exoscale.md#limitations)) |
-| **gcp** | 1 | Raw image written to a disk, snapshot, global custom image | sslip.io | [gcp.md](docs/providers/gcp.md); **experimental, untested**: no real deploy yet |
+| **gcp** | 1 | Raw image written to a disk, snapshot, global custom image | sslip.io | [gcp.md](docs/providers/gcp.md); **experimental**: first deploys passed (3 control planes, L4 GPU) |
 | **oci** | 1 | Raw image converted to qcow2, uploaded through write-only pre-authenticated requests, custom image with a UEFI capability schema | sslip.io | [oci.md](docs/providers/oci.md) |
 | **vultr** | 2 | Raw image served over HTTP, account-wide snapshot from the URL | sslip.io | [vultr.md](docs/providers/vultr.md) |
 

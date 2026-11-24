@@ -1,6 +1,6 @@
 # End-to-end checks not yet run
 
-Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16). gcp has not run at all.
+Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16). gcp passed its first deploys (2026-11-23 and 2026-11-24); the open items are below.
 Run these from the cluster directory (`examples/<provider>` or
 `clusters/<name>`); `make ci` must pass first.
 
@@ -55,31 +55,23 @@ joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
 ## gcp
 
 [ADR 014](decisions/014-gcp-module.md), [platform notes](providers/gcp.md). The
-module has only run against mocked providers: every item is open. Runbook:
-[examples/gcp/README.md](../examples/gcp/README.md). Do them in this order
-(staged, as on oci):
+first deploys (2026-11-23 and 2026-11-24) passed the quotas and org policies,
+the image build, `deploy_nodes = false` then `true`, UEFI boot with `gve` and
+`nvme` on `n2-standard-4` and `g2-standard-4`, three control planes joining
+through the internal load balancer, Rancher and the API on sslip.io, pod MTU
+1410, the GPU operator with the precompiled driver on L4, `nvidia-smi` in a
+pod, a local-path volume, aif-operator and two `--rebuild` runs in a row
+([Verified](providers/gcp.md#verified)). Runbook:
+[examples/gcp/README.md](../examples/gcp/README.md). Find a zone with GPU
+capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 
-- [ ] Quotas and org policies of the project (`gpus_all_regions`, the L4 or RTX
-      PRO 6000 quota, `vmExternalIpAccess`, `trustedImageProjects`,
-      `resourceLocations`); plan with `deploy_nodes = false` passes the checks.
-- [ ] Image build: guest attributes report `building` then `done`, the snapshot
-      and the global image exist, a failed build stops the wait at once, a
-      second build after `--rebuild` is not rate limited.
-- [ ] The Elemental image boots UEFI with `nvme` and `gve` on `n2-standard-4`
-      and on `g2-standard-4`; Ignition reads `user-data`; MTU and hostname from
-      DHCP.
-- [ ] One control plane, then three: local routes (the late internal route lets
-      the second and third join), health checks from all four ranges, Rancher
-      answers on the sslip.io name.
-- [ ] A worker pool and a GPU pool (L4, then RTX PRO 6000): GPU operator ready,
-      node advertises `nvidia.com/gpu`, `nvidia-smi` in a pod, precompiled
-      driver loads.
-- [ ] Rancher local-path volume and aif-operator.
-- [ ] `deploy.sh --rebuild` replaces every node; a plan afterwards shows no
-      changes.
+- [ ] Image build: a failed build stops the wait at once.
+- [ ] MTU and NTP from DHCP on the node; a larger `vpc_mtu`.
+- [ ] One control plane (`control_plane_count = 1`).
+- [ ] A worker pool; an RTX PRO 6000 GPU pool.
+- [ ] `--rebuild` with `connection_draining_timeout_sec = 0`: the membership
+      removals take seconds, not about six minutes each.
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only.
-- [ ] `deploy_nodes = false` builds the image only; a later run with `true`.
-- [ ] Pod MTU 1410 with the default `vpc_mtu`; a larger `vpc_mtu`.
 - [ ] Quota names in the plan messages match the metrics the API returns
       (L4, G4, machine families); a quota that is too low fails the plan.
 - [ ] Destroy, then `tools/leftovers/gcp.sh <cluster>`; the target disk and the
