@@ -62,20 +62,18 @@ through the internal load balancer, one control plane with a worker and a GPU
 pool, Rancher and the API on sslip.io, MTU and NTP from DHCP, pod MTU 1410, the
 GPU operator with the precompiled driver on L4, `nvidia-smi` in a pod, a
 local-path volume, aif-operator, quota checks, a failed build stopping the wait
-at the next poll, `image_id`, two `--rebuild` runs in a row and a destroy with a clean
-leftover check ([Verified](providers/gcp.md#verified)). Runbook:
+at the next poll, `image_id`, an existing network with `vpc_mtu = 8896`, two
+`--rebuild` runs in a row and a destroy with a clean leftover check
+([Verified](providers/gcp.md#verified)). Runbook:
 [examples/gcp/README.md](../examples/gcp/README.md). Find a zone with GPU
 capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 
-- [ ] A larger `vpc_mtu`.
 - [ ] An RTX PRO 6000 GPU pool (needs `GPUS_PER_GPU_FAMILY` quota and capacity).
 - [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
       address in the management `ingress_cidrs`.
-- [ ] Existing network (`vpc_id`, `subnet_id`, `nat_ips`): the plan checks read
-      a live VPC and subnet and reject a subnet of another VPC or region; one
-      control plane boots in the subnet behind its Cloud NAT; `egress_ips`
-      equals `nat_ips`; Rancher answers; destroy leaves the VPC, subnet, router
-      and NAT; `tools/leftovers/gcp.sh <cluster>` does not list them.
+- [ ] Existing network: a subnet of another VPC fails the plan; destroy leaves
+      the VPC, subnet, router and NAT; `tools/leftovers/gcp.sh <cluster>` does
+      not list them.
 
 ## Multicluster
 

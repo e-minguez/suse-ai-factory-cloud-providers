@@ -179,7 +179,7 @@ limited.
 
 `vpc_id` (VPC network, name or self link) and `subnet_id` (regional subnet of
 that VPC in `region`, name or self link), both or neither, deploy into an
-existing VPC instead of creating one. Untested against a live project. Set them
+existing VPC instead of creating one (verified, see [Verified](#verified)). Set them
 before the first apply: setting or clearing them later replaces the network
 objects, firewall rules, load balancers and nodes.
 
@@ -522,17 +522,20 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
   nodes and the jumphost (bastion only, Leap boot disk), the nodes boot from the
   pinned image and the next plan shows no changes. Terraform does not manage the
   pinned image: delete it yourself after the destroy.
+- Existing network: a custom VPC with MTU 8896, a /24 subnet and a Cloud NAT on
+  a static address, with `vpc_id`, `subnet_id`, `nat_ips` and `vpc_mtu = 8896`.
+  The plan created no network, subnet, router or NAT; a subnet self link in
+  another region failed the input check. The node took its address in the
+  subnet and MTU 8896 from DHCP, the pod MTU was 8846, egress left through the
+  NAT address, `egress_ips` equalled `nat_ips`, and the node reached Rancher and
+  the API on their external address through the NAT.
 - The test project's org policies allow external IPs, the custom image and both
   regions.
 
 ## Still open
 
 - Precompiled GPU driver on RTX PRO 6000.
-- A larger `vpc_mtu`.
-- NAT address as a client for the external address is enough for in-cluster
-  access to Rancher; the Cloud NAT address as `egress_ips` for multicluster
-  registration.
-- The existing network path.
+- The Cloud NAT address as `egress_ips` for multicluster registration.
 
 ## Sources
 
