@@ -155,10 +155,9 @@ locals {
   ))
 }
 
-# Gate for everything that consumes quota.
+# Gate for everything that consumes quota. No input: the preconditions run on
+# every plan anyway, and a stored demand would change after each apply.
 resource "terraform_data" "limits_check" {
-  input = [local.offered, local.region_demand, local.project_demand]
-
   depends_on = [terraform_data.input_checks]
 
   lifecycle {

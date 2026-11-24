@@ -79,7 +79,7 @@ under IAM and admin, Quotas and system limits.
 | Quota (metric) | Scope | Used for |
 |---|---|---|
 | `CPUS` or the family metric (`N2_CPUS`, `C3_CPUS`, ...) | region | vCPUs of all nodes and the jumphost |
-| `gpus_all_regions` (`GPUS_ALL_REGIONS`) | project | every GPU, summed. New projects can start at 0. |
+| `gpus_all_regions` (`GPUS_ALL_REGIONS`) | project | every GPU, summed. New projects can start at 0. Not checked when the project read does not list it (the test project did not). |
 | `nvidia_l4_gpus` (`NVIDIA_L4_GPUS`) | region | G2 nodes |
 | `gpus_per_gpu_family`, dimension `gpu_family` (for example `NVIDIA_RTX_PRO_6000`, `NVIDIA_H100`) and `region` | region | G4, A3 and newer GPUs. The default limit is 0. |
 | `SSD_TOTAL_GB` | region | `pd-balanced` boot disks and the image target disk |
@@ -413,10 +413,14 @@ Plan-time hard fails (`terraform_data.limits_check`):
 - Quotas read from the Compute API (`regions/<region>` and the project) with the
   provider's access token: `CPUS` or the family metric when the region lists
   one, the GPU metric of the type (`nvidia-l4` becomes `NVIDIA_L4_GPUS`),
-  `GPUS_ALL_REGIONS`, `SSD_TOTAL_GB` for `pd-balanced` disks,
-  `STATIC_ADDRESSES` and `IN_USE_ADDRESSES`. What the cluster already holds
-  (found by the `elemental-cluster` label) is not counted again, so a re-plan
-  does not fail on its own usage.
+  `GPUS_ALL_REGIONS` and `CPUS_ALL_REGIONS` when the project lists them,
+  `SSD_TOTAL_GB` for `pd-balanced` disks, `STATIC_ADDRESSES` and
+  `IN_USE_ADDRESSES`. What the cluster already holds (found by the
+  `elemental-cluster` label) is not counted again, so a re-plan does not fail
+  on its own usage. Verified: 100 `n2-standard-32` workers fail the plan with
+  `N2_CPUS in asia-southeast1: needs 3168 more, 2992 left`. The test project's
+  `projects.get` listed neither `*_ALL_REGIONS` metric, so both project checks
+  were skipped there.
 - A read failure of either call fails the plan with the HTTP status and the
   permission to check.
 
@@ -499,9 +503,8 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
   `nvidia-smi` in a workload pod, a local-path volume, aif-operator 2.4.0. The
   aif-operator chart install retries until Rancher has installed the Fleet CRDs
   (about six minutes), then completes.
-- A plan right after the deploy updates only `terraform_data.limits_check` (its
-  stored quota demand drops to zero once the nodes exist); the next plan shows
-  no changes.
+- A plan right after the deploy shows no changes (`terraform_data.limits_check`
+  stores no input; clusters deployed before that see one update of it).
 - `deploy.sh --rebuild` twice in a row: no image rate limit, every node and the
   jumphost replaced, the control planes back behind both load balancers, the GPU
   node back with `nvidia.com/gpu: 1`; a plan afterwards shows no changes.
@@ -512,9 +515,6 @@ Deploys on 2026-11-23 (`europe-west4`, `n2-standard-4` control planes) and
 
 ## Still open
 
-- `precondition` messages: quota names match the metrics the API returns for the
-  machine families in use (`NVIDIA_L4_GPUS` matches). A quota that is too low
-  fails the plan.
 - Precompiled GPU driver on RTX PRO 6000.
 - A larger `vpc_mtu`.
 - NAT address as a client for the external address is enough for in-cluster

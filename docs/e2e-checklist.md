@@ -70,9 +70,6 @@ capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
 - [ ] A larger `vpc_mtu`.
 - [ ] An RTX PRO 6000 GPU pool (needs `GPUS_PER_GPU_FAMILY` quota and capacity).
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only.
-- [ ] Quota names in the plan messages match the metrics the API returns
-      (machine families; L4 matches, G4 is not listed by the region API); a
-      quota that is too low fails the plan.
 - [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
       address in the management `ingress_cidrs`.
 - [ ] Existing network (`vpc_id`, `subnet_id`, `nat_ips`): the plan checks read
