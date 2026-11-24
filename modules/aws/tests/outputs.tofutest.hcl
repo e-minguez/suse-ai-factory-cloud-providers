@@ -332,7 +332,7 @@ run "rebuild_counter_changes_build_id" {
   }
 
   assert {
-    condition     = output.image.rebuild == 1 && output.image.build_id != "bd1215c0d5eb"
+    condition     = output.image.rebuild == 1 && output.image.build_id != "d68fad4bdaf8"
     error_message = "Bumping image_rebuild must change image.build_id and be reported in image.rebuild."
   }
 }
