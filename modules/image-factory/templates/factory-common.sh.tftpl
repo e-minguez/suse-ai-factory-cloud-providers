@@ -68,6 +68,10 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
+# Without these the EXIT trap sees status 0 after a signal and reports success.
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 log "=== image-factory starting (build $BUILD_ID) ==="
 

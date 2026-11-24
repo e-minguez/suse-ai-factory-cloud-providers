@@ -138,7 +138,7 @@ jobs:
           push: false
           tags: suse-ai-factory-cloud-providers:ci
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=max,ignore-error=true
       - name: Smoke test
         run: |
           docker run -d --init --name aif -p 127.0.0.1:8080:8080 --read-only --tmpfs /tmp suse-ai-factory-cloud-providers:ci
