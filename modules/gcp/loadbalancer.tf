@@ -93,7 +93,26 @@ resource "google_compute_instance_group" "control_plane" {
   description = "Control planes of ${var.cluster_name} in ${each.key}"
   zone        = each.key
   network     = local.network_id
-  instances   = [for n in local.control_plane_nodes : google_compute_instance.control_plane[n.hostname].self_link if n.zone == each.key]
+
+  # Members are google_compute_instance_group_membership.control_plane.
+  lifecycle {
+    ignore_changes = [instances]
+  }
+}
+
+# Deleting an instance drops it from the group, and a replacement keeps the same
+# self_link, so an in-place `instances` update adds nothing back: one membership
+# per control plane, recreated with its instance.
+resource "google_compute_instance_group_membership" "control_plane" {
+  for_each = { for n in local.control_plane_nodes : n.hostname => n if var.deploy_nodes }
+
+  zone           = each.value.zone
+  instance_group = google_compute_instance_group.control_plane[each.value.zone].name
+  instance       = google_compute_instance.control_plane[each.key].self_link
+
+  lifecycle {
+    replace_triggered_by = [google_compute_instance.control_plane[each.key]]
+  }
 }
 
 resource "google_compute_region_backend_service" "this" {
@@ -106,6 +125,8 @@ resource "google_compute_region_backend_service" "this" {
   protocol              = "TCP"
   network               = each.value.scheme == "INTERNAL" ? local.network_id : null
   health_checks         = [google_compute_region_health_check.this[each.key].id]
+  # The 300 s default delays each membership removal (serialised) by ~6 min.
+  connection_draining_timeout_sec = 0
 
   dynamic "backend" {
     for_each = google_compute_instance_group.control_plane

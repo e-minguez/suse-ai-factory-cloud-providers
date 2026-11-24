@@ -287,9 +287,17 @@ run "load_balancers" {
   assert {
     condition = (
       join(",", sort(keys(google_compute_instance_group.control_plane))) == "europe-west4-a,europe-west4-b,europe-west4-c" &&
-      alltrue([for k, b in google_compute_region_backend_service.this : b.protocol == "TCP" && b.load_balancing_scheme == (startswith(k, "ext-") ? "EXTERNAL" : "INTERNAL")])
+      alltrue([for k, b in google_compute_region_backend_service.this : b.protocol == "TCP" && b.connection_draining_timeout_sec == 0 && b.load_balancing_scheme == (startswith(k, "ext-") ? "EXTERNAL" : "INTERNAL")])
     )
     error_message = "One instance group per zone with control planes; passthrough TCP backend services."
+  }
+
+  assert {
+    condition = (
+      join(",", sort(keys(google_compute_instance_group_membership.control_plane))) == "gcp-test-cp-01,gcp-test-cp-02,gcp-test-cp-03" &&
+      alltrue([for h, m in google_compute_instance_group_membership.control_plane : m.zone == google_compute_instance.control_plane[h].zone && m.instance_group == google_compute_instance_group.control_plane[m.zone].name])
+    )
+    error_message = "One group membership per control plane, in the group of its zone."
   }
 
   assert {
@@ -324,7 +332,7 @@ run "load_balancers_exist_without_nodes" {
   }
 
   assert {
-    condition     = length(google_compute_instance_group.control_plane) == 0 && length(google_compute_forwarding_rule.this) == 5 && alltrue([for k, b in google_compute_region_backend_service.this : length(b.backend) == 0])
+    condition     = length(google_compute_instance_group.control_plane) == 0 && length(google_compute_instance_group_membership.control_plane) == 0 && length(google_compute_forwarding_rule.this) == 5 && alltrue([for k, b in google_compute_region_backend_service.this : length(b.backend) == 0])
     error_message = "The addresses and listeners exist before the nodes (the addresses are in the image)."
   }
 }
