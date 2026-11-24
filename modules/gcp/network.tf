@@ -177,9 +177,11 @@ data "google_compute_network" "existing" {
 data "google_compute_subnetwork" "existing" {
   count = local.create_network ? 0 : 1
 
+  # Region and project from a self link, so a subnet elsewhere is found and the
+  # input check rejects it with its message instead of a "not found".
   name    = try(local.subnet_ref.name, "invalid")
-  region  = local.region
-  project = var.gcp_project
+  region  = coalesce(try(local.subnet_ref.region, null), local.region)
+  project = coalesce(try(local.subnet_ref.project, null), var.gcp_project)
 }
 
 locals {

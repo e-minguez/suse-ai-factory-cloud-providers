@@ -831,6 +831,11 @@ run "existing_subnet_other_region" {
   }
 
   expect_failures = [terraform_data.input_checks]
+
+  assert {
+    condition     = data.google_compute_subnetwork.existing[0].region == "europe-west1"
+    error_message = "A subnet self link is read in its own region, so the input check (not a lookup error) rejects it."
+  }
 }
 
 run "existing_subnet_too_small" {
