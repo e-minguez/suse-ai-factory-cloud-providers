@@ -374,6 +374,12 @@ variable "aif_release" {
   }
 }
 
+variable "extra_manifests_dir" {
+  type        = string
+  default     = null
+  description = "Directory of Kubernetes manifests (*.yaml, *.yml) to bundle into the Elemental image. Applied once at first boot."
+}
+
 variable "core_platform_override" {
   type = object({
     os_image_base      = string

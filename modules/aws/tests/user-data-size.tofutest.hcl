@@ -245,3 +245,20 @@ run "jumphost_user_data_size" {
     error_message = "Jumphost user_data is ${nonsensitive(local.jumphost_user_data_bytes)} bytes with every management component, over EC2's 16384."
   }
 }
+
+# Default components plus a Rancher import manifest through extra_manifests_dir
+# (measured 5961 bytes). The management set above leaves ~450 bytes, so extra
+# manifests on top of it hit EC2's limit and fail the plan.
+run "jumphost_user_data_size_extra_manifest" {
+  command = plan
+
+  variables {
+    components          = ["rancher", "local-path-provisioner", "gpu-operator", "aif-operator"]
+    extra_manifests_dir = "../elemental-config/tests/fixtures/extra-manifests/rancher-import"
+  }
+
+  assert {
+    condition     = nonsensitive(local.jumphost_user_data_bytes) <= 16384
+    error_message = "Jumphost user_data is ${nonsensitive(local.jumphost_user_data_bytes)} bytes with a Rancher import manifest, over EC2's 16384."
+  }
+}

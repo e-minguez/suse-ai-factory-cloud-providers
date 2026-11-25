@@ -84,7 +84,7 @@ resource "vultr_instance" "jumphost" {
       # Vultr accepts up to 16 MB; 64 KiB is only a sanity ceiling against rendering
       # bugs. nonsensitive() on the length only, so the error can show the size.
       condition     = length(local.jumphost_user_data) <= 65536
-      error_message = "Rendered jumphost user_data is ${nonsensitive(length(local.jumphost_user_data))} bytes, over the 64 KiB sanity ceiling (Vultr accepts up to 16 MB; the ceiling only catches rendering bugs). Check the comment strip in locals.tf still covers local.factory_script (the module strips the elemental files), then look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
+      error_message = "Rendered jumphost user_data is ${nonsensitive(length(local.jumphost_user_data))} bytes, over the 64 KiB sanity ceiling (Vultr accepts up to 16 MB; the ceiling only catches rendering bugs). Check the comment strip in locals.tf still covers local.factory_script (the module strips the elemental files), then look for large files in extra_manifests_dir, a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
     }
   }
 }

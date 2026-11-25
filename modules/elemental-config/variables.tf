@@ -281,6 +281,17 @@ variable "local_route_addresses_after_server" {
   }
 }
 
+variable "extra_manifests_dir" {
+  type        = string
+  default     = null
+  description = "Directory of Kubernetes manifests (*.yaml, *.yml) to bundle into the Elemental image. Applied once at first boot. A relative path resolves against the root module directory."
+
+  validation {
+    condition     = var.extra_manifests_dir == null || try(trimspace(var.extra_manifests_dir) != "", false)
+    error_message = "extra_manifests_dir must be null or a non-empty path."
+  }
+}
+
 variable "extra_build_inputs" {
   type        = map(string)
   default     = {}

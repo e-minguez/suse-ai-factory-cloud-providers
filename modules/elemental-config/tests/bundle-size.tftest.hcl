@@ -103,3 +103,18 @@ run "management_bundle_size" {
     error_message = "config_bundle is ${nonsensitive(length(output.config_bundle))} characters; vultr, exoscale and evroc need it well under 21000."
   }
 }
+
+# Plus a Rancher import manifest (cattle-cluster-agent, ~5.4 KB) through
+# extra_manifests_dir: measured 19064 characters (+1504).
+run "management_bundle_size_with_extra_manifest" {
+  command = plan
+
+  variables {
+    extra_manifests_dir = "tests/fixtures/extra-manifests/rancher-import"
+  }
+
+  assert {
+    condition     = nonsensitive(length(output.config_bundle)) <= 21000
+    error_message = "config_bundle is ${nonsensitive(length(output.config_bundle))} characters with a Rancher import manifest; vultr, exoscale and evroc need it well under 21000."
+  }
+}

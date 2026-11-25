@@ -130,6 +130,12 @@ variable "aif_release" {
   description = "AI Factory release: a manifest URL (http:// or https://), or a version X.Y.Z resolved to the tag aif-operator-<version>."
 }
 
+variable "extra_manifests_dir" {
+  type        = string
+  default     = null
+  description = "Directory of Kubernetes manifests (*.yaml, *.yml) to bundle into the Elemental image. Applied once at first boot. A relative path resolves against the cluster directory (clusters/<name>/)."
+}
+
 variable "components" {
   type        = list(string)
   default     = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]

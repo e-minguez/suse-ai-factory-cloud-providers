@@ -43,6 +43,7 @@ common:
       - zones
     AI Factory:
       - aif_release
+      - {name: extra_manifests_dir, label: Extra manifests directory}
       - components
       - suse_storage_nodes
       - appco_registry

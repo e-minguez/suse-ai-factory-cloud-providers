@@ -87,6 +87,7 @@ and `private_subnet_id` deploy into an existing VCN
 | deploy\_nodes | Provision control-plane, worker and GPU nodes. false builds the image only and creates no nodes. | `bool` | `true` | no |
 | elemental\_image | Container image that runs `elemental customize` on the build host. | `string` | `"registry.suse.com/beta/uc/elemental:3.1.0-6.5"` | no |
 | etcd\_unsafe\_no\_fsync | DANGEROUS: disables fsync in etcd (etcd --unsafe-no-fsync), so a host crash or power loss can corrupt etcd and lose the cluster. Only for throwaway clusters on disks too slow for etcd. | `bool` | `false` | no |
+| extra\_manifests\_dir | Directory of Kubernetes manifests (*.yaml, *.yml) to bundle into the Elemental image. Applied once at first boot. | `string` | `null` | no |
 | fips | Set cryptoPolicy: fips in install.yaml. Every node must be FIPS-ready. | `bool` | `false` | no |
 | gpu\_driver\_repository | Registry path of the precompiled NVIDIA driver container. Experimental default; see docs/workarounds.md. | `string` | `"registry.opensuse.org/home/eminguez/branches/home/avicenzi/nvidia-for-bci-161/containerfile/third-party/nvidia"` | no |
 | gpu\_driver\_version | NVIDIA driver branch of the precompiled driver container; must exist under gpu\_driver\_repository. | `string` | `"615"` | no |

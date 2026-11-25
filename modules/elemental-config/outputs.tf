@@ -28,6 +28,21 @@ output "node_runtime_ignition" {
 output "build_hash" {
   description = "SHA-256 of every build input: rendered files, release manifest, elemental image, core platform override, sysext overrides and extra_build_inputs. Rebuild the image only when it changes."
   value       = local.build_hash
+
+  precondition {
+    condition     = local.extra_manifests_dir_ok
+    error_message = "extra_manifests_dir \"${coalesce(var.extra_manifests_dir, "-")}\" is not a directory (resolved to ${coalesce(local.extra_manifests_path, "-")}; relative paths resolve against the root module)."
+  }
+
+  precondition {
+    condition     = length(local.extra_manifest_bad_names) == 0
+    error_message = "extra_manifests_dir file names must match ^[A-Za-z0-9._-]+$: ${join(", ", local.extra_manifest_bad_names)}."
+  }
+
+  precondition {
+    condition     = length(local.extra_manifest_duplicates) == 0
+    error_message = "extra_manifests_dir files map to the same image path: ${join("; ", local.extra_manifest_duplicates)}."
+  }
 }
 
 output "build_id" {

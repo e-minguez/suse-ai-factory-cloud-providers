@@ -119,7 +119,7 @@ resource "harvester_cloudinit_secret" "buildhost" {
 
     precondition {
       condition     = length(local.buildhost_user_data) < local.user_data_budget
-      error_message = "Build host user_data is ${nonsensitive(length(local.buildhost_user_data))} bytes, over the budget of ${local.user_data_budget} (Secrets are limited to 1 MiB). Look for unusually large ssh_authorized_keys or credential values."
+      error_message = "Build host user_data is ${nonsensitive(length(local.buildhost_user_data))} bytes, over the budget of ${local.user_data_budget} (Secrets are limited to 1 MiB). Look for large files in extra_manifests_dir, unusually large ssh_authorized_keys or credential values."
     }
   }
 }

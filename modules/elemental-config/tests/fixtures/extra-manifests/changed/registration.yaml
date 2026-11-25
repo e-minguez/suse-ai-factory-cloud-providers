@@ -1,0 +1,11 @@
+# Applied once at first boot; this comment must survive.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: extra-registration
+  namespace: default
+data:
+  script: |
+    #!/bin/sh
+    # kept: inside a block scalar
+    echo registered
