@@ -1,6 +1,6 @@
 # End-to-end checks not yet run
 
-Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16). gcp passed its first deploys (2026-11-23 and 2026-11-24); the open items are below. harvester has not run yet.
+Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16). gcp passed its first deploys (2026-11-23 and 2026-11-24); the open items are below. harvester passed single-node, HA and GPU runs (2026-11-19 and 2026-11-25); its open items are below too.
 Run these from the cluster directory (`examples/<provider>` or
 `clusters/<name>`); `make ci` must pass first.
 
