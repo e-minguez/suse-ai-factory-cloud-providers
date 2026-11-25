@@ -409,9 +409,9 @@ gh api repos/$R/rulesets/$id | jq --arg c opentofu '
 gh api -X PUT repos/$R/rulesets/$id --input /tmp/protect-main.json --jq '.name'
 ```
 
-A new provider adds a matrix entry, so a new required check: `validate (gcp)`
-for the gcp provider (18 checks in total with it). Add it with the same command
-as above, with `--arg c 'validate (gcp)'` instead of `opentofu`.
+A new provider adds a matrix entry, so a new required check: `validate (harvester)`
+for the harvester provider (19 checks in total with it). Add it with the same command
+as above, with `--arg c 'validate (harvester)'` instead of `opentofu`.
 
 Run the list command again to confirm. The check name must match a job that
 has run at least once on a pull request, or every pull request waits for it.
