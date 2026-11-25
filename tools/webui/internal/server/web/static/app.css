@@ -329,6 +329,7 @@ dialog.dialog .actions { justify-content: flex-end; }
 
 /* cluster form */
 .edit-layout { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: 2.5rem; align-items: start; }
+.edit-layout.no-cost { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 62rem) { .edit-layout { grid-template-columns: 1fr; } }
 .cluster-form { display: flex; flex-direction: column; }
 .cluster-form > section.basic { margin-bottom: 1.5rem; }

@@ -162,6 +162,7 @@ The keys count against the `user_data` limit. The UI shows the running total:
 | oci | about 21 KiB (metadata limit 32000 bytes) |
 | vultr | 32 KiB |
 | evroc | 768 KiB |
+| harvester | 900000 bytes (plain, no gzip) |
 
 ## Deploy
 
@@ -181,8 +182,8 @@ under "Other actions" on the cluster page.
 `Destroy` (under "Other actions") asks you to type the cluster name and to
 confirm once, then shows the same plan review.
 Afterwards a button runs `tools/leftovers/<provider>.sh` (read-only) in the
-container and shows the result. The image ships the aws, evroc and oci CLIs the
-checks need. Outside the image, when a CLI is not in `PATH`, the page shows the
+container and shows the result. The image ships the aws, evroc and oci CLIs and
+`kubectl` that the checks need. Outside the image, when a CLI is not in `PATH`, the page shows the
 command to run on a machine that has it. Check the result before
 assuming the account is clean.
 

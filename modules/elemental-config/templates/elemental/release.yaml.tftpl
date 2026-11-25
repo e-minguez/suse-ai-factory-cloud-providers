@@ -11,6 +11,12 @@ components:
 %{ endfor ~}
 %{ endif ~}
   helm:
+%{ if length(vip_charts) > 0 ~}
+    # Managed apiVIP: the VIP charts install first (docs/workarounds.md).
+%{ endif ~}
+%{ for c in vip_charts ~}
+    - chart: ${c}
+%{ endfor ~}
 %{ for c in components ~}
     - chart: ${c.name}
 %{ if c.values_template != null ~}

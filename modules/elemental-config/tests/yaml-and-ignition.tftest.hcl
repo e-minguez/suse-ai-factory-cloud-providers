@@ -302,3 +302,32 @@ run "write_node_ip_pins_single_nic_when_asked" {
     error_message = "With pin_single_nic_node_ip, RKE2 units must require write-node-ip.service."
   }
 }
+
+run "etcd_fsync_stays_on_by_default" {
+  command = plan
+
+  assert {
+    condition     = !can(yamldecode(output.elemental_files["kubernetes/config/server.yaml"])["etcd-arg"])
+    error_message = "server.yaml must not pass etcd args unless etcd_unsafe_no_fsync is set."
+  }
+}
+
+run "etcd_unsafe_no_fsync_renders_etcd_arg" {
+  command = plan
+
+  variables {
+    etcd_unsafe_no_fsync = true
+  }
+
+  assert {
+    condition     = yamldecode(output.elemental_files["kubernetes/config/server.yaml"])["etcd-arg"] == ["unsafe-no-fsync=true"]
+    error_message = "etcd_unsafe_no_fsync must pass unsafe-no-fsync=true to etcd."
+  }
+
+  assert {
+    condition     = !strcontains(output.elemental_files["kubernetes/config/agent.yaml"], "unsafe-no-fsync")
+    error_message = "Agents run no etcd: agent.yaml must not carry the flag."
+  }
+
+  expect_failures = [check.etcd_unsafe_no_fsync_is_off]
+}

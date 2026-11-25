@@ -191,6 +191,8 @@ func UserDataLimit(provider string) int {
 		return 32768
 	case "evroc":
 		return 786432
+	case "harvester":
+		return 900000
 	}
 	return 16384
 }

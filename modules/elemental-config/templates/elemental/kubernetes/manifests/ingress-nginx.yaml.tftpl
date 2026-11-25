@@ -1,0 +1,14 @@
+# rke2-ingress-nginx runs as a DaemonSet on hostPorts by default; the Service
+# is switched on as a MetalLB LoadBalancer holding ingress_vip.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: rke2-ingress-nginx
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    controller:
+      service:
+        enabled: true
+        type: LoadBalancer
+        externalTrafficPolicy: Local

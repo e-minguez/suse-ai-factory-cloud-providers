@@ -18,6 +18,7 @@ locals {
     {
       "release.yaml" = templatefile("${path.module}/templates/elemental/release.yaml.tftpl", {
         components     = local.enabled_specs
+        vip_charts     = var.api_vip_mode == "managed" ? ["metallb", "endpoint-copier-operator"] : []
         sysexts        = local.enabled_sysexts
         appco_set      = local.appco_set
         appco_username = var.appco_username
@@ -57,10 +58,11 @@ locals {
       })
 
       "kubernetes/config/server.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/config/server.yaml.tftpl", {
-        token              = var.rke2_token
-        ingress_controller = var.ingress_controller
-        tls_san            = var.tls_san
-        node_username      = var.node_username
+        token                = var.rke2_token
+        ingress_controller   = var.ingress_controller
+        tls_san              = var.tls_san
+        node_username        = var.node_username
+        etcd_unsafe_no_fsync = var.etcd_unsafe_no_fsync
       })
 
       "kubernetes/config/agent.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/config/agent.yaml.tftpl", {
@@ -74,7 +76,18 @@ locals {
     local.addon_manifests,
     var.ingress_controller != "traefik" ? {} : {
       "kubernetes/manifests/traefik-priority.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/manifests/traefik.yaml.tftpl", {
-        vpc_cidr = var.vpc_cidr
+        vpc_cidr    = var.vpc_cidr
+        ingress_vip = var.ingress_vip
+      })
+    },
+    var.ingress_vip == null || var.ingress_controller != "ingress-nginx" ? {} : {
+      "kubernetes/manifests/ingress-nginx-priority.yaml" = file("${path.module}/templates/elemental/kubernetes/manifests/ingress-nginx.yaml.tftpl")
+    },
+    # Not -priority: the MetalLB CRDs exist only after the chart jobs.
+    var.ingress_vip == null || var.ingress_controller == "none" ? {} : {
+      "kubernetes/manifests/ingress-vip.yaml" = templatefile("${path.module}/templates/elemental/kubernetes/manifests/ingress-vip.yaml.tftpl", {
+        ingress_vip   = var.ingress_vip
+        service_names = var.ingress_controller == "traefik" ? "rke2-traefik, traefik" : "rke2-ingress-nginx, ingress-nginx"
       })
     },
   )
@@ -119,4 +132,12 @@ locals {
 
   # Hash of every build input: the only rebuild trigger in the providers.
   build_hash = nonsensitive(sha256(jsonencode(local.build_inputs)))
+}
+
+# Warns on every plan while etcd runs without fsync (DANGEROUS, see the variable).
+check "etcd_unsafe_no_fsync_is_off" {
+  assert {
+    condition     = !var.etcd_unsafe_no_fsync
+    error_message = "DANGEROUS: etcd_unsafe_no_fsync = true. etcd skips fsync on every control plane: a host crash or power loss can corrupt etcd and lose the cluster. Use it only for throwaway clusters on slow disks."
+  }
 }

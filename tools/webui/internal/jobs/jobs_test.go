@@ -300,6 +300,11 @@ func TestLeftoverSpec(t *testing.T) {
 	if e := LeftoverSpec(repo, dir, "vultr", "c1").Env; len(e) != 1 || e[0] != "VULTR_API_KEY=k" {
 		t.Errorf("env %v", e)
 	}
+	must(t, os.WriteFile(filepath.Join(dir, "common-harvester.tfvars"), []byte("harvester_kubeconfig_path = \"/k/c.yaml\"\nharvester_namespace = \"ns\"\n"), 0o600))
+	l := LeftoverSpec(repo, dir, "harvester", "c1")
+	if strings.Join(l.Args, " ") != "foo --namespace ns --kubeconfig /k/c.yaml" || len(l.Env) != 0 {
+		t.Errorf("harvester %v %v", l.Args, l.Env)
+	}
 }
 
 func TestNoEventsExitCode(t *testing.T) {

@@ -84,10 +84,11 @@ test-scripts: ## Script tests (fake terraform, tofu and ssh) and poll.sh self-te
 	bash scripts/tests/leftovers_evroc_test.sh
 	bash scripts/tests/leftovers_exoscale_test.sh
 	bash scripts/tests/leftovers_gcp_test.sh
+	bash scripts/tests/leftovers_harvester_test.sh
 	bash scripts/tests/leftovers_oci_test.sh
 	bash scripts/tests/leftovers_vultr_test.sh
 	@if [ -x /bin/bash ]; then \
-		for t in aws evroc exoscale gcp oci vultr; do /bin/bash scripts/tests/leftovers_$${t}_test.sh || exit 1; done; \
+		for t in aws evroc exoscale gcp harvester oci vultr; do /bin/bash scripts/tests/leftovers_$${t}_test.sh || exit 1; done; \
 	fi
 	bash scripts/lib/poll_test.sh
 	[ ! -x /bin/bash ] || /bin/bash scripts/lib/poll_test.sh

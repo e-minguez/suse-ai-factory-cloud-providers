@@ -68,6 +68,7 @@ flowchart TD
         exoscale["exoscale: qemu-img convert to qcow2 (≥ 10 GiB),<br/>HTTP on jumphost :80 → exoscale_template"]
         oci["oci: qemu-img convert to qcow2, curl -T to write-only PARs →<br/>oci_core_image + UEFI capability schema"]
         gcp["gcp: dd to google_compute_disk (image target) →<br/>google_compute_snapshot → google_compute_image (global)"]
+        harvester["harvester: dd to harvester_volume (image target) →<br/>harvester_image export-from-volume"]
     end
 
     deliver --> nodes["Nodes: boot from the image,<br/>Ignition sets role, hostname, node-ip"]
@@ -79,7 +80,8 @@ Terraform waits for the build from the workstation: aws polls S3
 (`wait-for-raw.sh`), vultr and exoscale poll the served URL
 (`wait-for-image.sh`), oci polls a read-only pre-authenticated request for the
 `done` marker (`wait-for-image.sh`), gcp polls the guest attributes of the
-jumphost through the Compute API (`wait-for-image.sh`), evroc polls the build-status relay on the
+jumphost through the Compute API (`wait-for-image.sh`), harvester polls the status
+file served on the build host (`wait-for-image.sh`), evroc polls the build-status relay on the
 jumphost (`wait-for-image.sh`).
 `scripts/build-logs.sh` follows the build log on the build host over SSH.
 
@@ -220,6 +222,26 @@ flowchart TD
 Once the pool is in state, `deploy.sh` runs one apply with the pins; a new
 template reopens tcp/80 and a second apply closes it.
 
+### harvester: one pass
+
+The VIPs are inputs and the node image is exported from the volume the build host
+wrote (the build host powers off first), so everything fits in one apply
+([ADR 013](decisions/013-harvester-module.md)).
+
+```mermaid
+flowchart TD
+    subgraph p1 ["Pass 1: Deploy"]
+        jimg["harvester_image: buildhost (download)"]
+        vol["harvester_volume: image_target"]
+        jh["buildhost: harvester_virtualmachine<br/>(builds, writes the raw to the volume, serves the status, powers off)"]
+        wait["terraform_data: wait-for-image.sh"]
+        img["harvester_image: node (export-from-volume)"]
+        nodes["nodes: harvester_virtualmachine + harvester_cloudinit_secret"]
+        jimg --> jh
+        vol --> jh --> wait --> img --> nodes
+    end
+```
+
 ### oci: one pass
 
 The NLB and its reserved public IP exist before the image, and NLB backends are
@@ -263,8 +285,9 @@ flowchart TD
 
 ## Network
 
-Main traffic paths. SSH always goes through the jumphost (`ProxyJump`,
-`scripts/ssh.sh`); `admin_cidrs` filters the jumphost, `api_cidrs` the public
+Main traffic paths. SSH goes through the jumphost (`ProxyJump`,
+`scripts/ssh.sh`), except on harvester, which has no bastion (SSH goes straight
+to the nodes); `admin_cidrs` filters the jumphost, `api_cidrs` the public
 Kubernetes API, `ingress_cidrs` ports 80/443.
 
 ### aws
@@ -443,6 +466,37 @@ flowchart LR
     cp --> nat
     ag --> nat
     nat --> inet
+```
+
+### harvester
+
+VMs sit on an existing L2 VLAN network with DHCP. MetalLB (in the image) announces
+the API and ingress VIPs on that segment, so there is no load balancer object and
+no hairpin. `api_cidrs`, `ingress_cidrs` and `admin_cidrs` are not enforced.
+
+```mermaid
+flowchart LR
+    admin(["Admin"])
+    users(["Users / kubectl"])
+    inet(["Internet"])
+
+    subgraph vlan ["Existing VM network (L2 VLAN, DHCP)"]
+        jh["buildhost (off after the build)<br/>harvester_virtualmachine"]
+        cp["control_plane<br/>harvester_virtualmachine<br/>MetalLB speaker"]
+        ag["worker, gpu<br/>harvester_virtualmachine"]
+        apivip(["api_vip<br/>6443, 9345"])
+        ingvip(["ingress_vip<br/>80/443"])
+    end
+    gw["Gateway (egress)"]
+
+    admin -- "SSH" --> cp
+    admin -- "SSH" --> ag
+    users -- "6443" --> apivip --> cp
+    users -- "80/443" --> ingvip --> cp
+    ag -- "6443, 9345 via api_vip" --> apivip
+    cp -- "egress" --> gw
+    ag -- "egress" --> gw
+    gw --> inet
 ```
 
 ### SUSE Security and SUSE Observability

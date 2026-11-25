@@ -6,7 +6,7 @@ override_data {
   target = data.http.aif_release_manifest
   values = {
     status_code   = 200
-    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n    repositories:\n      - name: \"jetstack\"\n        url: \"https://charts.jetstack.io\"\n      - name: \"rancher-prime\"\n        url: \"https://charts.rancher.com/server-charts/prime\"\n"
   }
 }
 
@@ -40,7 +40,7 @@ run "no_override_ships_manifest_verbatim" {
   command = plan
 
   assert {
-    condition     = output.release_manifest == "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    condition     = output.release_manifest == "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n    repositories:\n      - name: \"jetstack\"\n        url: \"https://charts.jetstack.io\"\n      - name: \"rancher-prime\"\n        url: \"https://charts.rancher.com/server-charts/prime\"\n"
     error_message = "Without overrides the manifest must be shipped byte for byte."
   }
 
@@ -177,4 +177,51 @@ run "misspelled_sysext_override_warns" {
   }
 
   expect_failures = [check.sysext_overrides_are_known]
+}
+
+run "core_override_managed_vip_keeps_core_charts" {
+  command = plan
+
+  variables {
+    api_vip_mode = "managed"
+    core_platform_override = {
+      os_image_base      = "base:1"
+      os_image_iso       = "iso:1"
+      kubernetes_version = "v1"
+      kubernetes_image   = "k8s:1"
+    }
+  }
+
+  assert {
+    condition = (
+      [for c in yamldecode(output.release_manifest).components.helm.charts : c.chart] == ["metallb", "endpoint-copier-operator", "cert-manager", "rancher"]
+      && contains([for r in yamldecode(output.release_manifest).components.helm.repositories : r.name], "metallb")
+      && contains([for r in yamldecode(output.release_manifest).components.helm.repositories : r.name], "suse-edge")
+      && contains([for r in yamldecode(output.release_manifest).components.helm.repositories : r.name], "jetstack")
+    )
+    error_message = "A managed apiVIP needs the core platform charts (metallb, endpoint-copier-operator) and their repositories in the flattened manifest."
+  }
+
+  assert {
+    condition     = yamldecode(output.release_manifest).components.helm.charts[3].values.global.psp.enabled == "false"
+    error_message = "AIF chart values must survive the merge."
+  }
+}
+
+run "core_override_external_vip_has_no_core_charts" {
+  command = plan
+
+  variables {
+    core_platform_override = {
+      os_image_base      = "base:1"
+      os_image_iso       = "iso:1"
+      kubernetes_version = "v1"
+      kubernetes_image   = "k8s:1"
+    }
+  }
+
+  assert {
+    condition     = !contains([for c in yamldecode(output.release_manifest).components.helm.charts : c.chart], "metallb")
+    error_message = "External mode must not add the core platform charts."
+  }
 }

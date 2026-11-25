@@ -6,7 +6,7 @@ override_data {
   target = data.http.aif_release_manifest
   values = {
     status_code   = 200
-    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n"
+    response_body = "metadata:\n  name: suse-ai-factory\n  # Comment lines are dropped when the manifest is rewritten.\n  version: 2.4.0\ncorePlatform:\n  image: registry.suse.com/elemental/rke2/rke2-manifest:1.35.6-48.1\ncomponents:\n  systemd:\n    extensions:\n      - name: \"suse-storage\"\n        image: \"registry.suse.com/elemental/longhorn:4.111-4.79\"\n  helm:\n    charts:\n      - chart: \"cert-manager\"\n        version: \"v1.21.0\"\n        namespace: \"cert-manager\"\n        repository: \"jetstack\"\n      - chart: \"rancher\"\n        version: \"2.14.3\"\n        namespace: \"cattle-system\"\n        repository: \"rancher-prime\"\n        dependsOn:\n          - name: \"cert-manager\"\n            type: \"helm\"\n        values:\n          replicas: 1\n          global:\n            psp:\n              enabled: \"false\"\n    repositories:\n      - name: \"jetstack\"\n        url: \"https://charts.jetstack.io\"\n      - name: \"rancher-prime\"\n        url: \"https://charts.rancher.com/server-charts/prime\"\n"
   }
 }
 
@@ -53,7 +53,7 @@ run "core_platform_override_changes_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "Setting core_platform_override must change build_hash."
   }
 }
@@ -71,7 +71,7 @@ run "core_platform_override_value_changes_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "820b94a06103337048e6c7f2d258bbd141bd5df904b29f83f3ab27cc585edf04"
+    condition     = output.build_hash != "2ed21fd4ad44340543b4bc53fbdd637d922a968254150b2c752e773cf36f329c"
     error_message = "Changing core_platform_override must change build_hash."
   }
 }
@@ -84,7 +84,7 @@ run "elemental_image_changes_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "Changing elemental_image must change build_hash."
   }
 }
@@ -97,7 +97,7 @@ run "sysext_override_changes_hash_only_when_enabled" {
   }
 
   assert {
-    condition     = output.build_hash == "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369" && output.effective_sysext_overrides == {}
+    condition     = output.build_hash == "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520" && output.effective_sysext_overrides == {}
     error_message = "An override for an extension no component needs must be inert."
   }
 }
@@ -125,7 +125,7 @@ run "sysext_override_value_changes_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "1d2e1fe7fbbf665fad14f9dc8cc47c98341a777b58b6cbffb9377bfd79c1a009"
+    condition     = output.build_hash != "e2c604ab21cca69dcd6aca9afb98e13cbd52822a629fa6111848321a87b189c0"
     error_message = "Changing an effective sysext override must change build_hash."
   }
 }
@@ -134,7 +134,7 @@ run "stable_across_plans" {
   command = plan
 
   assert {
-    condition     = output.build_hash == "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash == "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "build_hash must be stable across plans of the same inputs."
   }
 }
@@ -147,7 +147,7 @@ run "extra_build_inputs_change_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "extra_build_inputs must feed build_hash."
   }
 }
@@ -160,7 +160,7 @@ run "credentials_change_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "Rendered credentials must feed build_hash."
   }
 }
@@ -179,7 +179,7 @@ run "node_set_change_keeps_hash" {
   }
 
   assert {
-    condition     = output.build_hash == "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash == "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "Adding a GPU node must not change build_hash."
   }
 }
@@ -192,7 +192,7 @@ run "rebuild_zero_keeps_hash" {
   }
 
   assert {
-    condition     = output.build_hash == "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash == "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "image_rebuild = 0 must not change build_hash."
   }
 }
@@ -205,7 +205,7 @@ run "rebuild_counter_changes_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "Bumping image_rebuild must change build_hash."
   }
 }
@@ -218,7 +218,7 @@ run "rebuild_counter_values_differ" {
   }
 
   assert {
-    condition     = output.build_hash != "3bc4b2532954687b57590d6bf40816094ffd622637fb219f4cf8eacfac1d8752"
+    condition     = output.build_hash != "512840b95ddc4a82d5ed730e0bb16d230a978bf6f90e3e26f14c32a78bb24c93"
     error_message = "Each image_rebuild value must give its own build_hash."
   }
 }
@@ -231,7 +231,7 @@ run "local_route_addresses_change_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "local_route_addresses must change build_hash."
   }
 }
@@ -244,7 +244,7 @@ run "local_route_addresses_after_server_change_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369" && output.build_hash != "d5e10eff61b4a8105ca66751c88670d7aec48d04318e02ca1712ed9cebdf4159"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520" && output.build_hash != "d522f9648e6127c286fe531cf847bbbe18a483fa738731f28dd87b903c172094"
     error_message = "local_route_addresses_after_server must change build_hash, differently from local_route_addresses."
   }
 }

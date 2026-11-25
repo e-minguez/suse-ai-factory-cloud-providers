@@ -10,7 +10,7 @@ examples, the output set and the managed labels.
 |---|---|
 | Cluster name | `cluster_name` |
 | Control plane | `control_plane_instance_type`, `control_plane_disk_size_gb`, `control_plane_count`, `control_plane_public_ip` |
-| Build host and bastion | `jumphost_instance_type`, `jumphost_disk_size_gb`, `jumphost_image`, `jumphost_username` |
+| Build host and bastion | `jumphost_instance_type`, `jumphost_disk_size_gb`, `jumphost_image`, `jumphost_username` (on harvester the host only builds; its own names say `buildhost`) |
 | GPU and non-GPU workers | `gpu_pools`, `worker_pools` (one schema, see [scaling](scaling.md)) |
 | Pinned image | `image_id`, or `image_ids` (map by zone) where images are per zone |
 | Keep build artifacts | `keep_build_artifacts` |
@@ -63,7 +63,9 @@ vultr `zone`, `disk_size_gb` and `placement`; evroc `kind = "bare_metal"`;
 exoscale `zone`, `placement`, `kind = "bare_metal"` and `public_ip = false`
 (every node has a public IPv4, so `public_ip` and `control_plane_public_ip`
 must be `true` there; [ADR 008](decisions/008-exoscale-module.md)); gcp
-`placement` and `kind = "bare_metal"` ([ADR 014](decisions/014-gcp-module.md)).
+`placement` and `kind = "bare_metal"` ([ADR 014](decisions/014-gcp-module.md));
+harvester `zones`, `placement`, `kind = "bare_metal"` and `public_ip = true` (no
+public IPs; [ADR 013](decisions/013-harvester-module.md)).
 
 Exception: exoscale control planes are one instance pool, whose members
 Exoscale names `<cluster_name>-cp-<5 characters of the pool ID>-<random>`
@@ -112,7 +114,7 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 
 | Output | Type | Notes |
 |---|---|---|
-| `provider` | string | `aws`, `evroc`, `exoscale`, `gcp`, `oci` or `vultr`; tools dispatch on it |
+| `provider` | string | `aws`, `evroc`, `exoscale`, `gcp`, `harvester`, `oci` or `vultr`; tools dispatch on it |
 | `cluster_name`, `region` | string | |
 | `kubernetes_api_endpoint` | string | `https://<api_host>:6443` |
 | `api_host` | string | DNS name of the API for kubectl |
@@ -120,7 +122,7 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 | `ingress_endpoint` | string or null | `https://...` of the ingress; null with `ingress_controller = "none"` |
 | `rancher_url`, `rancher_hostname` | string or null | null when `rancher` is not in `components`; hostname precedence: `rancher_hostname`, `ingress_domain` (`rancher.<domain>`), provider default |
 | `rancher_bootstrap_password` | string, sensitive | null without Rancher |
-| `jumphost` | object | `{ public_ip, private_ip, ssh_user }`; IPs are null when `image_id` is set and no jumphost exists |
+| `jumphost` | object | `{ public_ip, private_ip, ssh_user }`; IPs are null when no jumphost exists (`image_id` set) or it is powered off (harvester); `scripts/ssh.sh` then connects to every host directly |
 | `nodes` | map(object) | key = hostname; `{ role, pool, init, zone, private_ip, public_ip, instance_type, id, ssh_user }`; `role` is `control_plane`, `worker` or `gpu`; `ssh_user` is `node_username` |
 | `image` | object | `{ build_id, rebuild, ids }`; `rebuild` is the `image_rebuild` counter; `ids` maps region or zone to image ID, empty until the image exists |
 | `egress_ips` | list(string) | public source IPs of cluster egress, used for allow-lists in [multicluster](../tools/multicluster/README.md#network) |
