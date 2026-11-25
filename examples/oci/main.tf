@@ -36,6 +36,7 @@ module "ai_factory" {
   private_subnet_id           = var.private_subnet_id
   image_rebuild               = var.image_rebuild
   aif_release                 = var.aif_release
+  extra_manifests_dir         = var.extra_manifests_dir
   etcd_unsafe_no_fsync        = var.etcd_unsafe_no_fsync
   components                  = var.components
   suse_storage_nodes          = var.suse_storage_nodes

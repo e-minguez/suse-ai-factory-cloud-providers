@@ -209,7 +209,7 @@ resource "oci_core_instance" "jumphost" {
     precondition {
       # nonsensitive() on the length only, so the error can show the size.
       condition     = length(local.jumphost_user_data_b64) + length(local.jumphost_ssh_keys) < local.jumphost_metadata_budget
-      error_message = "Jumphost metadata is ${nonsensitive(length(local.jumphost_user_data_b64) + length(local.jumphost_ssh_keys))} characters, over the budget of ${local.jumphost_metadata_budget} (OCI allows 32000 bytes of metadata). Look for unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
+      error_message = "Jumphost metadata is ${nonsensitive(length(local.jumphost_user_data_b64) + length(local.jumphost_ssh_keys))} characters, over the budget of ${local.jumphost_metadata_budget} (OCI allows 32000 bytes of metadata). Look for large files in extra_manifests_dir, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
     }
   }
 }

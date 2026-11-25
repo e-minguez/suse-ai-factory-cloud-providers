@@ -111,8 +111,9 @@ locals {
 
   canal_manifest = local.stripped["@canal"]
 
-  # The release manifest is shipped as-is: it is data, not a commented template.
+  # The release manifest and extra manifests are shipped as-is: data, not commented templates.
   elemental_files = merge(
+    local.extra_manifest_files,
     { for path, content in local.stripped : path => content if path != "@canal" },
     { "release_manifest.yaml" = local.release_manifest },
   )

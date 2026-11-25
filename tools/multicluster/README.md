@@ -27,6 +27,7 @@ clusters/
                              kubeconfig.sh, ssh.sh, build-logs.sh: symlinks to scripts/
     .provider                provider name
     terraform.tfvars         per-cluster values (mode 600)
+    manifests/               optional: extra_manifests_dir = "manifests" (see below)
   .register/<mgmt>/          state of the register root for that management cluster
 ```
 
@@ -49,6 +50,21 @@ Plain `terraform` commands in a cluster directory need the same var files;
 see [Running with plain Terraform](../../docs/manual-deploy.md#var-files).
 
 Worked examples with diagrams and per-cluster variable files: [catalog/](../../catalog/README.md).
+
+### Extra manifests
+
+`extra_manifests_dir` bundles Kubernetes manifests into the cluster's Elemental
+image; Elemental applies them once at first boot. A relative path resolves
+against the cluster directory, so put the files in `clusters/<name>/manifests/`
+and set `extra_manifests_dir = "manifests"` in its `terraform.tfvars`. Only
+top-level `*.yaml` and `*.yml` files are used, shipped unchanged as
+`extra-<name>.yaml`; a `-priority.yaml` name is applied before the HelmCharts.
+The files feed `build_hash`: changing one rebuilds the image on the next deploy,
+like any other build input. Manifests can carry secrets (for
+example a Rancher registration token): they end up in Terraform state and in
+the image, like the other image credentials. They also travel in the build
+host's `user_data`, which is size limited per provider (aws: 16384 bytes
+gzipped); the plan fails when it is over.
 
 ## Management and downstream clusters
 

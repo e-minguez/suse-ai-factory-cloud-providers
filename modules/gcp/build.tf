@@ -139,7 +139,7 @@ resource "google_compute_instance" "jumphost" {
     precondition {
       # nonsensitive() on the length only, so the error can show the size.
       condition     = length(local.jumphost_startup_script) <= local.metadata_value_max
-      error_message = "The jumphost startup script is ${nonsensitive(length(local.jumphost_startup_script))} characters, over the budget of ${local.metadata_value_max} (a metadata value holds 262144 bytes). Look for unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
+      error_message = "The jumphost startup script is ${nonsensitive(length(local.jumphost_startup_script))} characters, over the budget of ${local.metadata_value_max} (a metadata value holds 262144 bytes). Look for large files in extra_manifests_dir, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
     }
   }
 }

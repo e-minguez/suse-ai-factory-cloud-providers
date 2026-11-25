@@ -73,6 +73,7 @@ clusters/
     .oci/config, .oci/*.pem  oci CLI configuration and API key (written by the profile page)
     .ssh/id_ed25519          optional private key for kubeconfig download and ssh.sh
   <name>/                    one cluster: terraform.tfvars, state, .deploy/logs/
+  <name>/manifests/          optional manifests baked into the image (extra_manifests_dir)
 ```
 
 Directories are mode 700 and files 600. The volume contains credentials and
@@ -136,6 +137,11 @@ hashes. Variables that modules manage themselves are never shown.
 
 List and map values that have no dedicated widget are JSON text areas, checked
 against the variable type before saving.
+
+`Extra manifests directory` (AI Factory group) takes a path relative to the
+cluster folder. Copy the files into `<name>/manifests/` on the volume and set it
+to `manifests`; see
+[Extra manifests](../tools/multicluster/README.md#extra-manifests).
 
 ### SSH keys
 

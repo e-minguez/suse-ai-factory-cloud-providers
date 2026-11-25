@@ -44,6 +44,7 @@ module "config" {
   permit_root_ssh         = var.permit_root_ssh
 
   aif_release            = var.aif_release
+  extra_manifests_dir    = var.extra_manifests_dir
   core_platform_override = var.core_platform_override
   sysext_image_overrides = var.sysext_image_overrides
 

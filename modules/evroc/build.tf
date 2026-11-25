@@ -147,7 +147,7 @@ resource "evroc_virtual_machine" "jumphost" {
       # 32 KiB tripwire, far below the platform's 1 MB, to catch a template
       # rendering the config dir twice. nonsensitive() on the length only.
       condition     = length(local.jumphost_user_data) <= 32768
-      error_message = "Rendered jumphost user_data is ${nonsensitive(length(local.jumphost_user_data))} bytes, over the 32 KiB tripwire (evroc's own limit is 1 MB, so this is the module's, not the platform's). The elemental config is one gzip bundle (config_bundle). Check the comment strip in locals.tf still covers local.factory_script, then look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
+      error_message = "Rendered jumphost user_data is ${nonsensitive(length(local.jumphost_user_data))} bytes, over the 32 KiB tripwire (evroc's own limit is 1 MB, so this is the module's, not the platform's). The elemental config is one gzip bundle (config_bundle). Files in extra_manifests_dir are part of it. Check the comment strip in locals.tf still covers local.factory_script, then look for a template rendering something twice, unusually large ssh_authorized_keys (RSA keys run 700+ bytes each; ed25519 keys are ~80), or oversized credential values."
     }
   }
 }
