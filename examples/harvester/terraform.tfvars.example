@@ -52,7 +52,7 @@ nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
 # GPU pools need a device entry per pool key: the KubeVirt resource name of the
 # passed-through device and the count per node. The device must be enabled for
 # passthrough (pcidevices-controller add-on). The key "cp" attaches devices to
-# every control plane (single-node GPU box, no gpu_pools). Untested on hardware.
+# every control plane (single-node GPU box, no gpu_pools); verified with an A10.
 # gpu_pools = {
 #   gpu = { instance_type = "30x240", count = 1 }
 # }

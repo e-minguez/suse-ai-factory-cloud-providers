@@ -85,8 +85,10 @@ order:
 - [ ] A worker pool and a rise of its `count`; nothing is replaced.
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only.
 - [ ] Rancher local-path volume and aif-operator.
-- [ ] GPU pool (`gpu_devices`, `pcidevices-controller` enabled): `nvidia-smi` in the
-      driver pod. Not run: no GPUs on the test cluster.
+- [x] GPU on the control plane (`gpu_devices.cp`, `pcidevices-controller` enabled):
+      `nvidia.com/gpu` allocatable, `nvidia-smi` in a pod (NVIDIA A10, Harvester
+      1.10.0-rc3).
+- [ ] GPU pool (`gpu_pools` with `gpu_devices`): `nvidia-smi` in a pod.
 - [ ] DHCP reservations by MAC: a restarted control plane keeps its address.
 - [ ] Destroy and `tools/leftovers/harvester.sh`.
 - [ ] Catalog shapes (`catalog/*/harvester`) with distinct VIP pairs.

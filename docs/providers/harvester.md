@@ -17,7 +17,8 @@ end.
   (see [Network](#network)).
 - No cost estimate (on-premises) and no quota API: host CPU and memory capacity
   are not checked at plan.
-- GPU passthrough is implemented and untested (no GPUs on the test cluster).
+- GPU passthrough is verified on control planes (`gpu_devices.cp`, one NVIDIA
+  A10); GPU pools use the same mechanism and have not run on hardware.
 
 ## Prerequisites
 
@@ -25,9 +26,12 @@ end.
 - An existing namespace for every object of the cluster (`harvester_namespace`).
   The module does not create it; a missing namespace fails the apply at the
   first create (the provider has no namespace data source).
-- A VM network of type L2 VLAN with DHCP and egress to the internet from the
-  physical network. VMs need `registry.suse.com`, `registry.rancher.com` and,
-  for the default build host image, `download.opensuse.org`.
+- A VM network of type L2 VLAN or untagged with DHCP and egress to the internet
+  from the physical network. VMs need `registry.suse.com`, `registry.rancher.com`
+  and, for the default build host image, `download.opensuse.org`. Overlay
+  networks (Kube-OVN) do not fit: the runner has no route into them, and in the
+  `kubeovn-operator` add-on configuration Kube-OVN is a secondary CNI that
+  installs no outgoing NAT on the hosts.
 - Two free static IPv4 addresses inside the network's subnet, outside the DHCP
   range, for the API (`api_vip`) and the ingress (`ingress_vip`). Nothing at plan
   can detect an address that someone else uses without a lease.
@@ -266,9 +270,26 @@ gpu_devices = {
 ```
 
 `device_name` is the KubeVirt host device resource name, `count` the devices per
-node. Untested. NVIDIA vGPU (SR-IOV, MIG) needs a vGPU host licence and the vGPU
-guest driver, which the precompiled datacenter driver override does not cover:
-not supported.
+node. The add-on binds an enabled device to `vfio-pci` on its host and
+advertises it to KubeVirt as that resource (`kubectl get pcidevices` shows it);
+each `host_device` entry requests one, so the scheduler places the VM on the
+host that has a free device and the guest sees a plain PCI GPU. The GPU operator
+then installs the driver in the guest as on any other provider.
+
+- **Verified** with one NVIDIA A10 (`nvidia.com/GA102GL_A10`) on a single
+  control plane (`cp`), Harvester 1.10.0-rc3: `nvidia.com/gpu` allocatable 1,
+  operator validations passed, `nvidia-smi` in a pod shows the A10 with the
+  precompiled SLES 16.1 driver.
+- **Memory.** A VM with a passthrough device has all of its memory pinned on the
+  host, regardless of Harvester's memory overcommit. Size GPU nodes to the free
+  host memory (a `16x40` node ran on a 64 GiB host). Host capacity is not
+  checked at plan.
+- A device belongs to one VM at a time: on a host with a single GPU, a
+  replacement node cannot start while the old one holds it, and an image rebuild
+  runs the build host next to the pinned node. Destroy first there.
+
+NVIDIA vGPU (SR-IOV, MIG) needs a vGPU host licence and the vGPU guest driver,
+which the precompiled datacenter driver override does not cover: not supported.
 
 ## Variables and tfvars layering
 
@@ -315,7 +336,8 @@ persistent volume claims, virtual machine images and secrets. `deploy.sh
 
 - End-to-end run on the test cluster (see the
   [checklist](../e2e-checklist.md#harvester)).
-- GPU passthrough (`gpu_devices`) untested.
+- GPU pools (`gpu_pools` with `gpu_devices`) on hardware; control-plane GPUs
+  are verified.
 - elemental3 [SUSE/elemental#487](https://github.com/SUSE/elemental/issues/487):
   secondary servers retry the RKE2 install when the VIP is announced early; joins
   may be slow.

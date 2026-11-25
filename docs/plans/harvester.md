@@ -423,9 +423,20 @@ enforced; build-done signal over HTTP.
    was Ready again in ~2 min and back in the slice. Not yet run: the full
    catalog 02 shape (storage pool, GPU pool).
 5. **Still unverified:** nginx ingress label for the ingress pool; root-disk
-   PVCs carry no `elemental-*` labels (leftover check misses them); GPU
-   passthrough; destroy "image in use" retry; ruleset `validate (harvester)`
-   after merge.
+   PVCs carry no `elemental-*` labels (leftover check misses them); GPU pools
+   (`gpu_pools`) on hardware; destroy "image in use" retry; ruleset
+   `validate (harvester)` after merge.
+6. **GPU passthrough passed (2026-11-25)** on a second cluster: Harvester
+   1.10.0-rc3, one host (144 vCPU, 64 GiB), NVIDIA A10 enabled for passthrough
+   (`nvidia.com/GA102GL_A10`). One control plane `16x40` with
+   `gpu_devices.cp`, components `gpu-operator`, untagged VM network on `mgmt`
+   with the lab DHCP: `nvidia.com/gpu` allocatable 1, product `NVIDIA-A10`,
+   driver 615.71.09 (precompiled SLES 16.1), operator validator passed,
+   `nvidia-smi` in a pod OK. A Kube-OVN overlay network with `natOutgoing` was
+   tried first: the add-on runs Kube-OVN with `--non-primary-cni-mode=true`, so
+   no host masquerade exists and VMs have no egress; the runner has no route to
+   the build host status either. On overlay networks Harvester's webhook
+   switches `bridge` interfaces to the `managedtap` binding.
 
 ## Sources
 

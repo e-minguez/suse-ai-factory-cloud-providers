@@ -14,7 +14,7 @@ Shape overview: [../README.md](../README.md). Status: not run end to end on Harv
 - Two free static IPv4 addresses in `vpc_cidr`, outside the DHCP range: `api_vip` and `ingress_vip`. The example uses `.40` and `.41`.
 - Harvester downloads the openSUSE Leap cloud image from `buildhost_image_url` unless `jumphost_image` names an existing image in the namespace. The cluster needs outbound access for that download.
 - Application Collection credentials (`appco_username`, `appco_password`) are required by local-path-provisioner.
-- The GPU is a passthrough device on the control plane: `gpu_devices = { cp = ... }` (key `cp` = control planes). Needs the `pcidevices-controller` add-on and the device enabled for passthrough. Untested on Harvester.
+- The GPU is a passthrough device on the control plane: `gpu_devices = { cp = ... }` (key `cp` = control planes). Needs the `pcidevices-controller` add-on and the device enabled for passthrough. Verified with an NVIDIA A10; passthrough pins all node memory on the host, so size `control_plane_instance_type` to the free host memory.
 
 ## Steps
 

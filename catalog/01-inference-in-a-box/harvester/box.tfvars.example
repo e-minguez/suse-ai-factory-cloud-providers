@@ -12,6 +12,8 @@ components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator
 control_plane_count = 1
 
 # 30 vCPU / 240 GiB with one passthrough GPU (key "cp" = control planes).
+# Passthrough pins all guest memory on the host: size it to the free host
+# memory (16x40 ran on a 64 GiB host).
 control_plane_instance_type = "30x240"
 gpu_devices = {
   cp = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
