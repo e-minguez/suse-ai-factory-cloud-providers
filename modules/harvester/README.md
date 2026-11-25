@@ -121,7 +121,7 @@ provider from a kubeconfig path ([`examples/harvester`](../../examples/harvester
 | jumphost\_image | OS image (AMI, image name or OS ID) of the jumphost. Null uses the provider default (an openSUSE Leap image). | `string` | `null` | no |
 | jumphost\_instance\_type | Machine type, flavor or plan of the jumphost that builds the image and serves as SSH bastion. Null uses the provider default. | `string` | `null` | no |
 | jumphost\_username | Login user of the jumphost. Empty makes the jumphost root-only. | `string` | `"suse"` | no |
-| keep\_build\_artifacts | Keep the intermediate build artifacts (raw image, build disks) after the image is registered. No effect on vultr, which builds on the jumphost. | `bool` | `false` | no |
+| keep\_build\_artifacts | Keep the intermediate build artifacts (raw image, build disks) after the image is registered. No effect on vultr, which builds on the jumphost, nor on gcp, which keeps the build disk and snapshot until the next build or destroy. | `bool` | `false` | no |
 | node\_storage\_classes | StorageClass per node group, keyed by "cp" (control planes), a gpu\_pools or worker\_pools key, or "buildhost"; the rest use storage\_class\_name. Every extra class gets its own export of the node image (no clone without encryption). | `map(string)` | `{}` | no |
 | node\_user\_password\_hash | Crypt hash for node\_username. | `string` | n/a | yes |
 | node\_username | Unprivileged login account created on every node. | `string` | `"suse"` | no |
@@ -158,7 +158,7 @@ provider from a kubeconfig path ([`examples/harvester`](../../examples/harvester
 | vpc\_id | Existing Harvester VM network as <namespace>/<name>, for example "harvester-public/vlan-2006". It needs DHCP and egress; vpc\_cidr must be its subnet. | `string` | n/a | yes |
 | vpc\_mtu | MTU of the cluster network interfaces; the pod MTU is derived from it. Null uses the provider default. | `number` | `null` | no |
 | worker\_pools | Worker pools without GPUs keyed by pool name, with the same fields as gpu\_pools. Hostnames are <cluster\_name>-<pool>-NN, so keys must not collide with gpu\_pools keys. | <pre>map(object({<br/>    instance_type = string<br/>    count         = optional(number, 1)<br/>    disk_size_gb  = optional(number)<br/>    zone          = optional(string)<br/>    public_ip     = optional(bool, false)<br/>    kind          = optional(string, "vm")<br/>    placement     = optional(string)<br/>  }))</pre> | `{}` | no |
-| zones | Zone suffixes the cluster spans (for example ["a", "b", "c"]); control planes are spread round-robin. Empty uses the provider default; providers without zones accept at most one entry. | `list(string)` | `[]` | no |
+| zones | Zones the cluster spans, suffixes or full names as the provider expects (for example ["a", "b"] or ["europe-west4-a"]); control planes are spread round-robin. Empty uses the provider default; providers without zones accept at most one entry. | `list(string)` | `[]` | no |
 
 ## Outputs
 

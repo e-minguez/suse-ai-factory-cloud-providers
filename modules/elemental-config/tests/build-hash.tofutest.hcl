@@ -231,7 +231,7 @@ run "local_route_addresses_change_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520"
     error_message = "local_route_addresses must change build_hash."
   }
 }
@@ -244,7 +244,7 @@ run "local_route_addresses_after_server_change_hash" {
   }
 
   assert {
-    condition     = output.build_hash != "3797738b1ecf3d979e5aed334658e8f77750575d9a2f6a8972933b7446224369" && output.build_hash != "d5e10eff61b4a8105ca66751c88670d7aec48d04318e02ca1712ed9cebdf4159"
+    condition     = output.build_hash != "32d47feaf712e183d30b45272199edf054a5e85e5e3b3c3106a6895be2433520" && output.build_hash != "d522f9648e6127c286fe531cf847bbbe18a483fa738731f28dd87b903c172094"
     error_message = "local_route_addresses_after_server must change build_hash, differently from local_route_addresses."
   }
 }

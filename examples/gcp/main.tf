@@ -37,6 +37,7 @@ module "ai_factory" {
   vpc_mtu                     = var.vpc_mtu
   image_rebuild               = var.image_rebuild
   aif_release                 = var.aif_release
+  etcd_unsafe_no_fsync        = var.etcd_unsafe_no_fsync
   components                  = var.components
   suse_storage_nodes          = var.suse_storage_nodes
 
