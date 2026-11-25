@@ -288,6 +288,39 @@ then installs the driver in the guest as on any other provider.
   replacement node cannot start while the old one holds it, and an image rebuild
   runs the build host next to the pinned node. Destroy first there.
 
+### Several hosts and device models
+
+- **One resource name per model.** The resource name comes from the PCI vendor
+  and device ID, so every enabled A10 on every host is
+  `nvidia.com/GA102GL_A10`, and an L40S has its own name. List them with
+  `kubectl get pcidevices -o custom-columns=NODE:.status.nodeName,ADDR:.status.address,RESOURCE:.status.resourceName`
+  and `kubectl get pcideviceclaims` (enabled ones).
+- **The scheduler picks the host and the device.** The module sets no node
+  selector or PCI address: a node lands on any host with `count` free devices of
+  its resource, and KubeVirt picks which ones. `count = 2` needs two free
+  devices on the same host. A pool's nodes prefer different hosts (soft spread,
+  see [Network](#network)).
+- **One model per node group.** Each `gpu_devices` entry has a single
+  `device_name`. Different models are different pools:
+
+  ```hcl
+  gpu_pools = {
+    a10  = { instance_type = "16x64", count = 2 }
+    l40s = { instance_type = "32x128", count = 1 }
+  }
+  gpu_devices = { # read the names from `kubectl get pcidevices`
+    a10  = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+    l40s = { device_name = "nvidia.com/AD102GL_L40S", count = 2 }
+  }
+  ```
+
+- **Only what is enabled counts.** Devices without passthrough enabled are not
+  advertised; enabling is per device and outside the module. Nothing checks
+  free devices at plan: a node without a free device stays unscheduled (VM pod
+  `Pending`, `Insufficient <resource>`) until the apply times out.
+- `device_name` is any KubeVirt host device resource, but the image only has
+  the NVIDIA stack: GPUs are the supported case.
+
 NVIDIA vGPU (SR-IOV, MIG) needs a vGPU host licence and the vGPU guest driver,
 which the precompiled datacenter driver override does not cover: not supported.
 

@@ -5,7 +5,9 @@ existing Harvester VM network, a build host that builds the Elemental image and 
 off, and the node image exported from a volume. `deploy.sh` runs it in one pass.
 
 **Status:** single-node and HA end-to-end runs passed (Harvester 1.8.2). `deploy_nodes = false`
-stops after the image. GPU passthrough (`gpu_devices`) is untested.
+stops after the image. GPU passthrough (`gpu_devices`) is verified on a control plane
+(NVIDIA A10, Harvester 1.10.0-rc3); GPU pools have not run on hardware. How devices
+are matched to hosts: [provider notes](../../docs/providers/harvester.md#gpus).
 
 ## Prerequisites
 

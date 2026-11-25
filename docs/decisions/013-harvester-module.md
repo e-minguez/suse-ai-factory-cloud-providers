@@ -77,4 +77,5 @@ Platform behaviour that shapes the module (checked in the
 - A VIP collision with an unleased address cannot be detected at plan.
 - The node image is as large as `image_disk_size`.
 - Host capacity cannot be checked at plan; there is no cost estimate.
-- GPU passthrough is untested.
+- GPU passthrough is verified on control planes (one NVIDIA A10, 2026-11-25);
+  GPU pools have not run on hardware.
