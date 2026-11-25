@@ -67,6 +67,7 @@ flowchart TD
         evroc["evroc: dd to evroc_disk (image target) →<br/>detach → evroc_snapshot per zone"]
         exoscale["exoscale: qemu-img convert to qcow2 (≥ 10 GiB),<br/>HTTP on jumphost :80 → exoscale_template"]
         oci["oci: qemu-img convert to qcow2, curl -T to write-only PARs →<br/>oci_core_image + UEFI capability schema"]
+        gcp["gcp: dd to google_compute_disk (image target) →<br/>google_compute_snapshot → google_compute_image (global)"]
     end
 
     deliver --> nodes["Nodes: boot from the image,<br/>Ignition sets role, hostname, node-ip"]
@@ -77,7 +78,8 @@ flowchart TD
 Terraform waits for the build from the workstation: aws polls S3
 (`wait-for-raw.sh`), vultr and exoscale poll the served URL
 (`wait-for-image.sh`), oci polls a read-only pre-authenticated request for the
-`done` marker (`wait-for-image.sh`), evroc polls the build-status relay on the
+`done` marker (`wait-for-image.sh`), gcp polls the guest attributes of the
+jumphost through the Compute API (`wait-for-image.sh`), evroc polls the build-status relay on the
 jumphost (`wait-for-image.sh`).
 `scripts/build-logs.sh` follows the build log on the build host over SSH.
 
@@ -238,6 +240,27 @@ flowchart TD
     end
 ```
 
+### gcp: one pass
+
+Both load balancer addresses are reserved before the image, and the instance
+groups and backend services are created after the instances. The image comes from
+a snapshot of the attached target disk, so no detach pass is needed
+([ADR 014](decisions/014-gcp-module.md)).
+
+```mermaid
+flowchart TD
+    subgraph p1 ["Pass 1: Deploy"]
+        net["network: google_compute_network, subnetwork,<br/>router + NAT (reserved address), firewall rules by tag"]
+        lb["lb: reserved external + internal address (api_vip),<br/>health checks"]
+        jh["jumphost: google_compute_instance + image_target disk<br/>(builds the image, then the SSH bastion)"]
+        img["image: guest attributes poll → google_compute_snapshot →<br/>google_compute_image"]
+        nodes["nodes: google_compute_instance per node (zones)"]
+        be["instance group per zone, backend services,<br/>forwarding rules (external + internal)"]
+        net --> lb --> img --> nodes --> be
+        net --> jh --> img
+    end
+```
+
 ## Network
 
 Main traffic paths. SSH always goes through the jumphost (`ProxyJump`,
@@ -392,6 +415,34 @@ flowchart LR
     ag -- "6443, 9345 via public address" --> nat
     nat --> inet
     inet -- "to the reserved IP" --> nlb
+```
+
+### gcp
+
+```mermaid
+flowchart LR
+    admin(["Admin"])
+    users(["Users / kubectl"])
+    inet(["Internet"])
+
+    subgraph vpc ["google_compute_network (one regional subnet)"]
+        jh["jumphost<br/>(public address)"]
+        ilb["internal passthrough LB<br/>api_vip: 6443, 9345"]
+        cp["control_plane<br/>google_compute_instance<br/>local routes for both LB addresses"]
+        ag["worker, gpu<br/>google_compute_instance"]
+    end
+    elb["external passthrough LB (reserved address)<br/>6443, 80/443"]
+    nat["Cloud NAT (reserved address)"]
+
+    admin -- "SSH (admin_cidrs)" --> jh
+    jh -- "SSH" --> cp
+    jh -- "SSH" --> ag
+    users -- "80/443 (ingress_cidrs)<br/>6443 (api_cidrs), source kept" --> elb --> cp
+    cp -- "6443, 9345" --> ilb --> cp
+    ag -- "6443, 9345" --> ilb
+    cp --> nat
+    ag --> nat
+    nat --> inet
 ```
 
 ### SUSE Security and SUSE Observability

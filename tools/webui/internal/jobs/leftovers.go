@@ -13,6 +13,7 @@ var leftoverTools = map[string][]string{
 	"aws":      {"aws"},
 	"evroc":    {"evroc", "jq"},
 	"exoscale": {"curl", "jq", "openssl"},
+	"gcp":      {"gcloud", "jq"},
 	"oci":      {"oci", "jq"},
 	"vultr":    {"curl", "jq"},
 }
@@ -57,6 +58,7 @@ type Leftovers struct {
 //	aws       <cluster_name> --region <region>   (region: tfvars, else AWS_REGION; AWS_* creds via creds.Env)
 //	evroc     <cluster_name> [--region R] [--project P]
 //	exoscale  <cluster_name> [--region R]        + EXOSCALE_API_KEY/SECRET from exoscale_api_key/secret
+//	gcp       <cluster_name> [--project P]       + gcloud credentials from creds.Env (ADC file)
 //	oci       <cluster_name> [--region R] [--compartment C]   (C: oci_compartment_ocid; CLI creds from $HOME/.oci/config)
 //	vultr     <cluster_name>                     + VULTR_API_KEY from vultr_api_key
 //
@@ -104,6 +106,10 @@ func LeftoverSpec(repo, clustersDir, provider, cluster string) Leftovers {
 		}
 		if vars["exoscale_api_secret"] != "" {
 			l.Env = append(l.Env, "EXOSCALE_API_SECRET="+vars["exoscale_api_secret"])
+		}
+	case "gcp":
+		if vars["gcp_project"] != "" {
+			l.Args = append(l.Args, "--project", vars["gcp_project"])
 		}
 	case "oci":
 		region()

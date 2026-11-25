@@ -49,7 +49,9 @@ gpu_pools = {
 - **Availability:** each provider checks at plan that the instance types exist
   and can be served (aws: offered in the zone; evroc: flavor offered, compute
   and public IP quota; vultr: plan in stock; exoscale: type offered and
-  available to the organization, instance, load balancer and GPU quota). A failing check stops the plan
+  available to the organization, instance, load balancer and GPU quota; gcp:
+  machine type offered in the zone, and the region and project quotas the
+  Compute API reports, such as CPUs, GPUs and SSD GB). A failing check stops the plan
   before anything is created. Account quotas the provider does not expose are
   not checked; see `docs/providers/<provider>.md`.
 - **Shrink a pool or remove it:** Terraform destroys the highest-numbered

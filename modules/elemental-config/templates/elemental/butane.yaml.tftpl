@@ -60,6 +60,43 @@ systemd:
 %{ endfor ~}
 %{ endif ~}
 %{ endif ~}
+%{ if length(local_route_addresses) > 0 ~}
+    - name: local-routes.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Local routes for load balancer addresses (control planes)
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/bash /var/lib/elemental/local-routes.sh ${join(" ", local_route_addresses)}
+
+        [Install]
+        WantedBy=multi-user.target
+%{ endif ~}
+%{ if length(local_route_addresses_after_server) > 0 ~}
+    # The script waits for rke2-server to be active (no Requires=: an RKE2
+    # restart must not rerun it), so a joining server reaches an existing one
+    # first. Type=simple: the unbounded wait must not hold back multi-user.target.
+    - name: local-routes-after-server.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Local routes for load balancer addresses once rke2-server is active
+        Wants=network-online.target
+        After=network-online.target rke2-server.service
+
+        [Service]
+        Type=simple
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/bash /var/lib/elemental/local-routes.sh --after-server ${join(" ", local_route_addresses_after_server)}
+
+        [Install]
+        WantedBy=multi-user.target
+%{ endif ~}
 %{ if enable_iscsi_prep ~}
     # The suse-storage sysext ships iscsid under /usr and nothing under /etc.
     - name: iscsi-prep.service
@@ -146,6 +183,14 @@ storage:
       contents:
         inline: |
           ${indent(10, write_node_ip_script)}
+%{ endif ~}
+%{ if length(local_route_addresses) + length(local_route_addresses_after_server) > 0 ~}
+    - path: /var/lib/elemental/local-routes.sh
+      mode: 493 # 0755
+      overwrite: true
+      contents:
+        inline: |
+          ${indent(10, local_routes_script)}
 %{ endif ~}
 %{ if enable_iscsi_prep ~}
     - path: /var/lib/elemental/iscsi-prep.sh

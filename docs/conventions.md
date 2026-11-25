@@ -16,7 +16,7 @@ examples, the output set and the managed labels.
 | Keep build artifacts | `keep_build_artifacts` |
 | Network | `vpc_cidr` (subnets are derived from it), `vpc_mtu` |
 | Extra labels | `tags` |
-| Zones | `zones` (list of suffixes) |
+| Zones | `zones` (list of suffixes; gcp takes full zone names, `europe-west4-a`) |
 
 Variables every provider declares live in one file,
 `modules/common/variables-common.tf`. Terraform cannot import variable
@@ -62,7 +62,8 @@ cannot honour: aws `public_ip = true`, `placement` and `kind = "bare_metal"`;
 vultr `zone`, `disk_size_gb` and `placement`; evroc `kind = "bare_metal"`;
 exoscale `zone`, `placement`, `kind = "bare_metal"` and `public_ip = false`
 (every node has a public IPv4, so `public_ip` and `control_plane_public_ip`
-must be `true` there; [ADR 008](decisions/008-exoscale-module.md)).
+must be `true` there; [ADR 008](decisions/008-exoscale-module.md)); gcp
+`placement` and `kind = "bare_metal"` ([ADR 014](decisions/014-gcp-module.md)).
 
 Exception: exoscale control planes are one instance pool, whose members
 Exoscale names `<cluster_name>-cp-<5 characters of the pool ID>-<random>`
@@ -74,7 +75,9 @@ Every resource that can carry labels gets the same keys on every provider
 (Vultr stores them as `key=value` strings in `tags`). Values follow Kubernetes
 label value rules. `var.tags` is merged on top of the managed keys and must
 not use the `elemental-` prefix. Keys contain no `/`, because the evroc API
-rejects it; on evroc `var.tags` keys cannot contain `/` either.
+rejects it; on evroc `var.tags` keys cannot contain `/` either. On gcp keys and
+values are lowercase letters, digits, `_` and `-` only (keys start with a
+letter, at most 63 characters), checked at plan for `var.tags`.
 
 | Key | On | Value |
 |---|---|---|
@@ -96,7 +99,9 @@ listeners, target groups and VIPs); `network` (VPC, subnets, NAT, routes);
 `iam`. Security groups take the role of what they protect. No other keys, apart
 from the aws `Name` tag, a platform convention. Some Exoscale types carry no
 labels at all (security groups, anti-affinity groups, templates); they are
-named `<cluster_name>-<suffix>` and found by name.
+named `<cluster_name>-<suffix>` and found by name. The same holds on gcp for
+firewall rules, health checks, backend services and instance groups; the VPC,
+subnet, router and NAT are named `<cluster_name>`.
 
 ## Outputs
 
@@ -107,7 +112,7 @@ output is `next_steps`. Provider-only data goes in `provider_details`.
 
 | Output | Type | Notes |
 |---|---|---|
-| `provider` | string | `aws`, `evroc`, `exoscale` or `vultr`; tools dispatch on it |
+| `provider` | string | `aws`, `evroc`, `exoscale`, `gcp`, `oci` or `vultr`; tools dispatch on it |
 | `cluster_name`, `region` | string | |
 | `kubernetes_api_endpoint` | string | `https://<api_host>:6443` |
 | `api_host` | string | DNS name of the API for kubectl |

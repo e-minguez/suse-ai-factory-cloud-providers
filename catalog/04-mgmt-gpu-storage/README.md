@@ -130,6 +130,7 @@ estimate for your values: `tools/multicluster/cluster.sh cost <name>`.
 
 - [Vultr](vultr/README.md)
 - [evroc](evroc/README.md)
+- [GCP](gcp/README.md)
 - [OCI](oci/README.md)
 - [AWS](aws/README.md)
 

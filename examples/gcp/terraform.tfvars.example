@@ -1,0 +1,91 @@
+# Per-cluster values. Loaded last, so it wins over ../../common-all.tfvars and
+# ../common-gcp.tfvars (deploy.sh layers them, later wins). Values every
+# provider declares (admin_cidrs, password hashes, ssh_authorized_keys,
+# registry credentials, aif_release) can live in common-all.tfvars instead;
+# gcp_project and region fit common-gcp.tfvars.
+
+# false builds the network, load balancer addresses and image only.
+# deploy_nodes = true
+
+# Project ID (not name or number) and region. Credentials are Application
+# Default Credentials: `gcloud auth application-default login` or
+# GOOGLE_APPLICATION_CREDENTIALS. Nothing secret goes in this file.
+gcp_project = "REPLACE_WITH_YOUR_PROJECT_ID"
+region      = "europe-west4"
+
+# Optional: a service account the credentials may impersonate.
+# gcp_impersonate_service_account = "deployer@REPLACE.iam.gserviceaccount.com"
+
+# CIDRs allowed to SSH into the jumphost, the only SSH entry: your admin IP(s)
+# or VPN range.
+admin_cidrs = ["REPLACE_WITH_YOUR_IP/32"]
+
+# Generate both with `openssl passwd -6`. They must differ.
+root_password_hash      = "REPLACE_WITH_OUTPUT_OF_openssl_passwd_-6"
+node_user_password_hash = "REPLACE_WITH_A_DIFFERENT_OUTPUT_OF_openssl_passwd_-6"
+
+# At least one public key, installed for node_username and on the jumphost.
+ssh_authorized_keys = ["REPLACE_WITH_YOUR_ssh-ed25519_OR_ssh-rsa_PUBLIC_KEY"]
+
+# Login on the nodes; escalate with `su -` (no sudo in the image).
+# node_username = "suse"
+
+# --- Registry credentials -------------------------------------------------
+
+# Application Collection is required with local-path-provisioner (in the
+# default components) or suse-storage; the SUSE registry and NVIDIA NGC ones
+# are optional. With aif-operator, set all of them.
+appco_username         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_USERNAME"
+appco_password         = "REPLACE_WITH_YOUR_APPLICATION_COLLECTION_PASSWORD"
+suse_registry_username = "REPLACE_WITH_YOUR_SUSE_REGISTRY_USERNAME"
+suse_registry_password = "REPLACE_WITH_YOUR_SUSE_REGISTRY_PASSWORD"
+nvidia_api_key         = "REPLACE_WITH_YOUR_NVIDIA_NGC_API_KEY"
+
+# --- Machine types --------------------------------------------------------
+# Plain machine type names. GPUs come with the machine type: g2-standard-* (L4),
+# g4-standard-48 or larger (RTX PRO 6000; smaller G4 sizes are fractional and
+# rejected), a2-*, a3-*. The zone must offer the type and the project needs
+# the GPU quota in the region.
+#
+gpu_pools = {
+  gpu = { instance_type = "g2-standard-8", count = 1 }
+}
+# worker_pools = {
+#   wrk = { instance_type = "n2-standard-8", count = 2 }
+# }
+
+# --- Optional -------------------------------------------------------------
+
+# AI Factory: a version X.Y.Z (tag aif-operator-<version>, 2.1.0 or newer) or
+# a manifest URL (branch, fork or mirror).
+# aif_release = "2.4.0"
+
+# Changing components rebuilds the image and replaces every node.
+# components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# rancher_hostname = null  # defaults to "rancher-<external address>.sslip.io"
+# ingress_domain   = "aif.example.com"
+# api_cidrs        = ["0.0.0.0/0"]  # who may reach the Kubernetes API on 6443
+# ingress_cidrs    = ["0.0.0.0/0"]  # who may reach the ingress on 80/443
+
+# zones                       = ["europe-west4-a", "europe-west4-b", "europe-west4-c"]  # full zone names
+# cluster_name                = "suse-ai-factory"
+# control_plane_count         = 3  # 1, or odd and at least 3
+# control_plane_instance_type = "n2-standard-4"
+# jumphost_instance_type      = "e2-standard-4"
+# jumphost_image              = "projects/opensuse-cloud/global/images/family/opensuse-leap"
+# boot_disk_type              = "pd-ssd"  # default follows the machine family
+# tags replaces (not merges with) any tags map in common-*.tfvars. Lowercase only.
+# tags                        = { env = "test" }
+# image_id                    = "my-image"  # boot an existing image instead of building
+
+# Deploy into an existing VPC instead of creating one: a regional subnet in
+# `region` of that VPC, in this project, with Cloud NAT egress (nodes are
+# private). Both or neither. Set vpc_mtu to the VPC MTU when it is not 1460.
+# nat_ips lists the Cloud NAT addresses (not readable); without it egress_ips is
+# empty and the NAT client firewall entries are skipped. Destroy leaves the
+# network alone. See docs/providers/gcp.md#existing-network.
+# vpc_id    = "my-vpc"
+# subnet_id = "my-subnet"
+# nat_ips   = ["203.0.113.50"]
+# vpc_mtu   = 1460

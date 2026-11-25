@@ -1,0 +1,5 @@
+# Shape 04, management cluster. Shared values go in clusters/common-*.tfvars.
+
+cluster_name        = "aif-mgmt"
+control_plane_count = 3
+components          = ["rancher", "aif-operator", "local-path-provisioner"]

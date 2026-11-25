@@ -19,6 +19,17 @@ variables {
   nvidia_api_key          = "DUMMY-NVIDIA-API-KEY"
 }
 
+# The release manifest comes from a fixture: no network fetch in tests.
+mock_provider "http" {}
+
+override_data {
+  target = module.elemental_config.data.http.aif_release_manifest
+  values = {
+    status_code   = 200
+    response_body = file("tests/fixtures/release_manifest.yaml")
+  }
+}
+
 mock_provider "aws" {
   override_data {
     target = data.aws_availability_zones.available

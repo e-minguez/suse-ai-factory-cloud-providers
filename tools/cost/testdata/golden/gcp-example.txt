@@ -1,0 +1,24 @@
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.
+Provider: gcp   Region: europe-west4   Cluster: suse-ai-factory   Catalog: file (2026-11-20T00:00:00Z)
+
+  RESOURCE                                                              ROLE      POOL  QTY  TYPE                    USD/hr     1h     8h   24h     7d     30d
+  jumphost                                                              jumphost          1  e2-standard-4           0.1480   0.15   1.18  3.55  24.86  106.56
+  jumphost disk (100 GB)                                                jumphost          1  disk:pd-balanced   0.000164/GB   0.02   0.13  0.39   2.76   11.84
+  external IPv4 (jumphost)                                              jumphost          1  ip:external             0.0050   0.01   0.04  0.12   0.84    3.60
+  image target disk (8 GB)                                              image             1  disk:pd-balanced   0.000164/GB  <0.01   0.01  0.03   0.22    0.95
+  image snapshot (upper bound) (8 GB)                                   image             1  storage:snapshot   0.000036/GB  <0.01  <0.01  0.01   0.05    0.21
+  image (upper bound) (8 GB)                                            image             1  storage:image      0.000068/GB  <0.01  <0.01  0.01   0.09    0.39
+  forwarding rules (minimum charge, first 5)                            lb                1  lb:forwarding-min       0.0250   0.03   0.20  0.60   4.20   18.00
+  external IPv4 (load balancer)                                         lb                1  ip:external             0.0050   0.01   0.04  0.12   0.84    3.60
+  external IPv4 (cloud nat)                                             network           1  ip:external             0.0050   0.01   0.04  0.12   0.84    3.60
+  vpc, subnet, firewall rules, router, health checks, internal address  network              -- free --                  --     --     --    --     --      --
+                                                                                                                      TOTAL   0.21   1.65  4.96  34.71  148.74
+
+  All amounts in USD.
+  deploy_nodes = false: node rows omitted.
+  Not included:
+    - outbound traffic: traffic-dependent; internet egress is billed per GiB
+    - load balancer and NAT data processing: traffic-dependent, billed per GiB
+    - hyperdisk IOPS and throughput: disks are priced per GB only; provisioned performance above the baseline is not estimated
+
+ESTIMATE ONLY — a helper for rough guidance, not a quote. For real numbers contact the provider or do your own math.

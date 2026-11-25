@@ -27,3 +27,4 @@ with `# see docs/decisions/NNN-title.md`.
 - [010](010-security-observability.md) SUSE Security and SUSE Observability components
 - 011 reserved: bare metal provider, in review on branch `feat/baremetal`
 - [012](012-oci-module.md) oci module design
+- [014](014-gcp-module.md) gcp module design

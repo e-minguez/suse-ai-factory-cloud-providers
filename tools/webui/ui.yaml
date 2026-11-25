@@ -132,6 +132,27 @@ exoscale:
     - exoscale_api_key
     - exoscale_api_secret
 
+gcp:
+  examples:
+    worker_pools: |
+      {"wrk": {"instance_type": "n2-standard-8", "count": 2}}
+    zones: |
+      ["europe-west4-a", "europe-west4-b", "europe-west4-c"]
+  basic:
+    - name: region
+      label: GCP region
+      widget: text
+      options: [europe-west4, europe-west1, europe-north1, us-central1, us-east4, us-west1, asia-southeast1]
+    - {name: gcp_project, label: Project ID}
+  groups:
+    Provider:
+      - gcp_impersonate_service_account
+      - {name: boot_disk_type, widget: text, options: [pd-balanced, pd-ssd, pd-standard, hyperdisk-balanced]}  # empty = per family; a select would always send a value
+      - vpc_id
+      - subnet_id
+      - nat_ips
+      - vpc_mtu
+
 oci:
   examples:
     worker_pools: |

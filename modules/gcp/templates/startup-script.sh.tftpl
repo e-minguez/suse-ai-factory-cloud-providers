@@ -1,0 +1,37 @@
+#!/bin/bash
+# Jumphost startup script, run as root by the guest agent on every boot; the
+# setup runs once. Without jumphost_username the keys go to root.
+set -u
+MARK=/var/lib/aif-jumphost-init
+[ -e "$MARK" ] && exit 0
+mkdir -p "$(dirname "$MARK")"
+touch "$MARK"
+%{ if jumphost_username == "" ~}
+
+install -d -m 0700 /root/.ssh
+cat >> /root/.ssh/authorized_keys <<'KEYS'
+%{ for key in ssh_keys ~}
+${key}
+%{ endfor ~}
+KEYS
+chmod 0600 /root/.ssh/authorized_keys
+mkdir -p /etc/ssh/sshd_config.d
+echo 'PermitRootLogin prohibit-password' > /etc/ssh/sshd_config.d/50-aif-root.conf
+systemctl reload sshd || systemctl reload ssh || true
+%{ endif ~}
+%{ if build ~}
+
+base64 -d > /opt/elemental-config.sh.gz <<'CONFIG'
+${config_bundle}
+CONFIG
+gunzip -f /opt/elemental-config.sh.gz
+chmod 0700 /opt/elemental-config.sh
+base64 -d <<'FACTORY' | gunzip > /opt/image-factory.sh
+${factory_script}
+FACTORY
+chmod 0700 /opt/image-factory.sh
+
+bash /opt/elemental-config.sh ${config_dir}
+rm -f /opt/elemental-config.sh
+nohup setsid /opt/image-factory.sh </dev/null >/dev/null 2>&1 &
+%{ endif ~}

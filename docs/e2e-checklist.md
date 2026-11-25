@@ -1,6 +1,6 @@
 # End-to-end checks not yet run
 
-Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16).
+Every other end-to-end check passed on aws, evroc and vultr for `v0.1.0`, and on oci in its first run (2026-11-16). gcp passed its first deploys (2026-11-23 and 2026-11-24); the open items are below.
 Run these from the cluster directory (`examples/<provider>` or
 `clusters/<name>`); `make ci` must pass first.
 
@@ -51,6 +51,26 @@ joining through the NLB, fault-domain spread, A10 pool with `nvidia-smi`,
 - [ ] `image_id` set to an existing image: the jumphost is a bastion only, nodes boot.
 - [ ] As a multicluster downstream: `cluster.sh register` with the NAT address in the management `ingress_cidrs`.
 - [ ] Expired PARs after 24 hours: `oci os preauth-request list --bucket-name <cluster>-build`.
+
+## gcp
+
+[ADR 014](decisions/014-gcp-module.md), [platform notes](providers/gcp.md). The
+first deploys (2026-11-23 and 2026-11-24) passed the quotas and org policies,
+the image build, `deploy_nodes = false` then `true`, UEFI boot with `gve` and
+`nvme` on `n2-standard-4` and `g2-standard-4`, three control planes joining
+through the internal load balancer, one control plane with a worker and a GPU
+pool, Rancher and the API on sslip.io, MTU and NTP from DHCP, pod MTU 1410, the
+GPU operator with the precompiled driver on L4, `nvidia-smi` in a pod, a
+local-path volume, aif-operator, quota checks, a failed build stopping the wait
+at the next poll, `image_id`, an existing network with `vpc_mtu = 8896`, two
+`--rebuild` runs in a row and a destroy with a clean leftover check
+([Verified](providers/gcp.md#verified)). Runbook:
+[examples/gcp/README.md](../examples/gcp/README.md). Find a zone with GPU
+capacity first: [GPU capacity](providers/gcp.md#gpu-capacity).
+
+- [ ] An RTX PRO 6000 GPU pool (needs `GPUS_PER_GPU_FAMILY` quota and capacity).
+- [ ] As a multicluster downstream: `cluster.sh register` with the Cloud NAT
+      address in the management `ingress_cidrs`.
 
 ## Multicluster
 

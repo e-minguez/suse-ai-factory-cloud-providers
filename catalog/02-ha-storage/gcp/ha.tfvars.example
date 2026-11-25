@@ -1,0 +1,19 @@
+# Shape 02, HA cluster with storage. Shared values go in clusters/common-*.tfvars.
+
+cluster_name = "aif-ha"
+components   = ["rancher", "gpu-operator", "suse-storage", "aif-operator"]
+
+control_plane_count         = 3
+control_plane_instance_type = "n2-standard-8"
+
+gpu_pools = {
+  gpu = { instance_type = "g2-standard-8", count = 1 }
+}
+
+worker_pools = {
+  general = { instance_type = "n2-standard-4", count = 2 }
+  storage = { instance_type = "n2-standard-4", count = 3 }
+}
+
+# Pool "storage" hosts SUSE Storage (Longhorn) on its root disk.
+suse_storage_nodes = ["storage"]

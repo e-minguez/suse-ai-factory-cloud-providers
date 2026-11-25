@@ -1,0 +1,17 @@
+# Shape 01, inference in a box. Shared values (gcp_project, region, admin_cidrs,
+# password hashes, ssh keys, aif_release) go in clusters/common-*.tfvars.
+
+cluster_name = "aif-box"
+
+# Rancher, AI Factory and the GPU stack on one node. Changing components
+# rebuilds the image and replaces every node.
+components = ["rancher", "gpu-operator", "local-path-provisioner", "aif-operator"]
+
+# One node that is control plane and GPU worker. No gpu_pools, no worker_pools.
+control_plane_count = 1
+
+# One L4 (24 GB), 16 vCPU / 64 GB. Needs the nvidia_l4_gpus quota >= 1 in the region.
+control_plane_instance_type = "g2-standard-16"
+
+# Optional. Default is sslip.io names of the external load balancer address.
+# ingress_domain = "aif.example.com"  # A record: *.<domain> -> load balancer IP

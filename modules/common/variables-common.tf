@@ -25,7 +25,7 @@ variable "region" {
 variable "zones" {
   type        = list(string)
   default     = []
-  description = "Zone suffixes the cluster spans (for example [\"a\", \"b\", \"c\"]); control planes are spread round-robin. Empty uses the provider default; providers without zones accept at most one entry."
+  description = "Zones the cluster spans, suffixes or full names as the provider expects (for example [\"a\", \"b\"] or [\"europe-west4-a\"]); control planes are spread round-robin. Empty uses the provider default; providers without zones accept at most one entry."
 
   validation {
     condition     = length(distinct(var.zones)) == length(var.zones)
@@ -33,8 +33,8 @@ variable "zones" {
   }
 
   validation {
-    condition     = alltrue([for z in var.zones : can(regex("^[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$", z))])
-    error_message = "Every zone must be 1-16 characters of lowercase alphanumerics and hyphens, not starting or ending with a hyphen."
+    condition     = alltrue([for z in var.zones : can(regex("^[a-z0-9]([a-z0-9-]{0,26}[a-z0-9])?$", z))])
+    error_message = "Every zone must be 1-28 characters of lowercase alphanumerics and hyphens, not starting or ending with a hyphen."
   }
 }
 
@@ -319,11 +319,11 @@ variable "image_id" {
   description = "Existing image (AMI or snapshot) to boot instead of building one. Null builds the image. Providers with per-zone images use image_ids."
 }
 
-# tflint-ignore: terraform_unused_declarations # vultr has no separate build resources
+# tflint-ignore: terraform_unused_declarations # vultr has no separate build resources, gcp ignores it
 variable "keep_build_artifacts" {
   type        = bool
   default     = false
-  description = "Keep the intermediate build artifacts (raw image, build disks) after the image is registered. No effect on vultr, which builds on the jumphost."
+  description = "Keep the intermediate build artifacts (raw image, build disks) after the image is registered. No effect on vultr, which builds on the jumphost, nor on gcp, which keeps the build disk and snapshot until the next build or destroy."
 }
 
 variable "elemental_image" {

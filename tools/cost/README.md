@@ -8,7 +8,7 @@ and ends with this statement, and the JSON report carries it in a top-level
 
 `cost` reads the same tfvars files as `deploy.sh`, applies the module
 defaults, prices the resources the module would create (aws, evroc, exoscale,
-oci or vultr), and prints a per-resource table for 1h, 8h, 24h, 7d and 30d. It
+gcp, oci or vultr), and prints a per-resource table for 1h, 8h, 24h, 7d and 30d. It
 reads no plan, no state and no live resources, so it works before anything
 exists. Credentials in the tfvars files are never read.
 
@@ -18,7 +18,7 @@ of Go files.
 ## Usage
 
 ```
-make cost PROVIDER=<aws|evroc|exoscale|oci|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
+make cost PROVIDER=<aws|evroc|exoscale|gcp|oci|vultr> TFVARS="common-all.tfvars examples/<p>/terraform.tfvars"
 tools/multicluster/cluster.sh cost <name> [cost args]
 cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 ```
@@ -28,9 +28,9 @@ cd tools/cost && go run . --provider <p> --var-file F [--var-file F]... [flags]
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--provider NAME` | required | `aws`, `evroc`, `exoscale`, `oci` or `vultr` |
+| `--provider NAME` | required | `aws`, `evroc`, `exoscale`, `gcp`, `oci` or `vultr` |
 | `--var-file F` | none | tfvars file; repeatable, later wins |
-| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; evroc, exoscale and oci prices do not depend on it, and a null evroc region shows as `(evroc CLI context)`) |
+| `--region R` | from tfvars or module default | override the region (required for aws and vultr when the tfvars set none; gcp prices are those of the region, default `europe-west4`; evroc, exoscale and oci prices do not depend on it, and a null evroc region shows as `(evroc CLI context)`) |
 | `--json` | off | print a JSON report instead of a table |
 | `--catalog FILE` | none | use this provider catalog file instead of the network or cache |
 | `--no-network` | off | never call the network; use `--catalog` or a warm cache |
@@ -70,7 +70,7 @@ column per duration. `ROLE` and `POOL` use the label vocabulary in
   went.
 - `*` marks a row capped at the monthly rate (vultr monthly-invoiced plans).
 - Amounts are in the provider's native currency (aws and vultr USD, evroc EUR;
-  exoscale EUR, one of the three currencies it publishes; oci USD). There is no
+  exoscale EUR, one of the three currencies it publishes; oci and gcp USD). There is no
   conversion.
 - `Not included` lists resources that exist but are not priced, each with the
   reason.
@@ -138,6 +138,47 @@ network load balancer is priced per hour. The public IPv4 of each instance,
 the private network and security groups have no charge.
 
 Not included: outbound traffic.
+
+### gcp
+
+Prices come from the Cloud Billing Catalog API
+(`GET https://cloudbilling.googleapis.com/v1/services/<id>/skus`, USD) for
+Compute Engine (`6F81-5844-456A`) and Networking (`E505-1604-58F8`, where the
+load balancer forwarding rule SKUs live; if that service cannot be read, the
+forwarding rule rates are missing and the run fails with exit code 3). The API
+needs a key: create one for a project with the Cloud Billing API enabled
+and export it as `GCP_PRICING_API_KEY` (sent in a header, never printed). Without
+the key the warm cache serves, else the run fails naming the variable. Nothing
+from your account is read. The estimator keeps the on-demand SKUs of the
+region (and global ones) in a per-region cache file; `--catalog` takes the
+`skus` of one or more API response pages joined into `{"skus": [...]}`, and the
+report header shows the latest `effectiveTime`.
+
+SKUs are matched by `description` pattern, usage unit and `usageType =
+OnDemand` (spot, commitments, custom shapes, sole tenancy and regional disks are
+excluded), in `serviceRegions` of the region. Regional SKUs win over global
+ones; among several candidates the cheapest is used. A machine type costs vCPUs
+times the family core rate plus GB of RAM times the family RAM rate, plus the
+built-in GPU count times the GPU rate for G2 (L4), G4 (RTX PRO 6000 full sizes),
+A2 and A3. The vCPU, RAM and GPU table covers n1, n2, n2d, n4, e2 (not
+shared-core), c2, c2d, c3, c3d, c4 standard, highmem and highcpu shapes and the
+fixed g2, g4, a2 and a3 types; any other type fails with exit code 3
+(`--allow-unknown-plans` prices it as 0). A fractional G4 size or a malformed
+type fails with exit code 2, like the module.
+
+Boot disks are priced per GB-month by type: `pd-balanced` or
+`hyperdisk-balanced` by family (as `locals.tf`), or `boot_disk_type`; the
+jumphost always uses the family default. Hyperdisk IOPS and throughput are not
+estimated (GB only). The image build adds a target disk, a snapshot and an
+image, the last two at the disk size (an upper bound: both store compressed
+data). Every external IPv4 in use (jumphost, public nodes, load balancer, NAT)
+costs the in-use rate. The three to five forwarding rules cost one minimum
+charge (first five rules) and the internal ones are priced like the external
+ones. Cloud NAT is priced per VM without a public address, up to 32; with `vpc_id` the
+module creates no NAT or NAT address, so both rows are dropped.
+
+Not included: outbound traffic, load balancer and NAT data processing, and
+hyperdisk provisioned performance.
 
 ### oci
 

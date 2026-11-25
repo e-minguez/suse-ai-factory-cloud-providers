@@ -220,3 +220,29 @@ run "rebuild_counter_values_differ" {
     error_message = "Each image_rebuild value must give its own build_hash."
   }
 }
+
+run "local_route_addresses_change_hash" {
+  command = plan
+
+  variables {
+    local_route_addresses = ["10.20.0.100"]
+  }
+
+  assert {
+    condition     = output.build_hash != run.baseline.build_hash
+    error_message = "local_route_addresses must change build_hash."
+  }
+}
+
+run "local_route_addresses_after_server_change_hash" {
+  command = plan
+
+  variables {
+    local_route_addresses_after_server = ["10.20.0.100"]
+  }
+
+  assert {
+    condition     = output.build_hash != run.baseline.build_hash && output.build_hash != run.local_route_addresses_change_hash.build_hash
+    error_message = "local_route_addresses_after_server must change build_hash, differently from local_route_addresses."
+  }
+}
