@@ -301,25 +301,82 @@ then installs the driver in the guest as on any other provider.
   devices on the same host. A pool's nodes prefer different hosts (soft spread,
   see [Network](#network)).
 - **One model per node group.** Each `gpu_devices` entry has a single
-  `device_name`. Different models are different pools:
-
-  ```hcl
-  gpu_pools = {
-    a10  = { instance_type = "16x64", count = 2 }
-    l40s = { instance_type = "32x128", count = 1 }
-  }
-  gpu_devices = { # read the names from `kubectl get pcidevices`
-    a10  = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
-    l40s = { device_name = "nvidia.com/AD102GL_L40S", count = 2 }
-  }
-  ```
-
+  `device_name`. Different models are different pools ([example 3](#examples)).
 - **Only what is enabled counts.** Devices without passthrough enabled are not
   advertised; enabling is per device and outside the module. Nothing checks
   free devices at plan: a node without a free device stays unscheduled (VM pod
   `Pending`, `Insufficient <resource>`) until the apply times out.
 - `device_name` is any KubeVirt host device resource, but the image only has
   the NVIDIA stack: GPUs are the supported case.
+
+### Examples
+
+Node groups and their `gpu_devices` keys: control planes are `cp`, each
+`gpu_pools` key is its own group, `worker_pools` never get devices. Device names
+are examples; read yours from `kubectl get pcidevices`.
+
+1. **One GPU node** (inference in a box): the single control plane takes the GPU.
+
+   ```hcl
+   control_plane_count         = 1
+   control_plane_instance_type = "16x64"
+   gpu_devices = {
+     cp = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+   }
+   ```
+
+2. **Control planes, CPU workers and GPU workers.** Three control planes and two
+   workers without devices; two GPU nodes with one A10 each, on hosts that
+   have a free A10.
+
+   ```hcl
+   control_plane_count         = 3
+   control_plane_instance_type = "8x32"
+   worker_pools = {
+     wrk = { instance_type = "8x32", count = 2 }
+   }
+   gpu_pools = {
+     gpu = { instance_type = "16x64", count = 2 }
+   }
+   gpu_devices = {
+     gpu = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+   }
+   ```
+
+3. **Two GPU models.** As 2, with a second GPU pool whose node takes two L40S
+   from one host. Each pool lands only on hosts with its model.
+
+   ```hcl
+   gpu_pools = {
+     a10  = { instance_type = "16x64", count = 2 }
+     l40s = { instance_type = "32x128", count = 1 }
+   }
+   gpu_devices = {
+     a10  = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+     l40s = { device_name = "nvidia.com/AD102GL_L40S", count = 2 }
+   }
+   ```
+
+4. **GPUs on the control planes too.** `cp` applies to every control plane, so
+   three control planes need three free devices; here the GPU pool also
+   exists, and both groups draw from the same A10s (five in total).
+
+   ```hcl
+   control_plane_count         = 3
+   control_plane_instance_type = "16x64"
+   gpu_pools = {
+     gpu = { instance_type = "16x64", count = 2 }
+   }
+   gpu_devices = {
+     cp  = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+     gpu = { device_name = "nvidia.com/GA102GL_A10", count = 1 }
+   }
+   ```
+
+The plan rejects a `gpu_pools` key with nodes but no `gpu_devices` entry, and a
+`gpu_devices` key that is neither `cp` nor a `gpu_pools` key. Changing
+`gpu_devices` changes the VM spec of that group's nodes; check the `deploy.sh`
+plan for replacements.
 
 NVIDIA vGPU (SR-IOV, MIG) needs a vGPU host licence and the vGPU guest driver,
 which the precompiled datacenter driver override does not cover: not supported.
