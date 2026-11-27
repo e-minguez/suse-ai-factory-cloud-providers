@@ -419,6 +419,8 @@ main section:empty { display: none; }
 .plogo { width: 1.05em; height: 1.05em; flex: none; fill: currentColor; }
 .plogo.evroc { color: light-dark(#0078ff, #4d9fff); }
 .plogo.exoscale { color: light-dark(#da291c, #ff6b5e); }
+.plogo.gcp { color: light-dark(#4285f4, #8ab4f8); }
+.plogo.harvester { color: light-dark(#30ba78, #5fd39a); }
 .plogo.oci { color: light-dark(#c74634, #f07a6a); }
 .plogo.vultr { color: light-dark(#007bfc, #4da3ff); }
 label.choice .provider { font-weight: 600; }
