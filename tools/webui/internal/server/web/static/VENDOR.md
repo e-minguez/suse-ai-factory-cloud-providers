@@ -16,10 +16,12 @@ Both are BSD 0-clause / 2-clause licensed upstream (bigskysoftware). Update by r
 
 ## Provider marks
 
-`providers.svg` (sha256 5d683a74a6d3e8f02095d9abfa65b532f94c7f12ae12cda9bf9671061a808184): one `<symbol>` per provider,
+`providers.svg` (sha256 472ad91acaa6347fbe4574d6e14a601a92db4e28ac1b70df0296a01b7e08c7af): one `<symbol>` per provider,
 path coordinates rounded to 1 decimal and colours removed so CSS sets them.
 - evroc: https://evroc.com/favicon.svg
 - Exoscale, Vultr: Simple Icons 16.34.0 path data (CC0), `icons/exoscale.svg`, `icons/vultr.svg`.
 - AWS: Simple Icons 13.0.0 `icons/amazonwebservices.svg` (removed from later releases).
+- Google Cloud (`gcp`): Simple Icons 16.34.0 `icons/googlecloud.svg` (CC0), single colour.
+- Harvester: https://github.com/harvester/harvester-ui-extension `pkg/harvester/icon.svg` (Apache-2.0), zero-length segments dropped.
 
 The marks are trademarks of their owners, used only to identify the provider.

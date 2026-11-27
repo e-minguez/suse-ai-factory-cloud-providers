@@ -119,7 +119,7 @@ var providerNames = map[string]string{
 }
 
 // providerLogos lists the providers with a symbol in static/providers.svg.
-var providerLogos = map[string]bool{"aws": true, "evroc": true, "exoscale": true, "oci": true, "vultr": true}
+var providerLogos = map[string]bool{"aws": true, "evroc": true, "exoscale": true, "gcp": true, "harvester": true, "oci": true, "vultr": true}
 
 func providerName(p string) string {
 	if n, ok := providerNames[p]; ok {
