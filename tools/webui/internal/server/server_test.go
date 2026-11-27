@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/e-minguez/suse-ai-factory-cloud-providers/tools/webui/internal/schema"
 	"github.com/e-minguez/suse-ai-factory-cloud-providers/tools/webui/internal/tfvars"
 )
 
@@ -240,13 +241,35 @@ func TestProviderName(t *testing.T) {
 			t.Errorf("providerName(%q) = %q, want %q", in, got, want)
 		}
 	}
+}
+
+// Every provider (examples/*/deploy.sh) needs a brand name, a logo symbol
+// and a logo colour, so a new provider cannot ship with a blank slot.
+func TestProviderBranding(t *testing.T) {
 	sprite, err := webFS.ReadFile("web/static/providers.svg")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for p := range providerLogos {
+	css, err := webFS.ReadFile("web/static/app.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	providers := schema.Providers(realRoot(t))
+	if len(providers) == 0 {
+		t.Fatal("no providers found under examples/")
+	}
+	for _, p := range providers {
+		if _, ok := providerNames[p]; !ok {
+			t.Errorf("%s: missing from providerNames (templates.go)", p)
+		}
+		if !providerLogos[p] {
+			t.Errorf("%s: missing from providerLogos (templates.go)", p)
+		}
 		if !strings.Contains(string(sprite), `<symbol id="`+p+`"`) {
-			t.Errorf("providers.svg has no symbol for %s", p)
+			t.Errorf("%s: no <symbol> in static/providers.svg", p)
+		}
+		if !strings.Contains(string(css), ".plogo."+p+" {") {
+			t.Errorf("%s: no .plogo.%s colour in static/app.css", p, p)
 		}
 	}
 }
